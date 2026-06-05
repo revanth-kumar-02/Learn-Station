@@ -6,6 +6,7 @@ import api from '../services/api';
 import Loader from '../components/common/Loader';
 import ProgressBar from '../components/common/ProgressBar';
 import PageTransition from '../components/layout/PageTransition';
+import InteractivePlayground from '../components/common/InteractivePlayground';
 
 export default function AiWorkspacePage() {
   const { slug } = useParams();
@@ -339,49 +340,27 @@ export default function AiWorkspacePage() {
                     </motion.div>
                   )}
 
-                  {/* TAB 3: Interactive Practice */}
                   {activeTab === 'practice' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="workspace-tab-panel">
                       <h2>Interactive Practice</h2>
-                      <p className="mb-6">{activeLesson.practice?.instruction}</p>
-
-                      <div className="practice-box">
-                        <div className="practice-template">
-                          {activeLesson.practice?.template?.split('___').map((part, i, arr) => (
-                            <span key={i}>
-                              {part}
-                              {i < arr.length - 1 && (
-                                <input
-                                  type="text"
-                                  className={`practice-input ${practiceCorrect === true ? 'practice-input--correct' : practiceCorrect === false ? 'practice-input--wrong' : ''}`}
-                                  value={practiceInput}
-                                  onChange={(e) => {
-                                    setPracticeInput(e.target.value);
-                                    setPracticeCorrect(null);
-                                  }}
-                                  placeholder="Type answer..."
-                                  disabled={practiceCorrect === true}
-                                />
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-8 flex gap-4">
-                        {practiceCorrect !== true ? (
-                          <button className="btn btn--primary" onClick={handleCheckPractice}>
-                            Verify Practice Check
-                          </button>
-                        ) : (
-                          <button className="btn btn--success" onClick={() => setActiveTab('check')}>
-                            Correct! Go to Knowledge Check →
-                          </button>
-                        )}
-                        {practiceCorrect === false && (
-                          <span className="practice-feedback-error">❌ Try again. Check case and spelling.</span>
-                        )}
-                      </div>
+                      <p className="mb-2">{activeLesson.practice?.instruction}</p>
+                      
+                      <InteractivePlayground
+                        language={activeLesson.example?.language || 'javascript'}
+                        template={activeLesson.practice?.template}
+                        instruction={activeLesson.practice?.instruction}
+                        answer={activeLesson.practice?.answer}
+                        onCorrect={() => setPracticeCorrect(true)}
+                      />
+                      
+                      {practiceCorrect === true && (
+                        <button className="btn btn--success mt-4" onClick={() => {
+                          setPracticeCorrect(null);
+                          setActiveTab('check');
+                        }}>
+                          Correct! Go to Knowledge Check →
+                        </button>
+                      )}
                     </motion.div>
                   )}
 

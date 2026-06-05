@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
+import InteractivePlayground from '../components/common/InteractivePlayground';
 
 const STEPS = ['Concept', 'Example', 'Practice', 'Challenge', 'Complete'];
 
@@ -172,30 +173,14 @@ export default function LessonPage() {
                 <div className="lesson-practice">
                   <h3>Practice</h3>
                   <p>{lesson.practice?.instruction}</p>
-                  <div className="lesson-practice__template">
-                    <code>
-                      {lesson.practice?.template?.split('___').map((part, i, arr) => (
-                        <span key={i}>
-                          {part}
-                          {i < arr.length - 1 && (
-                            <input
-                              className={`lesson-practice__input ${practiceDone ? 'lesson-practice__input--correct' : ''}`}
-                              value={practiceAnswer}
-                              onChange={(e) => setPracticeAnswer(e.target.value)}
-                              placeholder="..."
-                              disabled={practiceDone}
-                              onKeyDown={(e) => e.key === 'Enter' && handlePracticeSubmit()}
-                            />
-                          )}
-                        </span>
-                      ))}
-                    </code>
-                  </div>
-                  {practiceDone ? (
-                    <div className="lesson-practice__success">✓ Correct!</div>
-                  ) : (
-                    <Button onClick={handlePracticeSubmit} variant="primary" size="md">Check</Button>
-                  )}
+                  
+                  <InteractivePlayground
+                    language={lesson.example?.language || 'javascript'}
+                    template={lesson.practice?.template}
+                    instruction={lesson.practice?.instruction}
+                    answer={lesson.practice?.answer}
+                    onCorrect={() => setPracticeDone(true)}
+                  />
                 </div>
                 {practiceDone && (
                   <Button onClick={handleNext} variant="primary" size="lg" className="lesson-next">
