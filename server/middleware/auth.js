@@ -1,4 +1,3 @@
-const jwt = require('jsonwebtoken');
 const { supabase } = require('../config/db');
 
 const protect = async (req, res, next) => {
@@ -13,14 +12,18 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
-    // Verify token using Supabase JWT Secret
-    const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    // Verify token using Supabase Auth Client
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return res.status(401).json({ message: 'Not authorized, token invalid' });
+    }
 
     // Fetch public profile details
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', decoded.sub)
+      .eq('id', authUser.id)
       .single();
 
     if (error || !profile) {
@@ -32,7 +35,7 @@ const protect = async (req, res, next) => {
       _id: profile.id,
       id: profile.id,
       name: profile.name,
-      email: decoded.email || profile.email,
+      email: authUser.email || profile.email,
       xp: profile.xp,
       level: profile.level,
       streak: profile.streak,
