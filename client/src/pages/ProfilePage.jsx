@@ -8,7 +8,7 @@ import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [achievements, setAchievements] = useState([]);
   const [activity, setActivity] = useState([]);
@@ -34,6 +34,23 @@ export default function ProfilePage() {
     fetchData();
   }, []);
 
+  const handleGoalChange = async (e) => {
+    const newGoal = parseInt(e.target.value, 10);
+    try {
+      await userService.updateProfile({ dailyXpGoal: newGoal });
+      setProfile((prev) => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          dailyXpGoal: newGoal
+        }
+      }));
+      updateUser({ dailyXpGoal: newGoal });
+    } catch (err) {
+      console.error('Failed to update daily goal:', err);
+    }
+  };
+
   if (loading) return <Loader fullPage />;
 
   const stats = profile?.stats || {};
@@ -54,6 +71,28 @@ export default function ProfilePage() {
               <div className="profile-level-bar">
                 <ProgressBar value={levelInfo.progress * 100} max={100} color="var(--accent-violet)" size="md" />
                 <span className="profile-level-text">{levelInfo.xpInLevel} / {levelInfo.xpNeeded} XP to next level</span>
+              </div>
+              <div className="profile-goal-setter" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Daily Goal:</span>
+                <select
+                  value={profile?.user?.dailyXpGoal || 50}
+                  onChange={handleGoalChange}
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-xs)',
+                    padding: '2px 8px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="20">20 XP (Casual)</option>
+                  <option value="50">50 XP (Regular)</option>
+                  <option value="100">100 XP (Serious)</option>
+                  <option value="200">200 XP (Insane)</option>
+                </select>
               </div>
             </div>
           </motion.div>
