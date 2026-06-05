@@ -4,10 +4,11 @@ const { supabase } = require('../config/db');
 // @route   GET /api/tracks
 const getTracks = async (req, res, next) => {
   try {
-    // 1. Fetch tracks
+    // 1. Fetch tracks: either public (non-AI) tracks OR tracks created by this user
     const { data: tracks, error: tracksError } = await supabase
       .from('tracks')
       .select('*')
+      .or(`is_ai_generated.eq.false,user_id.eq.${req.user.id}`)
       .order('display_order');
 
     if (tracksError) throw tracksError;
@@ -66,6 +67,7 @@ const getTrack = async (req, res, next) => {
       .from('tracks')
       .select('*')
       .eq('slug', req.params.slug)
+      .or(`is_ai_generated.eq.false,user_id.eq.${req.user.id}`)
       .maybeSingle();
 
     if (trackError || !track) {

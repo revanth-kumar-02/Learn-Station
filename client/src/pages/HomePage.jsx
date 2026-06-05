@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { trackService } from '../services/trackService';
+import { userService } from '../services/userService';
 import { progressService } from '../services/progressService';
 import ProgressBar from '../components/common/ProgressBar';
 import ProgressRing from '../components/common/ProgressRing';
@@ -17,15 +18,20 @@ export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tracks, setTracks] = useState([]);
+  const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await trackService.getAll();
-        setTracks(data.tracks || []);
+        const [tracksData, achData] = await Promise.all([
+          trackService.getAll(),
+          userService.getAchievements()
+        ]);
+        setTracks(tracksData.tracks || []);
+        setAchievements(achData.achievements || []);
       } catch (err) {
-        console.error('Error loading tracks:', err);
+        console.error('Error loading dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -107,6 +113,38 @@ export default function HomePage() {
             </div>
             <ProgressBar value={user?.dailyXpEarned || 0} max={user?.dailyXpGoal || 50} color="var(--accent-amber)" size="md" />
           </motion.section>
+
+          {/* Recent Achievements */}
+          {!loading && achievements.length > 0 && (
+            <section className="home-achievements mt-6" style={{ marginBottom: 'var(--space-10)' }}>
+              <div className="home-section-header">
+                <h2>Recent Achievements</h2>
+                <Link to="/profile" className="home-section-link">View all →</Link>
+              </div>
+              <div className="achievements-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
+                {achievements.filter(a => a.earned).slice(0, 3).length > 0 ? (
+                  achievements.filter(a => a.earned).slice(0, 3).map((a, i) => (
+                    <motion.div
+                      key={a.id}
+                      className="achievement-card achievement-card--earned"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 + i * 0.05 }}
+                    >
+                      <span className="achievement-card__icon">{a.icon}</span>
+                      <strong>{a.name}</strong>
+                      <p>{a.description}</p>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="card" style={{ gridColumn: '1 / -1', padding: 'var(--space-6)', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '24px', display: 'block', marginBottom: 'var(--space-2)' }}>🏆</span>
+                    No achievements earned yet. Start learning to unlock your first badge!
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Tracks Grid */}
           <section className="home-tracks">
