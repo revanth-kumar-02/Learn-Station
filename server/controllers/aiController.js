@@ -190,17 +190,17 @@ const getMockBlueprint = (skill, level, goal) => {
   return {
     track: {
       name: `AI: ${skill} (${level})`,
-      description: `Custom blueprint designed for ${goal}. Master the fundamentals, core syntax, structures, and practical application files of ${skill}.`,
+      description: `Custom blueprint designed for ${goal}. Master the foundations, core syntax, structures, and practical application files of ${skill}.`,
       color: 'hsl(262, 83%, 58%)',
       icon: 'code',
       capstone_project: {
-        title: `Build a ${skill} Capstone Console Application`,
-        description: `Create a fully operational, modular application implementing core design principles, state handling, and file read/write files in ${skill}.`,
+        title: `Build a ${skill} Capstone Project`,
+        description: `Create a fully operational, modular application implementing core design principles, state handling, and error handling in ${skill}.`,
         requirements: [
           'Deconstruct requirements into modular components.',
-          'Implement persistence using files or light structures.',
+          'Implement persistence or state serialization.',
           'Verify error boundaries and input validation logs.',
-          'Structure code using recommended directory conventions.'
+          'Structure code using recommended project conventions.'
         ]
       }
     },
@@ -209,14 +209,29 @@ const getMockBlueprint = (skill, level, goal) => {
         id: 'module-1',
         name: 'Foundations & Basic Syntax',
         display_order: 1,
-        learning_objective: 'Understand compilation/runtime concepts, print utilities, variables, and primitive types.',
+        learning_objective: 'Understand compilation/runtime concepts, printing, variables, and primitive data types.',
         mini_project: {
-          title: 'Interactive CLI Greetings Profile',
-          description: 'Build a script welcoming users and evaluating numeric inputs.',
+          title: 'Interactive Greetings Profile',
+          description: 'Build a script welcoming users and evaluating basic inputs.',
           requirements: [
-            'Prompt user for text profile info.',
-            'Compute age differences or rates.',
+            'Prompt user for input details.',
+            'Compute values based on input.',
             'Format console output values.'
+          ]
+        }
+      },
+      {
+        id: 'module-2',
+        name: 'Control Flow & Logic',
+        display_order: 2,
+        learning_objective: 'Understand boolean logic, conditional statements, and loops/iteration.',
+        mini_project: {
+          title: 'Simple Calculator & Iterator',
+          description: 'Create a program to perform calculations or iterate over collections.',
+          requirements: [
+            'Support basic operations (addition, subtraction, multiplication).',
+            'Handle invalid input gracefully.',
+            'Use loops to keep the program running.'
           ]
         }
       }
@@ -259,6 +274,116 @@ const getMockBlueprint = (skill, level, goal) => {
             template: '___ console',
             answer: 'terminal',
             explanation: 'The terminal console is the default output sink for CLI script logging.'
+          }
+        ]
+      },
+      {
+        slug: `${slugify(skill)}-2`,
+        title: 'Variables & Data Types',
+        module_id: 'module-1',
+        display_order: 2,
+        estimated_minutes: 10,
+        xp_reward: 25,
+        concept_title: 'Storing Values in Memory',
+        concept_content: `Variables are named containers used to store data in memory during runtime. In ${skill}, values have specific types like integers, floating point numbers, strings, and booleans.\n\nUnderstanding data types ensures that operations are performed correctly and memory is used efficiently.`,
+        concept_highlights: ['variables', 'data types', 'memory'],
+        example_language: 'javascript',
+        example_code: `// Storing primitive values\nlet skillName = "${skill}";\nlet rating = 5;\nlet isActive = true;`,
+        example_explanation: 'This snippet demonstrates declaring a string, a number, and a boolean variable.',
+        practice_type: 'fill-blank',
+        practice_instruction: 'Declare a variable called value and assign it the number 42:',
+        practice_template: 'let ___ = 42;',
+        practice_answer: 'value',
+        summary: 'Variables act as references to memory locations. Selecting the correct data types prevents runtime exceptions.',
+        challenges: [
+          {
+            type: 'multiple-choice',
+            question: 'Which of the following is a primitive boolean value?',
+            options: ['"true"', 'true', '1', 'NULL'],
+            correct_index: 1,
+            explanation: 'true is a literal boolean value, whereas "true" is a string.'
+          },
+          {
+            type: 'fill-blank',
+            question: 'Complete the statement to assign a string "admin" to the variable role:',
+            template: 'let role = "___";',
+            answer: 'admin',
+            explanation: 'String literals are enclosed in double or single quotes.'
+          }
+        ]
+      },
+      {
+        slug: `${slugify(skill)}-3`,
+        title: 'Conditionals & Logical Flow',
+        module_id: 'module-2',
+        display_order: 3,
+        estimated_minutes: 10,
+        xp_reward: 25,
+        concept_title: 'Making Decisions in Code',
+        concept_content: `Conditionals allow programs to execute different logic paths based on boolean conditions. The most common construct is the if/else block.\n\nUsing comparison operators (such as equals, greater than, or less than), we can direct the execution flow dynamically.`,
+        concept_highlights: ['conditionals', 'if statement', 'decision making'],
+        example_language: 'javascript',
+        example_code: `let xp = 100;\nif (xp >= 100) {\n  console.log("Mastery unlocked!");\n} else {\n  console.log("Keep practicing!");\n}`,
+        example_explanation: 'This evaluates whether the variable xp is 100 or more, printing the corresponding message.',
+        practice_type: 'fill-blank',
+        practice_instruction: 'Complete the condition keyword to run a block if true:',
+        practice_template: '___ (isValid) {\n  runTask();\n}',
+        practice_answer: 'if',
+        summary: 'Conditionals form the logic branches of applications, enabling code to respond to dynamic inputs.',
+        challenges: [
+          {
+            type: 'multiple-choice',
+            question: 'What is the purpose of the else keyword?',
+            options: [
+              'To define an alternative execution path when the if condition evaluates to false.',
+              'To repeat the block of code indefinitely.',
+              'To terminate the program.',
+              'To export the function.'
+            ],
+            correct_index: 0,
+            explanation: 'The else block executes only if all preceding if/elif conditions evaluate to false.'
+          },
+          {
+            type: 'fill-blank',
+            question: 'Complete the statement to check inequality (not equal):',
+            template: 'if (status ___ "inactive")',
+            answer: '!=',
+            explanation: 'The != operator checks if two values are not equal.'
+          }
+        ]
+      },
+      {
+        slug: `${slugify(skill)}-4`,
+        title: 'Loops & Iteration',
+        module_id: 'module-2',
+        display_order: 4,
+        estimated_minutes: 10,
+        xp_reward: 25,
+        concept_title: 'Repeating Operations',
+        concept_content: `Loops are constructs that repeat a block of code while a condition remains true, or for each element in a collection.\n\nThe while loop and the for loop are the standard methods to iterate over datasets or repeat tasks.`,
+        concept_highlights: ['loops', 'for loop', 'iteration'],
+        example_language: 'javascript',
+        example_code: 'for (let i = 0; i < 3; i++) {\n  console.log("Iteration: " + i);\n}',
+        example_explanation: 'This loops prints iteration indices 0, 1, and 2 to the console.',
+        practice_type: 'fill-blank',
+        practice_instruction: 'Complete the loop keyword for a fixed iteration loop:',
+        practice_template: '___ (let i = 0; i < 5; i++)',
+        practice_answer: 'for',
+        summary: 'Loops allow developers to process list items, perform calculations, and automate repetitive code structures.',
+        challenges: [
+          {
+            type: 'multiple-choice',
+            question: 'Which loop runs at least once, even if the condition is false?',
+            options: ['while loop', 'for loop', 'do-while loop', 'for-each loop'],
+            correct_index: 2,
+            explanation: 'The do-while loop evaluates its condition after executing the body, ensuring at least one run.'
+          },
+          {
+            type: 'fill-blank',
+            question: 'What keyword immediately exits a loop block?',
+            template: '___;',
+            answer: 'break',
+            explanation: 'The break keyword terminates the enclosing loop or switch statement.'
           }
         ]
       }
