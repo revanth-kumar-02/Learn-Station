@@ -51,6 +51,34 @@ const xpProgressInLevel = (totalXP) => {
   };
 };
 
+const AiMentorIcon = ({ className }) => (
+  <span className="ai-mentor-icon-container">
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs>
+        <linearGradient id="ai-mentor-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a855f7" />
+          <stop offset="100%" stopColor="#3b82f6" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="10" stroke="url(#ai-mentor-grad)" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
+      <path d="M12 6v12M6 12h12" stroke="url(#ai-mentor-grad)" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M8 8l8 8M8 16l8-8" stroke="url(#ai-mentor-grad)" strokeWidth="1" opacity="0.4" />
+      <circle cx="12" cy="12" r="3" fill="url(#ai-mentor-grad)" />
+      <path d="M19 5l.5 1L20.5 6.5l-1 .5-.5 1-.5-1-1-.5 1-.5.5-1z" fill="#a855f7" />
+      <path d="M5 19l.5 1L6.5 20.5l-1 .5-.5 1-.5-1-1-.5 1-.5.5-1z" fill="#3b82f6" />
+    </svg>
+  </span>
+);
+
+const SuccessIcon = () => (
+  <div className="success-icon-wrapper">
+    <svg className="success-icon-svg" viewBox="0 0 52 52">
+      <circle className="success-icon-circle" cx="26" cy="26" r="25" fill="none" stroke="var(--accent-green)" strokeWidth="2" />
+      <path className="success-icon-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" stroke="var(--accent-green)" strokeWidth="3" />
+    </svg>
+  </div>
+);
+
 export default function LessonPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -77,6 +105,8 @@ export default function LessonPage() {
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState([]);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   
   const popoverRefs = useRef({});
 
@@ -120,6 +150,8 @@ export default function LessonPage() {
         setQuizScore(0);
         setQuizAnswers([]);
         setQuizSubmitted(false);
+        setShowSuccessOverlay(false);
+        setIsCompleting(false);
         
         // If already completed, unlock all tabs
         if (data.isCompleted) {
@@ -296,13 +328,14 @@ export default function LessonPage() {
         setQuizSubmitted(true);
         const passed = newScore >= 4;
         if (passed) {
-          completeLesson(newScore, true);
+          setMaxStepReached(4);
         }
       }
     }, 2500);
   };
 
   const completeLesson = async (score, passed) => {
+    setIsCompleting(true);
     try {
       const result = await lessonService.complete(slug, score, passed);
       setReward(result);
@@ -317,13 +350,13 @@ export default function LessonPage() {
         ...prev,
         completedLessons: [...(prev.completedLessons || []), lesson.id],
         completedChallenges: [...(prev.completedChallenges || []), ...completedLessonChallengeIds],
+        progressPercent: result.progressPercent,
       }));
-      setMaxStepReached(4);
-      setCurrentStep(4);
+      setShowSuccessOverlay(true);
     } catch (err) {
       console.error(err);
-      setMaxStepReached(4);
-      setCurrentStep(4);
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -675,33 +708,46 @@ export default function LessonPage() {
                   >
                     {quizSubmitted ? (
                       <div className={`quiz-results ${quizScore >= 4 ? 'quiz-results--pass' : 'quiz-results--fail'}`}>
-                        <div style={{ fontSize: '64px', marginBottom: 'var(--space-2)' }}>
-                          {quizScore >= 4 ? '✅' : '❌'}
-                        </div>
-                        <h2>{quizScore >= 4 ? 'Quiz Passed!' : 'Quiz Failed'}</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
-                          {quizScore >= 4 
-                            ? 'Excellent work! You have passed the lesson assessment.' 
-                            : 'You need at least 4/5 correct answers to pass. Review the explanations below and try again.'}
-                        </p>
-
-                        <div className="quiz-score-display">
-                          <span className="quiz-score-number">{quizScore}</span>
-                          <span className="quiz-score-total">/ {lesson.challenges.length}</span>
-                        </div>
-
                         {quizScore >= 4 ? (
-                          <Button 
-                            onClick={() => handleTabClick(4)} 
-                            variant="primary" 
-                            size="lg" 
-                            className="w-full" 
-                            style={{ background: 'var(--accent-green)' }}
-                          >
-                            Continue to Summary →
-                          </Button>
+                          <>
+                            <SuccessIcon />
+                            <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', marginBottom: 'var(--space-2)' }}>Quiz Passed!</h2>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)', maxWidth: '440px' }}>
+                              Excellent work! You have passed the lesson assessment.
+                            </p>
+
+                            <div className="quiz-score-display">
+                              <span className="quiz-score-number">{quizScore}</span>
+                              <span className="quiz-score-total">/ {lesson.challenges.length}</span>
+                            </div>
+
+                            <div className="quiz-xp-badge">
+                              <span>⚡</span>
+                              <span>+{lesson.xpReward + (quizScore === 5 ? 15 : 0)} XP Earned</span>
+                            </div>
+
+                            <Button 
+                              onClick={() => handleTabClick(4)} 
+                              variant="primary" 
+                              size="lg" 
+                              className="w-full" 
+                              style={{ background: 'var(--accent-green)' }}
+                            >
+                              Continue to Summary →
+                            </Button>
+                          </>
                         ) : (
                           <>
+                            <div style={{ fontSize: '64px', marginBottom: 'var(--space-2)' }}>❌</div>
+                            <h2>Quiz Failed</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                              You need at least 4/5 correct answers to pass. Review the explanations below and try again.
+                            </p>
+
+                            <div className="quiz-score-display">
+                              <span className="quiz-score-number">{quizScore}</span>
+                              <span className="quiz-score-total">/ {lesson.challenges.length}</span>
+                            </div>
                             <div className="quiz-explanation-list">
                               <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-3)' }}>Review Your Answers</h3>
                               {lesson.challenges.map((challenge, idx) => {
@@ -904,46 +950,61 @@ export default function LessonPage() {
                       </ul>
                     </div>
 
-                    {/* Next Lesson Card */}
-                    {nextLesson ? (
-                      <div className="next-lesson-card" style={{ borderColor: `${track.color}40` }}>
-                        <div className="next-lesson-card__info">
-                          <span className="next-lesson-card__badge" style={{ color: track.color }}>Next Lesson</span>
-                          <h4 className="next-lesson-card__title">{nextLesson.title}</h4>
-                          <div className="next-lesson-card__meta">
-                            <span className="next-lesson-card__meta-item">
-                              ⏱ {nextLesson.estimatedMinutes || 5} Min
-                            </span>
-                            <span className="next-lesson-card__meta-item" style={{ color: 'var(--accent-amber)' }}>
-                              ✦ {nextLesson.xpReward || 50} XP
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          className="btn--continue-next"
-                          onClick={() => navigate(`/lesson/${nextLesson.slug}`)}
-                          style={{ background: track.color }}
+                    {/* Complete Lesson Button or Next Lesson Card */}
+                    {!completedLessonsSet.has(lesson.id.toString()) ? (
+                      <div style={{ marginTop: 'var(--space-6)', display: 'flex', justifyContent: 'center' }}>
+                        <Button 
+                          onClick={() => completeLesson(quizScore, true)} 
+                          variant="primary" 
+                          size="lg" 
+                          className="w-full"
+                          disabled={isCompleting}
+                          style={{ background: 'var(--accent-violet)', border: 'none', boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)' }}
                         >
-                          Continue Learning →
-                        </button>
+                          {isCompleting ? 'Saving Progress...' : 'Complete Lesson 🚀'}
+                        </Button>
                       </div>
                     ) : (
-                      <div className="next-lesson-card" style={{ borderColor: 'var(--accent-green-glow)' }}>
-                        <div className="next-lesson-card__info">
-                          <span className="next-lesson-card__badge" style={{ color: 'var(--accent-green)' }}>Module Complete</span>
-                          <h4 className="next-lesson-card__title">Track Milestone Reached!</h4>
-                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-                            You have completed all lessons in this track. Time to start the capstone project or another course.
-                          </p>
+                      nextLesson ? (
+                        <div className="next-lesson-card" style={{ borderColor: `${track.color}40` }}>
+                          <div className="next-lesson-card__info">
+                            <span className="next-lesson-card__badge" style={{ color: track.color }}>Next Lesson</span>
+                            <h4 className="next-lesson-card__title">{nextLesson.title}</h4>
+                            <div className="next-lesson-card__meta">
+                              <span className="next-lesson-card__meta-item">
+                                ⏱ {nextLesson.estimatedMinutes || 5} Min
+                              </span>
+                              <span className="next-lesson-card__meta-item" style={{ color: 'var(--accent-amber)' }}>
+                                ✦ {nextLesson.xpReward || 50} XP
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            className="btn--continue-next"
+                            onClick={() => navigate(`/lesson/${nextLesson.slug}`)}
+                            style={{ background: track.color }}
+                          >
+                            Continue Learning →
+                          </button>
                         </div>
-                        <button
-                          className="btn--continue-next"
-                          onClick={() => navigate(`/track/${track.slug}`)}
-                          style={{ background: 'var(--accent-green)' }}
-                        >
-                          Back to Track →
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="next-lesson-card" style={{ borderColor: 'var(--accent-green-glow)' }}>
+                          <div className="next-lesson-card__info">
+                            <span className="next-lesson-card__badge" style={{ color: 'var(--accent-green)' }}>Module Complete</span>
+                            <h4 className="next-lesson-card__title">Track Milestone Reached!</h4>
+                            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                              You have completed all lessons in this track. Time to start the capstone project or another course.
+                            </p>
+                          </div>
+                          <button
+                            className="btn--continue-next"
+                            onClick={() => navigate(`/track/${track.slug}`)}
+                            style={{ background: 'var(--accent-green)' }}
+                          >
+                            Back to Track →
+                          </button>
+                        </div>
+                      )
                     )}
                   </motion.div>
                 )}
@@ -959,7 +1020,7 @@ export default function LessonPage() {
           id="ai-mentor-fab"
           title="AI Mentor"
         >
-          {mentorOpen ? '✕' : '🤖'}
+          {mentorOpen ? '✕' : <AiMentorIcon />}
         </button>
 
         {/* AI Mentor Drawer */}
@@ -974,7 +1035,7 @@ export default function LessonPage() {
             >
               <div className="mentor-drawer__header">
                 <div className="mentor-drawer__title">
-                  <span>🤖</span>
+                  <AiMentorIcon />
                   <div>
                     <h3>AI Mentor</h3>
                     <p>{lesson?.title}</p>
@@ -1000,14 +1061,14 @@ export default function LessonPage() {
               <div className="mentor-messages">
                 {mentorMessages.length === 0 && (
                   <div className="mentor-messages__empty">
-                    <span>🤖</span>
+                    <AiMentorIcon />
                     <p>Hi! I'm your AI Mentor for this lesson.</p>
                     <p>Ask me anything about <strong>{lesson?.title}</strong> or use the shortcuts above.</p>
                   </div>
                 )}
                 {mentorMessages.map((msg, i) => (
                   <div key={i} className={`mentor-message mentor-message--${msg.role}`}>
-                    {msg.role === 'assistant' && <span className="mentor-message__avatar">🤖</span>}
+                    {msg.role === 'assistant' && <span className="mentor-message__avatar"><AiMentorIcon /></span>}
                     <div
                       className="mentor-message__text"
                       dangerouslySetInnerHTML={{ __html: parseMarkdown ? parseMarkdown(msg.text) : msg.text }}
@@ -1016,7 +1077,7 @@ export default function LessonPage() {
                 ))}
                 {mentorLoading && (
                   <div className="mentor-message mentor-message--assistant">
-                    <span className="mentor-message__avatar">🤖</span>
+                    <span className="mentor-message__avatar"><AiMentorIcon /></span>
                     <div className="mentor-message__typing">
                       <span /><span /><span />
                     </div>
@@ -1051,6 +1112,107 @@ export default function LessonPage() {
                 </button>
               </div>
             </motion.aside>
+          )}
+        </AnimatePresence>
+        {/* Fullscreen Success Overlay */}
+        <AnimatePresence>
+          {showSuccessOverlay && (
+            <motion.div
+              className="success-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="success-overlay-card"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              >
+                <div style={{ fontSize: '72px', marginBottom: 'var(--space-2)' }}>🎉</div>
+                <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-bold)', color: 'var(--accent-violet)', marginBottom: 'var(--space-2)' }}>
+                  Lesson Mastered!
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', marginBottom: 'var(--space-4)', maxWidth: '400px' }}>
+                  You have successfully completed <strong>{lesson?.title}</strong>!
+                </p>
+
+                <div className="success-overlay-reward-grid">
+                  <div className="success-overlay-reward-item">
+                    <span className="success-overlay-reward-label">XP Gained</span>
+                    <span className="success-overlay-reward-value" style={{ color: 'var(--accent-amber)' }}>
+                      +{reward?.xpEarned || lesson?.xpReward} XP
+                    </span>
+                  </div>
+                  <div className="success-overlay-reward-item">
+                    <span className="success-overlay-reward-label">Bonus XP</span>
+                    <span className="success-overlay-reward-value" style={{ color: 'var(--accent-green)' }}>
+                      +{reward?.bonusXp || 0} XP
+                    </span>
+                  </div>
+                  <div className="success-overlay-reward-item">
+                    <span className="success-overlay-reward-label">Streak</span>
+                    <span className="success-overlay-reward-value" style={{ color: 'var(--accent-rose)' }}>
+                      🔥 {reward?.streak || user?.streak || 1} Days
+                    </span>
+                  </div>
+                  <div className="success-overlay-reward-item">
+                    <span className="success-overlay-reward-label">Level</span>
+                    <span className="success-overlay-reward-value" style={{ color: 'var(--accent-blue)' }}>
+                      ⭐ Level {reward?.level || user?.level || 1}
+                    </span>
+                  </div>
+                </div>
+
+                {reward?.newAchievements?.length > 0 && (
+                  <div style={{ width: '100%', marginBottom: 'var(--space-4)' }}>
+                    <h4 style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      Achievements Unlocked!
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {reward.newAchievements.map((a) => (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-tertiary)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '8px 12px', borderRadius: '8px', textAlign: 'left' }}>
+                          <span style={{ fontSize: '20px' }}>{a.icon}</span>
+                          <div>
+                            <strong style={{ fontSize: '13px', display: 'block', color: 'var(--text-primary)' }}>{a.name}</strong>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.description}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="success-overlay-btn-group">
+                  {nextLesson ? (
+                    <Button
+                      onClick={() => {
+                        setShowSuccessOverlay(false);
+                        navigate(`/lesson/${nextLesson.slug}`);
+                      }}
+                      variant="primary"
+                      size="lg"
+                      className="w-full"
+                      style={{ background: track.color }}
+                    >
+                      Start Next Lesson →
+                    </Button>
+                  ) : null}
+                  <Button
+                    onClick={() => {
+                      setShowSuccessOverlay(false);
+                      navigate(`/track/${track.slug}`);
+                    }}
+                    variant="ghost"
+                    size="lg"
+                    className="w-full"
+                  >
+                    Return to Roadmap
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

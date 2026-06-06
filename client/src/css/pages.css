@@ -2972,8 +2972,12 @@
 }
 
 .quiz-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-10) var(--space-8);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   background: var(--bg-secondary);
@@ -2989,28 +2993,34 @@
 }
 
 .quiz-score-display {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 120px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
-  margin: var(--space-4) 0 var(--space-6);
+  margin: var(--space-6) 0;
   border: 4px solid var(--border);
   background: var(--bg-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
 }
 .quiz-results--pass .quiz-score-display {
   border-color: var(--accent-green);
   color: var(--accent-green);
+  background: hsla(142, 70%, 45%, 0.03);
+  box-shadow: 0 0 15px hsla(142, 70%, 45%, 0.1);
 }
 .quiz-results--fail .quiz-score-display {
   border-color: var(--accent-rose);
   color: var(--accent-rose);
+  background: hsla(346, 77%, 50%, 0.03);
+  box-shadow: 0 0 15px hsla(346, 77%, 50%, 0.1);
 }
 .quiz-score-number {
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
+  font-size: 38px;
+  font-weight: 800;
   line-height: 1;
 }
 .quiz-score-total {
@@ -5879,4 +5889,152 @@
     right: 20px;
   }
 }
+
+/* Redesigned Success Checkmark Animation */
+.success-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.success-icon-svg {
+  width: 80px;
+  height: 80px;
+  display: block;
+}
+.success-icon-circle {
+  stroke: var(--accent-green);
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: successStroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.success-icon-check {
+  transform-origin: 50% 50%;
+  stroke: var(--accent-green);
+  stroke-width: 3;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: successStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+}
+@keyframes successStroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Quiz Passed XP Badge */
+.quiz-xp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: hsla(38, 92%, 50%, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 8px 18px;
+  border-radius: 100px;
+  color: var(--accent-amber);
+  font-weight: 700;
+  font-size: 16px;
+  margin: var(--space-4) auto var(--space-6);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+  animation: pulseAmber 2s infinite alternate;
+}
+
+@keyframes pulseAmber {
+  0% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+}
+
+/* Fullscreen Success Overlay styling */
+.success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 12, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+}
+
+.success-overlay-card {
+  max-width: 500px;
+  width: 90%;
+  background: var(--bg-secondary);
+  border: 1px solid hsla(262, 83%, 58%, 0.3);
+  box-shadow: 0 0 50px rgba(139, 92, 246, 0.15);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.success-overlay-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+  margin: var(--space-6) 0;
+}
+
+.success-overlay-reward-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-overlay-reward-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.success-overlay-reward-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.success-overlay-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+/* AI Mentor Icon gradient styling */
+.ai-mentor-icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.mentor-fab .ai-mentor-icon-container {
+  width: 26px;
+  height: 26px;
+}
+
 
