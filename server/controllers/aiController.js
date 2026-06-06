@@ -1489,8 +1489,10 @@ const getMockBlueprint = (skill, level, goal) => {
 const generatePath = async (req, res, next) => {
   try {
     const { skill, level, goal } = req.body;
+    console.log(`📥 [API Route Hit] POST /api/ai/generate - Skill: "${skill}", Level: "${level}", Goal: "${goal}"`);
 
     if (!skill || !level || !goal) {
+      console.warn('⚠️ Missing required parameters for generatePath');
       return res.status(400).json({ message: 'Skill, Level, and Goal parameters are required.' });
     }
 
@@ -1498,7 +1500,7 @@ const generatePath = async (req, res, next) => {
 
     if (process.env.GROQ_API_KEY) {
       try {
-        console.log(`🤖 Requesting Groq API blueprint for: ${skill}...`);
+        console.log(`🤖 [AI Request Start] Requesting Groq API blueprint for: "${skill}" (Level: "${level}", Goal: "${goal}")...`);
         
         const systemInstruction = 
           "You are a professional educational curriculum designer. You output high-quality technical blueprint learning paths in strict JSON format. " +
@@ -1654,15 +1656,15 @@ Enforce:
         const data = await response.json();
         const rawJsonText = data?.choices?.[0]?.message?.content;
         blueprint = JSON.parse(rawJsonText);
-        console.log('✅ Groq API returned valid blueprint JSON.');
+        console.log(`✨ [AI Response Success] Groq API returned valid blueprint for: "${skill}"`);
       } catch (groqError) {
-        console.error('⚠️ Groq generation failed or returned invalid JSON, falling back to Gemini or Mock:', groqError.message);
+        console.error('⚠️ [AI Response Error] Groq generation failed or returned invalid JSON, falling back to Gemini or Mock:', groqError.message);
       }
     }
 
     if (!blueprint && process.env.GEMINI_API_KEY) {
       try {
-        console.log(`🤖 Requesting Gemini API blueprint for: ${skill}...`);
+        console.log(`🤖 [AI Request Start] Requesting Gemini API blueprint for: "${skill}" (Level: "${level}", Goal: "${goal}")...`);
         
         const systemInstruction = 
           "You are a professional educational curriculum designer. You output high-quality technical blueprint learning paths in strict JSON format. " +
@@ -1814,19 +1816,20 @@ Enforce:
         const data = await response.json();
         const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         blueprint = JSON.parse(rawJsonText);
-        console.log('✅ Gemini API returned valid blueprint JSON.');
+        console.log(`✨ [AI Response Success] Gemini API returned valid blueprint for: "${skill}"`);
       } catch (geminiError) {
-        console.error('⚠️ Gemini generation failed or returned invalid JSON, falling back to mock:', geminiError.message);
+        console.error('⚠️ [AI Response Error] Gemini generation failed or returned invalid JSON, falling back to mock:', geminiError.message);
         blueprint = getMockBlueprint(skill, level, goal);
       }
     }
 
     if (!blueprint) {
-      console.log('ℹ   No API keys found or generation failed. Using local mock generator...');
+      console.log(`💡 [AI Mock Fallback] No API keys found or generation failed. Using local mock generator for: "${skill}"`);
       blueprint = getMockBlueprint(skill, level, goal);
     }
 
     if (!blueprint || !blueprint.track || !blueprint.modules || !blueprint.lessons) {
+      console.error('❌ [API Route Error] Course blueprint validation failed: Missing track, modules or lessons', blueprint);
       return res.status(500).json({ message: 'Failed to generate a valid course blueprint.' });
     }
 
@@ -1925,14 +1928,14 @@ Enforce:
       }
     }
 
-    console.log('✅ AI Learning Blueprint stored successfully.');
+    console.log(`✨ [API Response Success] Stored AI learning blueprint successfully. Created Track Slug: "${trackSlug}"`);
 
     res.status(201).json({
       message: 'Learning blueprint generated and initialized.',
       trackSlug,
     });
   } catch (error) {
-    console.error('❌ AI Generation Controller error:', error.message);
+    console.error('❌ [API Route Error] POST /api/ai/generate failed:', error);
     next(error);
   }
 };
