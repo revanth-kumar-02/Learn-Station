@@ -54,12 +54,21 @@ const getAllProgress = async (req, res, next) => {
         : null,
     }));
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyXpEarned = profile.daily_xp_earned || 0;
+    if (profile.last_active_date) {
+      const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+      if (lastActiveStr !== todayStr) {
+        dailyXpEarned = 0;
+      }
+    }
+
     res.json({
       progress: formattedProgress,
       streak: profile.streak,
       longestStreak: profile.longest_streak,
       dailyXpGoal: profile.daily_xp_goal,
-      dailyXpEarned: profile.daily_xp_earned,
+      dailyXpEarned,
     });
   } catch (error) {
     next(error);

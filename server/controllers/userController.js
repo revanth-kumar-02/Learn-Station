@@ -31,6 +31,15 @@ const getProfile = async (req, res, next) => {
 
     const levelInfo = xpProgressInLevel(profile.xp);
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyXpEarned = profile.daily_xp_earned || 0;
+    if (profile.last_active_date) {
+      const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+      if (lastActiveStr !== todayStr) {
+        dailyXpEarned = 0;
+      }
+    }
+
     // Format progress items to match frontend expectations
     const formattedTrackProgress = (allProgress || []).map((p) => ({
       _id: p.id,
@@ -63,6 +72,7 @@ const getProfile = async (req, res, next) => {
         longestStreak: profile.longest_streak,
         achievements: profile.achievements || [],
         dailyXpGoal: profile.daily_xp_goal,
+        dailyXpEarned,
         createdAt: profile.created_at,
       },
       stats: {
@@ -70,6 +80,7 @@ const getProfile = async (req, res, next) => {
         level: profile.level,
         streak: profile.streak,
         longestStreak: profile.longest_streak,
+        dailyXpEarned,
         lessonsCompleted: totalLessonsCompleted,
         tracksStarted: allProgress?.length || 0,
         tracksCompleted: (allProgress || []).filter((p) => p.progress_percent >= 100).length,

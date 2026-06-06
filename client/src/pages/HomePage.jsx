@@ -70,7 +70,16 @@ export default function HomePage() {
                   <span>⏱ ~10 min</span>
                 </div>
                 {currentTrack ? (
-                  <Link to={`/track/${currentTrack.slug}`} className="btn btn--primary btn--lg home-hero__cta">
+                  <Link
+                    to={
+                      currentTrack.isAiGenerated
+                        ? `/ai-workspace/${currentTrack.slug}`
+                        : currentTrack.progress?.currentLessonSlug
+                        ? `/lesson/${currentTrack.progress.currentLessonSlug}`
+                        : `/track/${currentTrack.slug}`
+                    }
+                    className="btn btn--primary btn--lg home-hero__cta"
+                  >
                     Continue Learning →
                   </Link>
                 ) : (

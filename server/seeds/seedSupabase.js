@@ -1,6 +1,10 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+
 const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
 
 const { createClient } = require('@supabase/supabase-js');
 const { tracksData } = require('./curriculumData');

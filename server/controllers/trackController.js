@@ -1,7 +1,6 @@
 const { supabase } = require('../config/db');
 
 // @desc    Get all tracks with user progress
-// @route   GET /api/tracks
 const getTracks = async (req, res, next) => {
   try {
     // 1. Fetch tracks: either public (non-AI) tracks OR tracks created by this user
@@ -21,13 +20,64 @@ const getTracks = async (req, res, next) => {
 
     if (progressError) throw progressError;
 
+    // Fetch all lessons and modules to calculate slugs and progression rules
+    const { data: allLessons, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('id, slug, track_id, display_order, module_id');
+
+    if (lessonsError) throw lessonsError;
+
+    const { data: allModules, error: modulesError } = await supabase
+      .from('modules')
+      .select('id, track_id, display_order');
+
+    if (modulesError) throw modulesError;
+
+    // Group modules by track
+    const modulesByTrack = {};
+    (allModules || []).forEach(m => {
+      if (!modulesByTrack[m.track_id]) modulesByTrack[m.track_id] = [];
+      modulesByTrack[m.track_id].push(m);
+    });
+
+    // Sort lessons per track using module orders and display_order
+    const firstLessonSlugMap = {};
+    const lessonsMap = {};
+    (allLessons || []).forEach(l => {
+      lessonsMap[l.id] = l;
+    });
+
+    Object.keys(modulesByTrack).forEach(trackId => {
+      const trackMods = modulesByTrack[trackId].sort((a, b) => a.display_order - b.display_order);
+      const modOrder = {};
+      trackMods.forEach((m, idx) => {
+        modOrder[m.id] = idx;
+      });
+
+      const trackLessons = (allLessons || [])
+        .filter(l => l.track_id === trackId)
+        .sort((a, b) => {
+          const aMod = modOrder[a.module_id] ?? 0;
+          const bMod = modOrder[b.module_id] ?? 0;
+          if (aMod !== bMod) return aMod - bMod;
+          return a.display_order - b.display_order;
+        });
+
+      if (trackLessons.length > 0) {
+        firstLessonSlugMap[trackId] = trackLessons[0].slug;
+      }
+    });
+
     const progressMap = {};
     (progressList || []).forEach((p) => {
+      const currentLessonSlug = p.current_lesson ? (lessonsMap[p.current_lesson]?.slug || firstLessonSlugMap[p.track_id] || '') : (firstLessonSlugMap[p.track_id] || '');
       progressMap[p.track_id] = {
         completedLessons: p.completed_lessons?.length || 0,
         xpEarned: p.xp_earned,
         progressPercent: p.progress_percent,
         currentModule: p.current_module,
+        currentLesson: p.current_lesson,
+        currentLessonSlug,
         lastAccessedAt: p.last_accessed_at,
       };
     });
@@ -43,11 +93,14 @@ const getTracks = async (req, res, next) => {
       color: track.color,
       order: track.display_order,
       totalLessons: track.total_lessons,
+      isAiGenerated: track.is_ai_generated,
       progress: progressMap[track.id] || {
         completedLessons: 0,
         xpEarned: 0,
         progressPercent: 0,
         currentModule: null,
+        currentLesson: null,
+        currentLessonSlug: firstLessonSlugMap[track.id] || '',
         lastAccessedAt: null,
       },
     }));
@@ -92,6 +145,25 @@ const getTrack = async (req, res, next) => {
 
     if (lessonsError) throw lessonsError;
 
+    // Fetch challenges to know which ones belong to which lesson
+    const lessonIds = (lessons || []).map(l => l.id);
+    const challengeIdsMap = {};
+    if (lessonIds.length > 0) {
+      const { data: challenges, error: challengesError } = await supabase
+        .from('challenges')
+        .select('id, lesson_id')
+        .in('lesson_id', lessonIds);
+
+      if (!challengesError && challenges) {
+        challenges.forEach(c => {
+          if (!challengeIdsMap[c.lesson_id]) {
+            challengeIdsMap[c.lesson_id] = [];
+          }
+          challengeIdsMap[c.lesson_id].push(c.id);
+        });
+      }
+    }
+
     // 4. Map lessons inside modules
     const trackModules = (modules || []).map((mod) => ({
       id: mod.id,
@@ -108,6 +180,7 @@ const getTrack = async (req, res, next) => {
           estimatedMinutes: l.estimated_minutes,
           xpReward: l.xp_reward,
           moduleId: l.module_id,
+          challengeIds: challengeIdsMap[l.id] || [],
         })),
     }));
 
@@ -131,6 +204,7 @@ const getTrack = async (req, res, next) => {
       color: track.color,
       totalLessons: track.total_lessons,
       modules: trackModules,
+      capstone_project: track.capstone_project || {},
     };
 
     const formattedProgress = progress

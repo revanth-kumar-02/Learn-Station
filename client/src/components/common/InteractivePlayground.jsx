@@ -499,30 +499,78 @@ export default function InteractivePlayground({ language, template, instruction,
 
     if (!cleanAnswer) return;
 
-    // 1. Text normalization check
+    // Helper: normalize whitespace and case for comparison
     const normalize = (str) => str.replace(/\s+/g, ' ').replace(/[;']/g, '"').trim().toLowerCase();
+
+    // Build the "full correct query" for text match
     const correctCode = template ? template.replace(/___/g, answer) : answer;
 
-    if (normalize(userCode) === normalize(correctCode) || normalize(userCode) === normalize(answer)) {
+    // 1. Exact normalized text match → immediate pass
+    if (normalize(userCode) === normalize(correctCode) || normalize(userCode) === normalize(cleanAnswer)) {
+      if (isSql) {
+        const res = runSQLQuery(code);
+        if (res.success) setSqlResult(res.rows);
+      }
       triggerSuccess();
       return;
     }
 
-    // 2. Contains answer check
+    // 2. SQL: compare query execution results
+    if (isSql) {
+      const userRes = runSQLQuery(code);
+      if (!userRes.success) {
+        setErrors(`SQL Error: ${userRes.error}`);
+        return;
+      }
+      setSqlResult(userRes.rows);
+
+      const expectedRes = runSQLQuery(cleanAnswer);
+      if (!expectedRes.success) {
+        // Can't compare — fall through to simple contains check
+      } else {
+        // Compare result sets: same columns, same rows in same order
+        const serializeRows = (rows) => {
+          if (!rows || rows.length === 0) return '[]';
+          return JSON.stringify(rows.map(row => {
+            const keys = Object.keys(row).sort();
+            const norm = {};
+            keys.forEach(k => { norm[k] = String(row[k]).toLowerCase().trim(); });
+            return norm;
+          }));
+        };
+        const serializeCols = (rows) => {
+          if (!rows || rows.length === 0) return '';
+          return Object.keys(rows[0]).sort().join(',');
+        };
+
+        const userSer = serializeRows(userRes.rows);
+        const expSer = serializeRows(expectedRes.rows);
+        const userCols = serializeCols(userRes.rows);
+        const expCols = serializeCols(expectedRes.rows);
+
+        if (userSer === expSer && userCols === expCols) {
+          triggerSuccess();
+          return;
+        } else {
+          // Rows mismatch — give a helpful specific error
+          if (userCols !== expCols) {
+            setErrors(`Column mismatch: Expected columns [${expCols}] but got [${userCols}]. Check which columns you are selecting.`);
+          } else if (userRes.rows.length !== expectedRes.rows.length) {
+            setErrors(`Row count mismatch: Expected ${expectedRes.rows.length} row(s) but got ${userRes.rows.length}. Check your WHERE / LIMIT clause.`);
+          } else {
+            setErrors(`The result values don't match the expected answer. Double-check your column selection, filtering conditions, or ORDER BY clause.`);
+          }
+          return;
+        }
+      }
+    }
+
+    // 3. Non-SQL: contains-answer check with execution validation
     const userCodeLower = userCode.toLowerCase();
     const answerLower = cleanAnswer.toLowerCase();
-    
+
     if (userCodeLower.includes(answerLower)) {
-      // Validate execution holds up
-      if (isSql) {
-        const res = runSQLQuery(code);
-        if (res.success) {
-          setSqlResult(res.rows);
-          triggerSuccess();
-        } else {
-          setErrors(`Query compiled with errors: ${res.error}`);
-        }
-      } else if (isPython) {
+      if (isPython) {
         const res = runPythonCode(code);
         if (res.success) {
           setConsoleLogs(res.logs);

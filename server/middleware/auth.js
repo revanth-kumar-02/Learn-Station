@@ -31,6 +31,15 @@ const protect = async (req, res, next) => {
     }
 
     // Map fields to match custom Mongoose properties to preserve interface compatibility
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyXpEarned = profile.daily_xp_earned || 0;
+    if (profile.last_active_date) {
+      const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+      if (lastActiveStr !== todayStr) {
+        dailyXpEarned = 0;
+      }
+    }
+
     req.user = {
       _id: profile.id,
       id: profile.id,
@@ -42,8 +51,9 @@ const protect = async (req, res, next) => {
       longestStreak: profile.longest_streak,
       lastActiveDate: profile.last_active_date,
       dailyXpGoal: profile.daily_xp_goal,
-      dailyXpEarned: profile.daily_xp_earned,
+      dailyXpEarned,
     };
+
 
     next();
   } catch (error) {

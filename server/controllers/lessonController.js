@@ -1,6 +1,123 @@
 const { supabase } = require('../config/db');
 const { calculateLevel, checkAchievements } = require('../utils/xpCalculator');
 
+const checkIsLessonUnlocked = async (userId, lesson) => {
+  // 1. Fetch user progress
+  const { data: progress, error: progressError } = await supabase
+    .from('progress')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('track_id', lesson.track_id)
+    .maybeSingle();
+
+  if (progressError) {
+    console.error('Error fetching progress:', progressError);
+    return false;
+  }
+
+  const completedSet = new Set(progress ? progress.completed_lessons || [] : []);
+  const completedChallengesSet = new Set(progress ? progress.completed_challenges || [] : []);
+
+  // Already completed is unlocked
+  if (completedSet.has(lesson.id)) {
+    return true;
+  }
+
+  // 2. Fetch modules for sorting
+  const { data: modules, error: modulesError } = await supabase
+    .from('modules')
+    .select('*')
+    .eq('track_id', lesson.track_id)
+    .order('display_order', { ascending: true });
+
+  if (modulesError) {
+    console.error('Error fetching modules:', modulesError);
+    return false;
+  }
+
+  const sortedModules = [...(modules || [])].sort((a, b) => a.display_order - b.display_order);
+
+  // 3. Determine which modules are unlocked
+  const unlockedModules = new Set();
+  if (sortedModules.length > 0) {
+    unlockedModules.add(sortedModules[0].id); // First module is unlocked
+  }
+
+  for (let i = 1; i < sortedModules.length; i++) {
+    const prevModule = sortedModules[i - 1];
+    
+    // Fetch all lessons for prevModule to check if they are all completed
+    const { data: prevModuleLessons, error: pmLessonsError } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('module_id', prevModule.id);
+
+    if (pmLessonsError) {
+      console.error('Error fetching prev module lessons:', pmLessonsError);
+      return false;
+    }
+
+    const allCompleted = (prevModuleLessons || []).length > 0 
+      ? prevModuleLessons.every(l => completedSet.has(l.id))
+      : true; // if no lessons, treat as completed
+      
+    if (allCompleted) {
+      unlockedModules.add(sortedModules[i].id);
+    }
+  }
+
+  // If the lesson's module is locked, then this lesson is locked
+  if (!unlockedModules.has(lesson.module_id)) {
+    return false;
+  }
+
+  // 4. Fetch lessons in the current module to check intra-module order
+  const { data: moduleLessons, error: mLessonsError } = await supabase
+    .from('lessons')
+    .select('*')
+    .eq('module_id', lesson.module_id)
+    .order('display_order', { ascending: true });
+
+  if (mLessonsError) {
+    console.error('Error fetching module lessons:', mLessonsError);
+    return false;
+  }
+
+  const sortedModuleLessons = [...(moduleLessons || [])].sort((a, b) => a.display_order - b.display_order);
+  const lessonIdx = sortedModuleLessons.findIndex(l => l.id === lesson.id);
+
+  if (lessonIdx <= 0) {
+    // First lesson of an unlocked module is always unlocked
+    return true;
+  }
+
+  // Unlocked if previous lesson in the module is completed
+  const prevLesson = sortedModuleLessons[lessonIdx - 1];
+  if (!completedSet.has(prevLesson.id)) {
+    return false;
+  }
+
+  // If previous lesson has challenges, all of them must be completed
+  const { data: prevChallenges, error: challengesError } = await supabase
+    .from('challenges')
+    .select('id')
+    .eq('lesson_id', prevLesson.id);
+
+  if (challengesError) {
+    console.error('Error fetching challenges:', challengesError);
+    return false;
+  }
+
+  if (prevChallenges && prevChallenges.length > 0) {
+    const allChallengesCompleted = prevChallenges.every(c => completedChallengesSet.has(c.id));
+    if (!allChallengesCompleted) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 // @desc    Get lesson by slug
 // @route   GET /api/lessons/:slug
 const getLesson = async (req, res, next) => {
@@ -14,6 +131,12 @@ const getLesson = async (req, res, next) => {
 
     if (lessonError || !lesson) {
       return res.status(404).json({ message: 'Lesson not found' });
+    }
+
+    // Check if lesson is unlocked
+    const isUnlocked = await checkIsLessonUnlocked(req.user.id, lesson);
+    if (!isUnlocked) {
+      return res.status(403).json({ message: 'This lesson is locked. Complete the previous lesson to continue.' });
     }
 
     // 2. Fetch challenges for the lesson
@@ -38,6 +161,84 @@ const getLesson = async (req, res, next) => {
       ? (progress.completed_lessons || []).includes(lesson.id)
       : false;
 
+    // 4. Fetch Track Details (modules, lessons) for Sidebar and Progress Display
+    const { data: track, error: trackError } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('id', lesson.track_id)
+      .single();
+
+    if (trackError) throw trackError;
+
+    // Fetch modules for this track
+    const { data: modules, error: modulesError } = await supabase
+      .from('modules')
+      .select('*')
+      .eq('track_id', track.id)
+      .order('display_order');
+
+    if (modulesError) throw modulesError;
+
+    // Fetch lessons for this track
+    const { data: lessons, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('id, slug, title, display_order, estimated_minutes, xp_reward, module_id')
+      .eq('track_id', track.id)
+      .order('display_order');
+
+    if (lessonsError) throw lessonsError;
+
+    // Fetch challenge IDs map for the track's lessons
+    const lessonIds = (lessons || []).map(l => l.id);
+    const challengeIdsMap = {};
+    if (lessonIds.length > 0) {
+      const { data: challengesList, error: challengesListError } = await supabase
+        .from('challenges')
+        .select('id, lesson_id')
+        .in('lesson_id', lessonIds);
+
+      if (!challengesListError && challengesList) {
+        challengesList.forEach(c => {
+          if (!challengeIdsMap[c.lesson_id]) {
+            challengeIdsMap[c.lesson_id] = [];
+          }
+          challengeIdsMap[c.lesson_id].push(c.id);
+        });
+      }
+    }
+
+    // Map lessons inside modules
+    const trackModules = (modules || []).map((mod) => ({
+      id: mod.id,
+      name: mod.name,
+      order: mod.display_order,
+      lessons: (lessons || [])
+        .filter((l) => l.module_id === mod.id)
+        .map((l) => ({
+          _id: l.id,
+          id: l.id,
+          slug: l.slug,
+          title: l.title,
+          order: l.display_order,
+          estimatedMinutes: l.estimated_minutes,
+          xpReward: l.xp_reward,
+          moduleId: l.module_id,
+          challengeIds: challengeIdsMap[l.id] || [],
+        })),
+    }));
+
+    const formattedTrack = {
+      _id: track.id,
+      id: track.id,
+      slug: track.slug,
+      name: track.name,
+      description: track.description,
+      icon: track.icon,
+      color: track.color,
+      totalLessons: track.total_lessons,
+      modules: trackModules,
+    };
+
     // Format response to match mongoose object properties
     const formattedLesson = {
       _id: lesson.id,
@@ -49,6 +250,7 @@ const getLesson = async (req, res, next) => {
       order: lesson.display_order,
       estimatedMinutes: lesson.estimated_minutes,
       xpReward: lesson.xp_reward,
+      summary: lesson.summary || '',
       concept: {
         title: lesson.concept_title,
         content: lesson.concept_content,
@@ -89,6 +291,24 @@ const getLesson = async (req, res, next) => {
       lesson: formattedLesson,
       isCompleted,
       completedChallenges: progress ? progress.completed_challenges || [] : [],
+      track: formattedTrack,
+      progress: progress
+        ? {
+            completedLessons: progress.completed_lessons || [],
+            completedChallenges: progress.completed_challenges || [],
+            xpEarned: progress.xp_earned,
+            progressPercent: progress.progress_percent,
+            currentModule: progress.current_module,
+            currentLesson: progress.current_lesson,
+          }
+        : {
+            completedLessons: [],
+            completedChallenges: [],
+            xpEarned: 0,
+            progressPercent: 0,
+            currentModule: null,
+            currentLesson: null,
+          },
     });
   } catch (error) {
     next(error);
@@ -165,11 +385,24 @@ const completeLesson = async (req, res, next) => {
     // Check if already completed
     const completedLessons = progress.completed_lessons || [];
     if (completedLessons.includes(lesson.id)) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      let dailyXpEarned = profile.daily_xp_earned || 0;
+      if (profile.last_active_date) {
+        const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+        if (lastActiveStr !== todayStr) {
+          dailyXpEarned = 0;
+        }
+      }
+
+      console.log(`[Progression Engine Debug] Lesson "${lesson.title}" (${lesson.slug}) already completed. Returning current user progression stats: Streak=${profile.streak}, XP=${profile.xp}, dailyXpEarned=${dailyXpEarned}`);
+
       return res.json({
         message: 'Lesson already completed',
         xpEarned: 0,
         totalXp: profile.xp,
         level: profile.level,
+        streak: profile.streak || 0,
+        dailyXpEarned: dailyXpEarned,
         newAchievements: [],
       });
     }
@@ -180,22 +413,61 @@ const completeLesson = async (req, res, next) => {
     const totalLessons = track.total_lessons || 3;
     const progressPercent = Math.round((completedLessons.length / totalLessons) * 100);
 
-    // Find next lesson
+    // Fetch challenges for completed lesson to add to completed_challenges
+    const { data: lessonChallenges, error: chalError } = await supabase
+      .from('challenges')
+      .select('id')
+      .eq('lesson_id', lesson.id);
+
+    if (chalError) throw chalError;
+
+    const completedChallenges = progress.completed_challenges || [];
+    if (lessonChallenges && lessonChallenges.length > 0) {
+      lessonChallenges.forEach(c => {
+        if (!completedChallenges.includes(c.id)) {
+          completedChallenges.push(c.id);
+        }
+      });
+    }
+
+    // Find next lesson using sequential sort: module order first, then display_order
+    const { data: modules, error: modulesError } = await supabase
+      .from('modules')
+      .select('*')
+      .eq('track_id', lesson.track_id)
+      .order('display_order', { ascending: true });
+
+    if (modulesError) throw modulesError;
+
     const { data: allLessons, error: lessonsError } = await supabase
       .from('lessons')
-      .select('id, module_id')
-      .eq('track_id', lesson.track_id)
-      .order('display_order');
+      .select('*')
+      .eq('track_id', lesson.track_id);
 
     if (lessonsError) throw lessonsError;
 
+    const sortedModules = [...(modules || [])].sort((a, b) => a.display_order - b.display_order);
+    const moduleOrder = {};
+    sortedModules.forEach((m, idx) => {
+      moduleOrder[m.id] = idx;
+    });
+
+    const sortedLessons = [...(allLessons || [])].sort((a, b) => {
+      const aModIdx = moduleOrder[a.module_id] ?? 999;
+      const bModIdx = moduleOrder[b.module_id] ?? 999;
+      if (aModIdx !== bModIdx) {
+        return aModIdx - bModIdx;
+      }
+      return a.display_order - b.display_order;
+    });
+
     let nextLessonId = progress.current_lesson;
     let nextModuleId = progress.current_module;
-    const currentIndex = allLessons.findIndex((l) => l.id === lesson.id);
+    const currentIndex = sortedLessons.findIndex((l) => l.id === lesson.id);
 
-    if (currentIndex > -1 && currentIndex < allLessons.length - 1) {
-      nextLessonId = allLessons[currentIndex + 1].id;
-      nextModuleId = allLessons[currentIndex + 1].module_id;
+    if (currentIndex > -1 && currentIndex < sortedLessons.length - 1) {
+      nextLessonId = sortedLessons[currentIndex + 1].id;
+      nextModuleId = sortedLessons[currentIndex + 1].module_id;
     }
 
     // Update progress in DB
@@ -203,6 +475,7 @@ const completeLesson = async (req, res, next) => {
       .from('progress')
       .update({
         completed_lessons: completedLessons,
+        completed_challenges: completedChallenges,
         xp_earned: progressXp,
         progress_percent: progressPercent,
         current_lesson: nextLessonId,
@@ -236,6 +509,11 @@ const completeLesson = async (req, res, next) => {
         }
       }
     } else {
+      streak = 1;
+    }
+
+    // Fallback: If streak is 0 but they completed a lesson today, it must be at least 1.
+    if (streak === 0) {
       streak = 1;
     }
 
@@ -299,6 +577,8 @@ const completeLesson = async (req, res, next) => {
     if (newAchievements.length > 0) {
       updatedAchievements.push(...newAchievements.map((a) => a.id));
     }
+
+    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}" (${lesson.slug}). XP awarded: +${lesson.xp_reward} (Total: ${totalXp}). Streak: ${profile.streak} -> ${streak} (Longest: ${longestStreak}). Daily XP earned: ${dailyXpEarned}.`);
 
     // Update profiles table in DB
     const { error: updateProfileError } = await supabase
