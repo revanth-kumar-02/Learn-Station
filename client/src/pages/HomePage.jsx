@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePathSelection } from '../context/PathSelectionContext';
@@ -19,9 +19,14 @@ export default function HomePage() {
   const { user } = useAuth();
   const { openOverlay } = usePathSelection();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tracks, setTracks] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    console.log("🔍 [Route Debug] Route loaded:", location.pathname);
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,89 +49,94 @@ export default function HomePage() {
   // Find current track
   const currentTrack = tracks.find((t) => t._id === user?.currentTrack);
   const dailyPercent = user ? Math.min((user.dailyXpEarned / user.dailyXpGoal) * 100, 100) : 0;
+  const isTracksPath = location.pathname === '/tracks';
 
   return (
     <PageTransition>
       <div className="home-page">
         <div className="container">
           {/* Hero — Continue Learning */}
-          <section className="home-hero">
-            <motion.div
-              className="home-hero__card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="home-hero__left">
-                <span className="home-hero__label">Continue Learning</span>
-                <h1 className="home-hero__title">
-                  {currentTrack ? currentTrack.name : 'Start a track'}
-                </h1>
-                <p className="home-hero__subtitle">
-                  {currentTrack
-                    ? `${currentTrack.progress?.completedLessons || 0} of ${currentTrack.totalLessons} lessons completed`
-                    : 'Choose a learning track below to begin your journey'}
-                </p>
-                <div className="home-hero__meta">
-                  <span>🎯 +25 XP</span>
-                  <span>⏱ ~10 min</span>
+          {!isTracksPath && (
+            <section className="home-hero">
+              <motion.div
+                className="home-hero__card"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="home-hero__left">
+                  <span className="home-hero__label">Continue Learning</span>
+                  <h1 className="home-hero__title">
+                    {currentTrack ? currentTrack.name : 'Start a track'}
+                  </h1>
+                  <p className="home-hero__subtitle">
+                    {currentTrack
+                      ? `${currentTrack.progress?.completedLessons || 0} of ${currentTrack.totalLessons} lessons completed`
+                      : 'Choose a learning track below to begin your journey'}
+                  </p>
+                  <div className="home-hero__meta">
+                    <span>🎯 +25 XP</span>
+                    <span>⏱ ~10 min</span>
+                  </div>
+                  {currentTrack ? (
+                    <Link
+                      to={
+                        currentTrack.isAiGenerated
+                          ? `/ai-workspace/${currentTrack.slug}`
+                          : currentTrack.progress?.currentLessonSlug
+                          ? `/lesson/${currentTrack.progress.currentLessonSlug}`
+                          : `/track/${currentTrack.slug}`
+                      }
+                      className="btn btn--primary btn--lg home-hero__cta"
+                    >
+                      Continue Learning →
+                    </Link>
+                  ) : (
+                    <button onClick={openOverlay} className="btn btn--primary btn--lg home-hero__cta">
+                      Browse Tracks →
+                    </button>
+                  )}
                 </div>
-                {currentTrack ? (
-                  <Link
-                    to={
-                      currentTrack.isAiGenerated
-                        ? `/ai-workspace/${currentTrack.slug}`
-                        : currentTrack.progress?.currentLessonSlug
-                        ? `/lesson/${currentTrack.progress.currentLessonSlug}`
-                        : `/track/${currentTrack.slug}`
-                    }
-                    className="btn btn--primary btn--lg home-hero__cta"
-                  >
-                    Continue Learning →
-                  </Link>
-                ) : (
-                  <button onClick={openOverlay} className="btn btn--primary btn--lg home-hero__cta">
-                    Browse Tracks →
-                  </button>
-                )}
-              </div>
-              <div className="home-hero__right">
-                <ProgressRing
-                  percent={currentTrack?.progress?.progressPercent || 0}
-                  size={120}
-                  strokeWidth={8}
-                  color={currentTrack?.color || 'var(--accent-blue)'}
-                />
-              </div>
-            </motion.div>
-          </section>
+                <div className="home-hero__right">
+                  <ProgressRing
+                    percent={currentTrack?.progress?.progressPercent || 0}
+                    size={120}
+                    strokeWidth={8}
+                    color={currentTrack?.color || 'var(--accent-blue)'}
+                  />
+                </div>
+              </motion.div>
+            </section>
+          )}
 
           {/* Daily Goal */}
-          <motion.section
-            className="home-daily"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-          >
-            <div className="home-daily__header">
-              <div className="home-daily__left">
-                <span className="home-daily__fire">🔥</span>
-                <div>
-                  <span className="home-daily__streak">
-                    <strong>{user?.streak || 0}</strong> day streak
-                  </span>
-                  <span className="home-daily__goal-text">
-                    <AnimatedCounter value={user?.dailyXpEarned || 0} duration={1000} /> / {user?.dailyXpGoal || 50} XP today
-                  </span>
+          {!isTracksPath && (
+            <motion.section
+              className="home-daily"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <div className="home-daily__header">
+                <div className="home-daily__left">
+                  <span className="home-daily__fire">🔥</span>
+                  <div>
+                    <span className="home-daily__streak">
+                      <strong>{user?.streak || 0}</strong> day streak
+                    </span>
+                    <span className="home-daily__goal-text">
+                      <AnimatedCounter value={user?.dailyXpEarned || 0} duration={1000} /> / {user?.dailyXpGoal || 50} XP today
+                    </span>
+                  </div>
                 </div>
+                {dailyPercent >= 100 && <span className="home-daily__badge">🎉 Goal met!</span>}
               </div>
-              {dailyPercent >= 100 && <span className="home-daily__badge">🎉 Goal met!</span>}
-            </div>
-            <ProgressBar value={user?.dailyXpEarned || 0} max={user?.dailyXpGoal || 50} color="var(--accent-amber)" size="md" />
-          </motion.section>
+              <ProgressBar value={user?.dailyXpEarned || 0} max={user?.dailyXpGoal || 50} color="var(--accent-amber)" size="md" />
+            </motion.section>
+          )}
 
           {/* Recent Achievements */}
-          {!loading && achievements.length > 0 && (
+          {!isTracksPath && !loading && achievements.length > 0 && (
             <section className="home-achievements mt-6" style={{ marginBottom: 'var(--space-10)' }}>
               <div className="home-section-header">
                 <h2>Recent Achievements</h2>

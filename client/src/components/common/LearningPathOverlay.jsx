@@ -56,7 +56,14 @@ export default function LearningPathOverlay() {
   }, [isOpen, user]);
 
   const handleNavigate = (path) => {
+    if (path === '/tracks') {
+      console.log("🔍 [Overlay Debug] Explore Tracks clicked");
+    } else if (path === '/generate') {
+      console.log("🔍 [Overlay Debug] Generate With AI clicked");
+    }
+    console.log("🔍 [Overlay Debug] Overlay closing");
     closeOverlay();
+    console.log(`🔍 [Overlay Debug] Navigating to ${path}`);
     navigate(path);
   };
 
@@ -151,7 +158,7 @@ export default function LearningPathOverlay() {
                   <span className="example-tag">Data Science</span>
                   <span className="example-tag">Java</span>
                 </div>
-                <button className="card-action-btn btn-explore" onClick={(e) => { e.stopPropagation(); handleNavigate('/tracks'); }}>
+                <button type="button" className="card-action-btn btn-explore" onClick={(e) => { e.stopPropagation(); handleNavigate('/tracks'); }}>
                   Explore Tracks
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" />
@@ -182,7 +189,7 @@ export default function LearningPathOverlay() {
                   <span className="example-tag">Cyber Security</span>
                   <span className="example-tag">React Native</span>
                 </div>
-                <button className="card-action-btn btn-ai" onClick={(e) => { e.stopPropagation(); handleNavigate('/generate'); }}>
+                <button type="button" className="card-action-btn btn-ai" onClick={(e) => { e.stopPropagation(); handleNavigate('/generate'); }}>
                   Generate With AI
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" />
