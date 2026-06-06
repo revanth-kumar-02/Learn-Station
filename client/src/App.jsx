@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
+import TracksPage from './pages/TracksPage';
 import TrackDetailPage from './pages/TrackDetailPage';
 import LessonPage from './pages/LessonPage';
 import ProfilePage from './pages/ProfilePage';
@@ -68,7 +69,7 @@ function AnimatedRoutes() {
             path="/tracks"
             element={
               <ProtectedRoute>
-                <HomePage />
+                <TracksPage />
               </ProtectedRoute>
             }
           />
