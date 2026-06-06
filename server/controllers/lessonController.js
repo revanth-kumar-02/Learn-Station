@@ -511,9 +511,6 @@ const completeLesson = async (req, res, next) => {
     if (updateProgressError) throw updateProgressError;
 
     // 6. Update user XP & Streak
-    const totalXp = profile.xp + earnedXp;
-    const newLevel = calculateLevel(totalXp);
-
     // Streak logic
     const todayStr = new Date().toISOString().split('T')[0];
     let streak = profile.streak || 0;
@@ -536,7 +533,6 @@ const completeLesson = async (req, res, next) => {
       streak = 1;
     }
 
-    // Fallback: If streak is 0 but they completed a lesson today, it must be at least 1.
     if (streak === 0) {
       streak = 1;
     }
@@ -545,7 +541,7 @@ const completeLesson = async (req, res, next) => {
       longestStreak = streak;
     }
 
-    // Update daily activity
+    // Daily Activity XP update
     const { data: dailyActivity, error: activityError } = await supabase
       .from('activity')
       .select('*')
@@ -569,10 +565,42 @@ const completeLesson = async (req, res, next) => {
         .insert({ user_id: req.user.id, date: todayStr, xp_earned: earnedXp });
     }
 
+    // Daily Missions Logic
+    const { generateDailyMissions, updateDailyMissions } = require('../utils/xpCalculator');
+    let dailyMissionsObj = profile.daily_missions;
+    if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
+      dailyMissionsObj = generateDailyMissions(todayStr);
+    }
+
+    const checkMissionsCompletions = (before, after) => {
+      let count = 0;
+      for (let i = 0; i < after.length; i++) {
+        if (after[i].completed && !before[i].completed) {
+          count++;
+        }
+      }
+      return count;
+    };
+
+    const missionsBefore = JSON.parse(JSON.stringify(dailyMissionsObj.missions));
+
+    // Update daily mission tasks
+    dailyMissionsObj = updateDailyMissions(dailyMissionsObj, 'lesson', 1);
+    dailyMissionsObj = updateDailyMissions(dailyMissionsObj, 'xp', earnedXp);
+    dailyMissionsObj = updateDailyMissions(dailyMissionsObj, 'quiz', 1);
+    dailyMissionsObj = updateDailyMissions(dailyMissionsObj, 'challenge', 5); // 5 quiz questions
+
+    const missionsAfter = dailyMissionsObj.missions;
+    const newlyCompletedMissions = checkMissionsCompletions(missionsBefore, missionsAfter);
+    const dailyMissionBonusXp = newlyCompletedMissions * 100; // +100 XP per mission
+
+    const totalXp = profile.xp + earnedXp + dailyMissionBonusXp;
+    const newLevel = calculateLevel(totalXp);
+
     // 7. Check Achievements
     const { data: allProgress, error: allProgressError } = await supabase
       .from('progress')
-      .select('*')
+      .select('*, track:tracks(slug, is_ai_generated)')
       .eq('user_id', req.user.id);
 
     if (allProgressError) throw allProgressError;
@@ -583,6 +611,8 @@ const completeLesson = async (req, res, next) => {
     );
     const tracksStarted = allProgress?.length || 0;
     const completedTracks = (allProgress || []).filter((p) => p.progress_percent >= 100).length;
+    const completedTracksList = (allProgress || []).filter((p) => p.progress_percent >= 100).map(p => p.track?.slug || '');
+    const aiPathsGenerated = (allProgress || []).filter((p) => p.track?.is_ai_generated).length;
 
     const userData = {
       xp: totalXp,
@@ -593,7 +623,9 @@ const completeLesson = async (req, res, next) => {
       completedLessonsCount: totalCompleted,
       tracksStarted,
       completedTracks,
-      perfectLessons: quizScore === 5 ? 1 : 0,
+      completedTracksList,
+      aiPathsGenerated,
+      perfectQuizzes: (quizScore === 5 ? 1 : 0),
     };
 
     const newAchievements = checkAchievements(userData);
@@ -602,7 +634,7 @@ const completeLesson = async (req, res, next) => {
       updatedAchievements.push(...newAchievements.map((a) => a.id));
     }
 
-    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}" (${lesson.slug}). Base XP: +${lesson.xp_reward}, Bonus XP: +${bonusXp} (Total: ${totalXp}). Streak: ${profile.streak} -> ${streak}.`);
+    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}". Base XP: +${lesson.xp_reward}, Quiz Bonus: +${bonusXp}, Missions Bonus: +${dailyMissionBonusXp}. Total XP: ${totalXp}. Streak: ${streak}.`);
 
     // Update profiles table in DB
     const { error: updateProfileError } = await supabase
@@ -615,6 +647,7 @@ const completeLesson = async (req, res, next) => {
         last_active_date: new Date().toISOString(),
         daily_xp_earned: dailyXpEarned,
         achievements: updatedAchievements,
+        daily_missions: dailyMissionsObj,
       })
       .eq('id', req.user.id);
 
@@ -625,7 +658,7 @@ const completeLesson = async (req, res, next) => {
     res.json({
       passed: true,
       xpEarned: lesson.xp_reward,
-      bonusXp,
+      bonusXp: bonusXp + dailyMissionBonusXp,
       totalXp,
       level: newLevel,
       streak,

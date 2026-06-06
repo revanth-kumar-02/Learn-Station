@@ -1,5 +1,5 @@
 const { supabase } = require('../config/db');
-const { getAllAchievements, xpProgressInLevel } = require('../utils/xpCalculator');
+const { getAllAchievements, xpProgressInLevel, generateDailyMissions } = require('../utils/xpCalculator');
 
 // @desc    Get current user profile
 // @route   GET /api/users/me
@@ -16,6 +16,36 @@ const getProfile = async (req, res, next) => {
       return res.status(404).json({ message: 'Profile not found' });
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyMissionsObj = profile.daily_missions;
+
+    // Check if new day, reset daily missions and daily XP earned
+    let dailyXpEarned = profile.daily_xp_earned || 0;
+    let dbUpdatesNeeded = false;
+    const updates = {};
+
+    if (profile.last_active_date) {
+      const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+      if (lastActiveStr !== todayStr) {
+        dailyXpEarned = 0;
+        updates.daily_xp_earned = 0;
+        dbUpdatesNeeded = true;
+      }
+    }
+
+    if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
+      dailyMissionsObj = generateDailyMissions(todayStr);
+      updates.daily_missions = dailyMissionsObj;
+      dbUpdatesNeeded = true;
+    }
+
+    if (dbUpdatesNeeded) {
+      await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', req.user.id);
+    }
+
     // 2. Fetch progress with track details
     const { data: allProgress, error: progressError } = await supabase
       .from('progress')
@@ -30,15 +60,6 @@ const getProfile = async (req, res, next) => {
     );
 
     const levelInfo = xpProgressInLevel(profile.xp);
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    let dailyXpEarned = profile.daily_xp_earned || 0;
-    if (profile.last_active_date) {
-      const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
-      if (lastActiveStr !== todayStr) {
-        dailyXpEarned = 0;
-      }
-    }
 
     // Format progress items to match frontend expectations
     const formattedTrackProgress = (allProgress || []).map((p) => ({
@@ -65,6 +86,8 @@ const getProfile = async (req, res, next) => {
       user: {
         id: profile.id,
         name: profile.name,
+        username: profile.username || `user_${profile.id.substring(0, 8)}`,
+        bio: profile.bio || '',
         email: req.user.email,
         xp: profile.xp,
         level: profile.level,
@@ -73,6 +96,8 @@ const getProfile = async (req, res, next) => {
         achievements: profile.achievements || [],
         dailyXpGoal: profile.daily_xp_goal,
         dailyXpEarned,
+        dailyMissions: dailyMissionsObj,
+        learningTime: profile.learning_time || 0,
         createdAt: profile.created_at,
       },
       stats: {
@@ -97,10 +122,31 @@ const getProfile = async (req, res, next) => {
 // @route   PUT /api/users/me
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, dailyXpGoal } = req.body;
+    const { name, dailyXpGoal, username, bio } = req.body;
     const updates = {};
     if (name) updates.name = name;
     if (dailyXpGoal) updates.daily_xp_goal = dailyXpGoal;
+    if (bio !== undefined) updates.bio = bio;
+
+    if (username) {
+      // Validate unique username
+      const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (cleanUsername.length < 3) {
+        return res.status(400).json({ message: 'Username must be at least 3 alphanumeric characters' });
+      }
+      
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', cleanUsername)
+        .neq('id', req.user.id)
+        .maybeSingle();
+
+      if (existingUser) {
+        return res.status(400).json({ message: 'Username is already taken' });
+      }
+      updates.username = cleanUsername;
+    }
 
     const { data: updated, error: updateError } = await supabase
       .from('profiles')
@@ -115,8 +161,12 @@ const updateProfile = async (req, res, next) => {
       user: {
         id: updated.id,
         name: updated.name,
+        username: updated.username,
+        bio: updated.bio,
         email: req.user.email,
         dailyXpGoal: updated.daily_xp_goal,
+        xp: updated.xp,
+        level: updated.level,
       },
     });
   } catch (error) {
@@ -155,7 +205,7 @@ const getAchievements = async (req, res, next) => {
 const getActivity = async (req, res, next) => {
   try {
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 13);
+    startDate.setDate(startDate.getDate() - 29); // Return 30 days for rich analytics charts
     const startDateStr = startDate.toISOString().split('T')[0];
 
     const { data: rows, error: activityError } = await supabase
@@ -171,25 +221,196 @@ const getActivity = async (req, res, next) => {
       activityMap[r.date] = r.xp_earned;
     });
 
-    const last14Days = [];
+    const last30Days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 13; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
 
-      last14Days.push({
+      last30Days.push({
         date: dateStr,
         xp: activityMap[dateStr] || 0,
       });
     }
 
-    res.json({ activity: last14Days });
+    res.json({ activity: last30Days });
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = { getProfile, updateProfile, getAchievements, getActivity };
+// @desc    Get public profile details by username
+// @route   GET /api/users/public/:username
+const getPublicProfile = async (req, res, next) => {
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, name, username, bio, xp, level, streak, longest_streak, achievements, created_at')
+      .eq('username', req.params.username)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return res.status(404).json({ message: 'User profile not found.' });
+    }
+
+    // Fetch tracks completed
+    const { data: allProgress } = await supabase
+      .from('progress')
+      .select('*, track:tracks(id, name, slug, color, icon)')
+      .eq('user_id', profile.id);
+
+    const completedTracks = (allProgress || [])
+      .filter((p) => p.progress_percent >= 100)
+      .map((p) => p.track);
+
+    // Fetch capstone submissions
+    const { data: submissions } = await supabase
+      .from('capstone_submissions')
+      .select('*, track:tracks(name, slug)')
+      .eq('user_id', profile.id);
+
+    // Fetch certificates
+    const { data: certificates } = await supabase
+      .from('certificates')
+      .select('*, track:tracks(name, slug)')
+      .eq('user_id', profile.id);
+
+    res.json({
+      profile: {
+        id: profile.id,
+        name: profile.name,
+        username: profile.username,
+        bio: profile.bio || '',
+        xp: profile.xp,
+        level: profile.level,
+        streak: profile.streak,
+        longestStreak: profile.longest_streak,
+        achievements: profile.achievements || [],
+        createdAt: profile.created_at,
+      },
+      completedTracks,
+      projects: submissions || [],
+      certificates: certificates || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get rankings for Leaderboards
+// @route   GET /api/users/leaderboard
+const getLeaderboard = async (req, res, next) => {
+  try {
+    // 1. Global XP rankings
+    const { data: globalXP } = await supabase
+      .from('profiles')
+      .select('name, username, xp, level, streak')
+      .order('xp', { ascending: false })
+      .limit(10);
+
+    // 2. Streaks rankings
+    const { data: streaks } = await supabase
+      .from('profiles')
+      .select('name, username, longest_streak, level')
+      .order('longest_streak', { ascending: false })
+      .limit(10);
+
+    // 3. Weekly & Monthly XP (JS aggregation from activity records)
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+    const { data: weeklyActivity } = await supabase
+      .from('activity')
+      .select('user_id, xp_earned')
+      .gte('date', sevenDaysAgoStr);
+
+    const { data: monthlyActivity } = await supabase
+      .from('activity')
+      .select('user_id, xp_earned')
+      .gte('date', thirtyDaysAgoStr);
+
+    const { data: allUsers } = await supabase
+      .from('profiles')
+      .select('id, name, username, level');
+
+    const userMap = {};
+    (allUsers || []).forEach(u => {
+      userMap[u.id] = { name: u.name, username: u.username || `user_${u.id.substring(0, 8)}`, level: u.level };
+    });
+
+    // Aggregate Weekly
+    const weeklyMap = {};
+    (weeklyActivity || []).forEach(act => {
+      weeklyMap[act.user_id] = (weeklyMap[act.user_id] || 0) + act.xp_earned;
+    });
+    const weeklyXP = Object.entries(weeklyMap)
+      .map(([userId, xp]) => ({
+        ...userMap[userId],
+        xp,
+      }))
+      .filter(u => u.username)
+      .sort((a, b) => b.xp - a.xp)
+      .slice(0, 10);
+
+    // Aggregate Monthly
+    const monthlyMap = {};
+    (monthlyActivity || []).forEach(act => {
+      monthlyMap[act.user_id] = (monthlyMap[act.user_id] || 0) + act.xp_earned;
+    });
+    const monthlyXP = Object.entries(monthlyMap)
+      .map(([userId, xp]) => ({
+        ...userMap[userId],
+        xp,
+      }))
+      .filter(u => u.username)
+      .sort((a, b) => b.xp - a.xp)
+      .slice(0, 10);
+
+    // 4. Most Tracks Completed rankings
+    const { data: progress } = await supabase
+      .from('progress')
+      .select('user_id')
+      .gte('progress_percent', 100);
+
+    const completedMap = {};
+    (progress || []).forEach(p => {
+      completedMap[p.user_id] = (completedMap[p.user_id] || 0) + 1;
+    });
+    const tracksCompleted = Object.entries(completedMap)
+      .map(([userId, count]) => ({
+        ...userMap[userId],
+        completedTracksCount: count,
+      }))
+      .filter(u => u.username)
+      .sort((a, b) => b.completedTracksCount - a.completedTracksCount)
+      .slice(0, 10);
+
+    res.json({
+      globalXP: globalXP || [],
+      weeklyXP,
+      monthlyXP,
+      streaks: streaks || [],
+      tracksCompleted,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  getAchievements,
+  getActivity,
+  getPublicProfile,
+  getLeaderboard
+};

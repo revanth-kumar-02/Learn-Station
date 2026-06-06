@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { trackService } from '../services/trackService';
+import { progressService } from '../services/userService';
 import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
@@ -17,6 +18,10 @@ export default function TrackDetailPage() {
   const [openModule, setOpenModule] = useState(null);
   const [toast, setToast] = useState(null);
   const [celebrationModule, setCelebrationModule] = useState(null);
+  const [showCapstone, setShowCapstone] = useState(false);
+  const [capstoneForm, setCapstoneForm] = useState({ repoUrl: '', demoUrl: '' });
+  const [capstoneSubmitting, setCapstoneSubmitting] = useState(false);
+  const [capstoneResult, setCapstoneResult] = useState(null);
 
   const showToast = (message) => {
     setToast(message);
@@ -276,6 +281,184 @@ export default function TrackDetailPage() {
               );
             })}
           </div>
+
+          {/* Capstone Project Section */}
+          {track && (
+            <motion.section
+              className="capstone-section"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="capstone-section__header">
+                <div className="capstone-section__icon">🚀</div>
+                <div>
+                  <h2 className="capstone-section__title">Capstone Project</h2>
+                  <p className="capstone-section__subtitle">
+                    Build a complete project to demonstrate your mastery of <strong>{track.name}</strong>.
+                    Submit your work to earn a certificate and <strong>+500 XP</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="capstone-section__requirements">
+                <h3>Project Requirements</h3>
+                <ul>
+                  {track.slug === 'sql' && (
+                    <>
+                      <li>Design and implement a relational database for an Inventory Management System</li>
+                      <li>Create tables with proper relationships, constraints, and indexes</li>
+                      <li>Write 10+ complex SQL queries including JOINs, aggregations, and subqueries</li>
+                      <li>Implement stored procedures or views for common operations</li>
+                    </>
+                  )}
+                  {track.slug === 'python' && (
+                    <>
+                      <li>Build a Python CLI tool or web scraper with real-world data processing</li>
+                      <li>Implement OOP principles with at least 3 classes</li>
+                      <li>Handle errors gracefully and write unit tests</li>
+                      <li>Include a README with setup instructions</li>
+                    </>
+                  )}
+                  {track.slug === 'webdev' && (
+                    <>
+                      <li>Create a fully responsive multi-page website</li>
+                      <li>Implement JavaScript interactivity (forms, animations, API calls)</li>
+                      <li>Ensure accessibility and mobile-first design</li>
+                      <li>Deploy to a live hosting platform</li>
+                    </>
+                  )}
+                  {track.slug === 'ai' && (
+                    <>
+                      <li>Build an AI application using a real ML/AI API or library</li>
+                      <li>Demonstrate data preprocessing and model evaluation</li>
+                      <li>Present results with visualizations</li>
+                      <li>Document your methodology and findings</li>
+                    </>
+                  )}
+                  {track.slug === 'datascience' && (
+                    <>
+                      <li>Perform EDA on a real-world dataset (Kaggle, UCI, etc.)</li>
+                      <li>Apply statistical analysis and ML models</li>
+                      <li>Create data visualizations and a final report</li>
+                      <li>Achieve at least 80% model accuracy on test data</li>
+                    </>
+                  )}
+                  {track.slug === 'java' && (
+                    <>
+                      <li>Develop an OOP application (e.g., Library Management System)</li>
+                      <li>Use design patterns (Singleton, Factory, Observer)</li>
+                      <li>Write JUnit tests with 80%+ coverage</li>
+                      <li>Document with Javadoc comments</li>
+                    </>
+                  )}
+                  {!['sql','python','webdev','ai','datascience','java'].includes(track.slug) && (
+                    <>
+                      <li>Apply core concepts learned throughout the track</li>
+                      <li>Build a complete, functional project showcasing your skills</li>
+                      <li>Include documentation and a live demo or repository</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+
+              {capstoneResult ? (
+                <motion.div
+                  className="capstone-success"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  <div className="capstone-success__icon">🎉</div>
+                  <h3>Capstone Submitted!</h3>
+                  <p>You earned <strong>+500 XP</strong> and a certificate has been generated.</p>
+                  {capstoneResult.certificate && (
+                    <Link
+                      to={`/certificate/${capstoneResult.certificate.certificate_id}`}
+                      className="btn btn--primary"
+                    >
+                      View Certificate →
+                    </Link>
+                  )}
+                </motion.div>
+              ) : (
+                <>
+                  {!showCapstone ? (
+                    <button
+                      type="button"
+                      className="btn btn--primary capstone-section__cta"
+                      onClick={() => setShowCapstone(true)}
+                      id="capstone-submit-btn"
+                    >
+                      🚀 Submit Capstone Project
+                    </button>
+                  ) : (
+                    <motion.div
+                      className="capstone-form"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="capstone-form__field">
+                        <label htmlFor="capstone-repo">Repository URL <span className="required">*</span></label>
+                        <input
+                          id="capstone-repo"
+                          type="url"
+                          placeholder="https://github.com/username/project"
+                          value={capstoneForm.repoUrl}
+                          onChange={(e) => setCapstoneForm((f) => ({ ...f, repoUrl: e.target.value }))}
+                          className="capstone-form__input"
+                        />
+                      </div>
+                      <div className="capstone-form__field">
+                        <label htmlFor="capstone-demo">Live Demo URL (optional)</label>
+                        <input
+                          id="capstone-demo"
+                          type="url"
+                          placeholder="https://your-project.vercel.app"
+                          value={capstoneForm.demoUrl}
+                          onChange={(e) => setCapstoneForm((f) => ({ ...f, demoUrl: e.target.value }))}
+                          className="capstone-form__input"
+                        />
+                      </div>
+                      <div className="capstone-form__actions">
+                        <button
+                          type="button"
+                          className="btn btn--ghost"
+                          onClick={() => setShowCapstone(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--primary"
+                          disabled={capstoneSubmitting || !capstoneForm.repoUrl}
+                          onClick={async () => {
+                            if (!capstoneForm.repoUrl) return;
+                            try {
+                              setCapstoneSubmitting(true);
+                              const result = await progressService.submitCapstone(
+                                track._id || track.id,
+                                capstoneForm.repoUrl,
+                                capstoneForm.demoUrl
+                              );
+                              setCapstoneResult(result);
+                            } catch (err) {
+                              const msg = err.response?.data?.message || 'Submission failed. Please try again.';
+                              showToast(msg);
+                            } finally {
+                              setCapstoneSubmitting(false);
+                            }
+                          }}
+                        >
+                          {capstoneSubmitting ? 'Submitting...' : 'Submit Project →'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </>
+              )}
+            </motion.section>
+          )}
         </div>
       </div>
     </PageTransition>

@@ -20,6 +20,16 @@ export const userService = {
     const { data } = await api.get('/users/me/activity');
     return data;
   },
+
+  getLeaderboard: async () => {
+    const { data } = await api.get('/users/leaderboard');
+    return data;
+  },
+
+  getPublicProfile: async (username) => {
+    const { data } = await api.get(`/users/public/${username}`);
+    return data;
+  },
 };
 
 export const lessonService = {
@@ -37,6 +47,40 @@ export const lessonService = {
 export const challengeService = {
   submit: async (challengeId, answer) => {
     const { data } = await api.post(`/challenges/${challengeId}/submit`, { answer });
+    return data;
+  },
+};
+
+export const progressService = {
+  getAll: async () => {
+    const { data } = await api.get('/progress');
+    return data;
+  },
+
+  getByTrack: async (trackSlug) => {
+    const { data } = await api.get(`/progress/${trackSlug}`);
+    return data;
+  },
+
+  submitCapstone: async (trackId, repoUrl, demoUrl) => {
+    const { data } = await api.post('/progress/capstone/submit', { trackId, repoUrl, demoUrl });
+    return data;
+  },
+
+  getCertificate: async (certId) => {
+    const { data } = await api.get(`/progress/certificate/${certId}`);
+    return data;
+  },
+};
+
+export const aiService = {
+  generate: async (payload) => {
+    const { data } = await api.post('/ai/generate', payload);
+    return data;
+  },
+
+  mentor: async (message, lessonSlug, trackSlug, mode = 'default') => {
+    const { data } = await api.post('/ai/mentor', { message, lessonSlug, trackSlug, mode });
     return data;
   },
 };

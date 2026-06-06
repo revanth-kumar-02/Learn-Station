@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { lessonService } from '../services/userService';
+import { lessonService, aiService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
@@ -79,6 +79,13 @@ export default function LessonPage() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   
   const popoverRefs = useRef({});
+
+  // AI Mentor state
+  const [mentorOpen, setMentorOpen] = useState(false);
+  const [mentorMessages, setMentorMessages] = useState([]);
+  const [mentorInput, setMentorInput] = useState('');
+  const [mentorLoading, setMentorLoading] = useState(false);
+  const mentorEndRef = useRef(null);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -340,6 +347,23 @@ export default function LessonPage() {
     enter: (dir) => ({ x: dir > 0 ? 150 : -150, opacity: 0 }),
     center: { x: 0, opacity: 1 },
     exit: (dir) => ({ x: dir > 0 ? -150 : 150, opacity: 0 }),
+  };
+
+  const sendMentorMessage = async (text, mode = 'default') => {
+    const msg = text || mentorInput.trim();
+    if (!msg || mentorLoading) return;
+    setMentorInput('');
+    setMentorMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    setMentorLoading(true);
+    try {
+      const result = await aiService.mentor(msg, lesson?.slug, track?.slug, mode);
+      setMentorMessages((prev) => [...prev, { role: 'assistant', text: result.response }]);
+    } catch (err) {
+      setMentorMessages((prev) => [...prev, { role: 'assistant', text: '⚠️ Could not reach the AI Mentor. Make sure the backend server is running.' }]);
+    } finally {
+      setMentorLoading(false);
+      setTimeout(() => mentorEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
   };
 
   return (
@@ -927,6 +951,108 @@ export default function LessonPage() {
             </div>
           </div>
         </div>
+
+        {/* AI Mentor Floating Button */}
+        <button
+          className={`mentor-fab ${mentorOpen ? 'mentor-fab--active' : ''}`}
+          onClick={() => setMentorOpen(!mentorOpen)}
+          id="ai-mentor-fab"
+          title="AI Mentor"
+        >
+          {mentorOpen ? '✕' : '🤖'}
+        </button>
+
+        {/* AI Mentor Drawer */}
+        <AnimatePresence>
+          {mentorOpen && (
+            <motion.aside
+              className="mentor-drawer"
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            >
+              <div className="mentor-drawer__header">
+                <div className="mentor-drawer__title">
+                  <span>🤖</span>
+                  <div>
+                    <h3>AI Mentor</h3>
+                    <p>{lesson?.title}</p>
+                  </div>
+                </div>
+                <button className="mentor-drawer__close" onClick={() => setMentorOpen(false)}>✕</button>
+              </div>
+
+              {/* Quick Mode Shortcuts */}
+              <div className="mentor-shortcuts">
+                <button type="button" className="mentor-shortcut" onClick={() => sendMentorMessage(`Explain "${lesson?.title}" differently using a fresh analogy`, 'explain')}>
+                  💡 Explain Differently
+                </button>
+                <button type="button" className="mentor-shortcut" onClick={() => sendMentorMessage(`Give me a real-world example of "${lesson?.title}"`, 'example')}>
+                  🌍 Real-World Example
+                </button>
+                <button type="button" className="mentor-shortcut" onClick={() => sendMentorMessage(`Create a practice question for me about "${lesson?.title}"`, 'practice')}>
+                  ✍️ Practice Question
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div className="mentor-messages">
+                {mentorMessages.length === 0 && (
+                  <div className="mentor-messages__empty">
+                    <span>🤖</span>
+                    <p>Hi! I'm your AI Mentor for this lesson.</p>
+                    <p>Ask me anything about <strong>{lesson?.title}</strong> or use the shortcuts above.</p>
+                  </div>
+                )}
+                {mentorMessages.map((msg, i) => (
+                  <div key={i} className={`mentor-message mentor-message--${msg.role}`}>
+                    {msg.role === 'assistant' && <span className="mentor-message__avatar">🤖</span>}
+                    <div
+                      className="mentor-message__text"
+                      dangerouslySetInnerHTML={{ __html: parseMarkdown ? parseMarkdown(msg.text) : msg.text }}
+                    />
+                  </div>
+                ))}
+                {mentorLoading && (
+                  <div className="mentor-message mentor-message--assistant">
+                    <span className="mentor-message__avatar">🤖</span>
+                    <div className="mentor-message__typing">
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                )}
+                <div ref={mentorEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="mentor-input-area">
+                <textarea
+                  className="mentor-input"
+                  placeholder="Ask the AI Mentor anything about this lesson..."
+                  value={mentorInput}
+                  onChange={(e) => setMentorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMentorMessage();
+                    }
+                  }}
+                  rows={3}
+                />
+                <button
+                  type="button"
+                  className="mentor-send-btn"
+                  onClick={() => sendMentorMessage()}
+                  disabled={!mentorInput.trim() || mentorLoading}
+                  id="mentor-send-btn"
+                >
+                  {mentorLoading ? '⏳' : '↑'}
+                </button>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
     </PageTransition>
   );

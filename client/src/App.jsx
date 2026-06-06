@@ -12,6 +12,10 @@ import ProfilePage from './pages/ProfilePage';
 import LandingPage from './pages/LandingPage';
 import GenerateTrackPage from './pages/GenerateTrackPage';
 import AiWorkspacePage from './pages/AiWorkspacePage';
+import LeaderboardPage from './pages/LeaderboardPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import PublicPortfolioPage from './pages/PublicPortfolioPage';
+import CertificatePage from './pages/CertificatePage';
 import Loader from './components/common/Loader';
 import { AnimatePresence } from 'framer-motion';
 
@@ -129,6 +133,25 @@ function AnimatedRoutes() {
               </PublicRoute>
             }
           />
+          <Route
+            path="/leaderboard"
+            element={
+              <ProtectedRoute>
+                <LeaderboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Public routes — no auth required */}
+          <Route path="/u/:username" element={<PublicPortfolioPage />} />
+          <Route path="/certificate/:certId" element={<CertificatePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

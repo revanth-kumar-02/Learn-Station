@@ -1940,4 +1940,95 @@ Enforce:
   }
 };
 
-module.exports = { generatePath };
+// @desc    AI Mentor — contextual lesson help
+// @route   POST /api/ai/mentor
+const mentorChat = async (req, res, next) => {
+  try {
+    const { message, lessonSlug, trackSlug, mode } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ message: 'Message is required.' });
+    }
+
+    // Fetch lesson context if provided
+    let lessonContext = '';
+    if (lessonSlug) {
+      const { data: lesson } = await supabase
+        .from('lessons')
+        .select('title, content, concepts, objective')
+        .eq('slug', lessonSlug)
+        .maybeSingle();
+
+      if (lesson) {
+        lessonContext = `
+CURRENT LESSON: "${lesson.title}"
+OBJECTIVE: ${lesson.objective || 'N/A'}
+CONCEPTS: ${Array.isArray(lesson.concepts) ? lesson.concepts.join(', ') : lesson.concepts || 'N/A'}
+LESSON CONTENT SUMMARY: ${(lesson.content || '').substring(0, 800)}
+`.trim();
+      }
+    }
+
+    let trackContext = '';
+    if (trackSlug) {
+      const { data: track } = await supabase
+        .from('tracks')
+        .select('name, description')
+        .eq('slug', trackSlug)
+        .maybeSingle();
+
+      if (track) {
+        trackContext = `LEARNING TRACK: "${track.name}" — ${track.description || ''}`;
+      }
+    }
+
+    // Build system instructions based on mode
+    const modeInstructions = {
+      'explain': 'Explain the concept differently using a fresh analogy or simpler language. Focus on clarity.',
+      'example': 'Provide a concrete, real-world example or use case that demonstrates this concept practically.',
+      'practice': 'Generate a relevant practice question or mini-challenge to test understanding of this concept.',
+      'default': 'Answer the student\'s question helpfully, concisely, and with code examples where relevant.',
+    };
+
+    const systemPrompt = `You are an expert AI coding mentor for the Learn Station learning platform. You help students understand technical concepts clearly and engagingly.
+
+${trackContext}
+${lessonContext}
+
+Your role:
+- Be concise and focused. Keep answers under 300 words unless a longer answer is clearly needed.
+- ${modeInstructions[mode] || modeInstructions['default']}
+- Use markdown formatting for code blocks.
+- Be encouraging and supportive.
+- If the question is outside the lesson topic, gently redirect to the lesson content.
+
+Do NOT:
+- Give long philosophical answers
+- Repeat the same content already in the lesson
+- Use jargon without explanation`;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ message: 'AI service not configured.' });
+    }
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: systemPrompt,
+    });
+
+    const result = await model.generateContent(message);
+    const text = result.response.text();
+
+    console.log(`🤖 [AI Mentor] Responded to: "${message.substring(0, 60)}..." (${text.length} chars)`);
+
+    res.json({ response: text });
+  } catch (error) {
+    console.error('❌ [AI Mentor Error]:', error);
+    next(error);
+  }
+};
+
+module.exports = { generatePath, mentorChat };
