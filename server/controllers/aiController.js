@@ -11,6 +11,61 @@ const slugify = (text) => {
     .replace(/\-\-+/g, '-'); // Replace multiple - with single -
 };
 
+// Helper to pad challenges to exactly 5 for getMockBlueprint
+const padChallenges = (challenges, lessonTitle, trackName) => {
+  const padded = [...challenges];
+  
+  if (padded.length < 3) {
+    padded.push({
+      type: 'multiple-choice',
+      question: `In an enterprise production system, how is the concept of "${lessonTitle}" typically applied?`,
+      options: [
+        'To optimize resource allocation and improve system resilience under high client load.',
+        'To bypass local validation schemas.',
+        'To force garbage collection sweeps on the heap.',
+        'To delete unused data records automatically.'
+      ],
+      correct_index: 0,
+      explanation: `Applying "${lessonTitle}" in production environments ensures components remain highly available, scalable, and modular.`
+    });
+  }
+
+  if (padded.length < 4) {
+    padded.push({
+      type: 'fill-blank',
+      question: `Complete the syntax to check state parameters for "${lessonTitle}":`,
+      template: `if (state === "___") { runCheck(); }`,
+      answer: 'active',
+      explanation: 'Checking active status prevents null pointer errors.'
+    });
+  }
+
+  if (padded.length < 5) {
+    padded.push({
+      type: 'multiple-choice',
+      question: `Which of the following is a primary performance trade-off or edge case when using "${lessonTitle}"?`,
+      options: [
+        'Increased memory footprint vs execution latency reduction.',
+        'Slower network upload speeds only.',
+        'Data security rules are completely disabled.',
+        'The application must run in JIT compiler mode only.'
+      ],
+      correct_index: 0,
+      explanation: 'Managing resource caching and memory allocation requires balancing RAM utilization against lookup speed.'
+    });
+  }
+
+  return padded.map(c => ({
+    type: c.type || 'multiple-choice',
+    question: c.question,
+    options: c.options || [],
+    correct_index: c.correct_index !== undefined ? c.correct_index : (c.correctIndex !== undefined ? c.correctIndex : 0),
+    template: c.template || null,
+    answer: c.answer || null,
+    explanation: c.explanation || 'Review the core concept to understand this behavior.'
+  }));
+};
+
 // Seeding/Mock blueprint content when Gemini key is not present or fails
 const getMockBlueprint = (skill, level, goal) => {
   const normalizedSkill = skill.trim();
@@ -1300,7 +1355,7 @@ const getMockBlueprint = (skill, level, goal) => {
   }
 
   // Return the compiled blueprint object
-  return {
+  const blueprint = {
     track: {
       name: trackName,
       description: trackDesc,
@@ -1419,6 +1474,14 @@ const getMockBlueprint = (skill, level, goal) => {
       }
     ]
   };
+
+  // Pad challenges to exactly 5 per lesson
+  blueprint.lessons = blueprint.lessons.map(lesson => ({
+    ...lesson,
+    challenges: padChallenges(lesson.challenges, lesson.title, blueprint.track.name)
+  }));
+
+  return blueprint;
 };
 
 // @desc    Generate AI learning path
@@ -1518,17 +1581,38 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
       "challenges": [
         {
           "type": "multiple-choice",
-          "question": "Quiz question text",
+          "question": "Quiz question text (Recall Level: terminology or basic syntax definition)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Concept Understanding Level: how or why a concept works)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Real-World Application Level: realistic industry scenario or practical usage)",
           "options": ["Option A", "Option B", "Option C", "Option D"],
           "correct_index": 0,
           "explanation": "Why this answer is correct"
         },
         {
           "type": "fill-blank",
-          "question": "Quiz fill-in-the-blank question",
+          "question": "Quiz question text (Problem Solving Level: code analysis, completing a statement, or debugging)",
           "template": "Code template with ___",
           "answer": "Answer value",
-          "explanation": "Why this fill-in value is correct"
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Advanced Understanding Level: performance tradeoffs, edge cases, or design constraints)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
         }
       ]
     }
@@ -1538,7 +1622,7 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
 Enforce:
 1. Generate EXACTLY 2 modules.
 2. Generate EXACTLY 2 lessons per module (Total 4 lessons).
-3. Generate EXACTLY 2 challenges per lesson.
+3. Generate EXACTLY 5 challenges per lesson covering all 5 cognitive levels listed above (Recall, Concept, Application, Problem Solving, Advanced).
 4. Ensure the capstone project is comprehensive.
 5. Content should be highly professional and detailed.
 `;
@@ -1661,17 +1745,38 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
       "challenges": [
         {
           "type": "multiple-choice",
-          "question": "Quiz question text",
+          "question": "Quiz question text (Recall Level: terminology or basic syntax definition)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Concept Understanding Level: how or why a concept works)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Real-World Application Level: realistic industry scenario or practical usage)",
           "options": ["Option A", "Option B", "Option C", "Option D"],
           "correct_index": 0,
           "explanation": "Why this answer is correct"
         },
         {
           "type": "fill-blank",
-          "question": "Quiz fill-in-the-blank question",
+          "question": "Quiz question text (Problem Solving Level: code analysis, completing a statement, or debugging)",
           "template": "Code template with ___",
           "answer": "Answer value",
-          "explanation": "Why this fill-in value is correct"
+          "explanation": "Why this answer is correct"
+        },
+        {
+          "type": "multiple-choice",
+          "question": "Quiz question text (Advanced Understanding Level: performance tradeoffs, edge cases, or design constraints)",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correct_index": 0,
+          "explanation": "Why this answer is correct"
         }
       ]
     }
@@ -1681,7 +1786,7 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
 Enforce:
 1. Generate EXACTLY 2 modules.
 2. Generate EXACTLY 2 lessons per module (Total 4 lessons).
-3. Generate EXACTLY 2 challenges per lesson.
+3. Generate EXACTLY 5 challenges per lesson covering all 5 cognitive levels listed above (Recall, Concept, Application, Problem Solving, Advanced).
 4. Ensure the capstone project is comprehensive.
 5. Content should be highly professional and detailed.
 `;

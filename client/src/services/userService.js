@@ -28,8 +28,8 @@ export const lessonService = {
     return data;
   },
 
-  complete: async (slug, perfectScore = false) => {
-    const { data } = await api.post(`/lessons/${slug}/complete`, { perfectScore });
+  complete: async (slug, quizScore = 0, quizPassed = false) => {
+    const { data } = await api.post(`/lessons/${slug}/complete`, { quizScore, quizPassed });
     return data;
   },
 };

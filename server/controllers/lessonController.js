@@ -382,6 +382,21 @@ const completeLesson = async (req, res, next) => {
       progress = newProgress;
     }
 
+    // Check if quiz is passed (hard gate check)
+    const { quizScore, quizPassed } = req.body;
+    if (quizPassed !== undefined && !quizPassed) {
+      return res.json({
+        passed: false,
+        message: 'Quiz failed. Score must be at least 4/5.',
+        xpEarned: 0,
+        totalXp: profile.xp,
+        level: profile.level,
+        streak: profile.streak || 0,
+        dailyXpEarned: profile.daily_xp_earned || 0,
+        newAchievements: []
+      });
+    }
+
     // Check if already completed
     const completedLessons = progress.completed_lessons || [];
     if (completedLessons.includes(lesson.id)) {
@@ -397,8 +412,10 @@ const completeLesson = async (req, res, next) => {
       console.log(`[Progression Engine Debug] Lesson "${lesson.title}" (${lesson.slug}) already completed. Returning current user progression stats: Streak=${profile.streak}, XP=${profile.xp}, dailyXpEarned=${dailyXpEarned}`);
 
       return res.json({
+        passed: true,
         message: 'Lesson already completed',
         xpEarned: 0,
+        bonusXp: 0,
         totalXp: profile.xp,
         level: profile.level,
         streak: profile.streak || 0,
@@ -409,7 +426,14 @@ const completeLesson = async (req, res, next) => {
 
     // 5. Add completion & calculate XP progress
     completedLessons.push(lesson.id);
-    const progressXp = progress.xp_earned + lesson.xp_reward;
+
+    let bonusXp = 0;
+    if (quizScore === 5) {
+      bonusXp = 15;
+    }
+    const earnedXp = lesson.xp_reward + bonusXp;
+
+    const progressXp = progress.xp_earned + earnedXp;
     const totalLessons = track.total_lessons || 3;
     const progressPercent = Math.round((completedLessons.length / totalLessons) * 100);
 
@@ -487,7 +511,7 @@ const completeLesson = async (req, res, next) => {
     if (updateProgressError) throw updateProgressError;
 
     // 6. Update user XP & Streak
-    const totalXp = profile.xp + lesson.xp_reward;
+    const totalXp = profile.xp + earnedXp;
     const newLevel = calculateLevel(totalXp);
 
     // Streak logic
@@ -531,10 +555,10 @@ const completeLesson = async (req, res, next) => {
 
     if (activityError) throw activityError;
 
-    let dailyXpEarned = lesson.xp_reward;
+    let dailyXpEarned = earnedXp;
 
     if (dailyActivity) {
-      dailyXpEarned = dailyActivity.xp_earned + lesson.xp_reward;
+      dailyXpEarned = dailyActivity.xp_earned + earnedXp;
       await supabase
         .from('activity')
         .update({ xp_earned: dailyXpEarned })
@@ -542,7 +566,7 @@ const completeLesson = async (req, res, next) => {
     } else {
       await supabase
         .from('activity')
-        .insert({ user_id: req.user.id, date: todayStr, xp_earned: lesson.xp_reward });
+        .insert({ user_id: req.user.id, date: todayStr, xp_earned: earnedXp });
     }
 
     // 7. Check Achievements
@@ -569,7 +593,7 @@ const completeLesson = async (req, res, next) => {
       completedLessonsCount: totalCompleted,
       tracksStarted,
       completedTracks,
-      perfectLessons: req.body.perfectScore ? 1 : 0,
+      perfectLessons: quizScore === 5 ? 1 : 0,
     };
 
     const newAchievements = checkAchievements(userData);
@@ -578,7 +602,7 @@ const completeLesson = async (req, res, next) => {
       updatedAchievements.push(...newAchievements.map((a) => a.id));
     }
 
-    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}" (${lesson.slug}). XP awarded: +${lesson.xp_reward} (Total: ${totalXp}). Streak: ${profile.streak} -> ${streak} (Longest: ${longestStreak}). Daily XP earned: ${dailyXpEarned}.`);
+    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}" (${lesson.slug}). Base XP: +${lesson.xp_reward}, Bonus XP: +${bonusXp} (Total: ${totalXp}). Streak: ${profile.streak} -> ${streak}.`);
 
     // Update profiles table in DB
     const { error: updateProfileError } = await supabase
@@ -599,7 +623,9 @@ const completeLesson = async (req, res, next) => {
     const dailyGoalMet = dailyXpEarned >= profile.daily_xp_goal;
 
     res.json({
+      passed: true,
       xpEarned: lesson.xp_reward,
+      bonusXp,
       totalXp,
       level: newLevel,
       streak,

@@ -1277,6 +1277,14 @@ const lessonsSpecs = {
 const compileCurriculum = () => {
   const tracks = [];
   
+  let quizData = {};
+  try {
+    quizData = require('./quizData');
+  } catch (e) {
+    // Falls back silently or with warning
+  }
+  
+  
   for (const trackMeta of tracksMeta) {
     const trackSlug = trackMeta.slug;
     const rawLessons = lessonsSpecs[trackSlug] || [];
@@ -1345,7 +1353,7 @@ const compileCurriculum = () => {
         practiceTemplate: lesson.practiceTemplate,
         practiceAnswer: lesson.practiceAnswer,
         summary: `You completed learning ${lesson.title}. Explore more lessons in this module to build complete technical mastery.`,
-        challenges: lesson.challenges
+        challenges: quizData[lesson.slug] || lesson.challenges
       });
     });
     

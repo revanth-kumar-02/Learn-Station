@@ -74,6 +74,9 @@ export default function LessonPage() {
   const [practiceDone, setPracticeDone] = useState(false);
   const [allCorrect, setAllCorrect] = useState(true);
   const [reward, setReward] = useState(null);
+  const [quizScore, setQuizScore] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState([]);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
   
   const popoverRefs = useRef({});
 
@@ -107,6 +110,9 @@ export default function LessonPage() {
         setPracticeDone(false);
         setAllCorrect(true);
         setReward(null);
+        setQuizScore(0);
+        setQuizAnswers([]);
+        setQuizSubmitted(false);
         
         // If already completed, unlock all tabs
         if (data.isCompleted) {
@@ -255,7 +261,18 @@ export default function LessonPage() {
       isCorrect = userAnswer.trim().toLowerCase() === challenge.answer.toLowerCase();
     }
 
-    if (!isCorrect) setAllCorrect(false);
+    const newScore = isCorrect ? quizScore + 1 : quizScore;
+    setQuizScore(newScore);
+
+    const updatedAnswers = [...quizAnswers];
+    updatedAnswers[challengeIndex] = {
+      isCorrect,
+      question: challenge.question,
+      userAnswer: challenge.type === 'multiple-choice' ? challenge.options[selectedOption] : userAnswer,
+      correctAnswer: challenge.type === 'multiple-choice' ? challenge.options[challenge.correctIndex] : challenge.answer,
+      explanation: challenge.explanation
+    };
+    setQuizAnswers(updatedAnswers);
 
     setFeedback({
       correct: isCorrect,
@@ -269,15 +286,18 @@ export default function LessonPage() {
         setSelectedOption(null);
         setUserAnswer('');
       } else {
-        // Complete the lesson
-        completeLesson();
+        setQuizSubmitted(true);
+        const passed = newScore >= 4;
+        if (passed) {
+          completeLesson(newScore, true);
+        }
       }
     }, 2500);
   };
 
-  const completeLesson = async () => {
+  const completeLesson = async (score, passed) => {
     try {
-      const result = await lessonService.complete(slug, allCorrect);
+      const result = await lessonService.complete(slug, score, passed);
       setReward(result);
       updateUser({
         xp: result.totalXp,
@@ -285,9 +305,7 @@ export default function LessonPage() {
         streak: result.streak,
         dailyXpEarned: result.dailyXpEarned,
       });
-      // Collect the IDs of all challenges in the completed lesson
       const completedLessonChallengeIds = (lesson.challenges || []).map(c => c.id);
-      // Refresh local progress state – including challenges so next lesson unlocks immediately
       setProgress(prev => ({
         ...prev,
         completedLessons: [...(prev.completedLessons || []), lesson.id],
@@ -300,6 +318,16 @@ export default function LessonPage() {
       setMaxStepReached(4);
       setCurrentStep(4);
     }
+  };
+
+  const handleRetryQuiz = () => {
+    setChallengeIndex(0);
+    setUserAnswer('');
+    setSelectedOption(null);
+    setFeedback(null);
+    setQuizScore(0);
+    setQuizAnswers([]);
+    setQuizSubmitted(false);
   };
 
   const handleLessonClick = (clickedLesson, isUnlocked) => {
@@ -621,94 +649,174 @@ export default function LessonPage() {
                     exit="exit"
                     transition={{ duration: 0.25 }}
                   >
-                    {lesson.challenges?.[challengeIndex] && (
-                      <div className="lesson-card">
-                        <div className="lesson-challenge">
-                          <div className="lesson-challenge__counter">
-                            Challenge {challengeIndex + 1} of {lesson.challenges.length}
-                          </div>
-                          <h3 style={{ fontSize: 'var(--text-lg)', margin: 'var(--space-2) 0 var(--space-6)' }}>
-                            {lesson.challenges[challengeIndex].question}
-                          </h3>
+                    {quizSubmitted ? (
+                      <div className={`quiz-results ${quizScore >= 4 ? 'quiz-results--pass' : 'quiz-results--fail'}`}>
+                        <div style={{ fontSize: '64px', marginBottom: 'var(--space-2)' }}>
+                          {quizScore >= 4 ? '✅' : '❌'}
+                        </div>
+                        <h2>{quizScore >= 4 ? 'Quiz Passed!' : 'Quiz Failed'}</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                          {quizScore >= 4 
+                            ? 'Excellent work! You have passed the lesson assessment.' 
+                            : 'You need at least 4/5 correct answers to pass. Review the explanations below and try again.'}
+                        </p>
 
-                          {lesson.challenges[challengeIndex].type === 'multiple-choice' && (
-                            <div className="lesson-challenge__options">
-                              {lesson.challenges[challengeIndex].options?.map((opt, i) => (
-                                <button
-                                  key={i}
-                                  className={`challenge-option ${selectedOption === i ? 'challenge-option--selected' : ''} ${
-                                    feedback
-                                      ? i === lesson.challenges[challengeIndex].correctIndex
-                                        ? 'challenge-option--correct'
-                                        : selectedOption === i
-                                        ? 'challenge-option--wrong'
-                                        : ''
-                                      : ''
-                                  }`}
-                                  onClick={() => !feedback && setSelectedOption(i)}
-                                  disabled={!!feedback}
-                                  style={selectedOption === i ? { borderColor: track.color } : {}}
-                                >
-                                  <span className="challenge-option__letter">{String.fromCharCode(65 + i)}</span>
-                                  {opt}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                        <div className="quiz-score-display">
+                          <span className="quiz-score-number">{quizScore}</span>
+                          <span className="quiz-score-total">/ {lesson.challenges.length}</span>
+                        </div>
 
-                          {lesson.challenges[challengeIndex].type === 'fill-blank' && (
-                            <div className="lesson-challenge__fill">
-                              <div className="lesson-challenge__template" style={{ background: 'var(--bg-primary)' }}>
-                                <code>
-                                  {lesson.challenges[challengeIndex].template?.split('___').map((part, i, arr) => (
-                                    <span key={i}>
-                                      {part}
-                                      {i < arr.length - 1 && (
-                                        <input
-                                          className={`challenge-fill-input ${feedback ? (feedback.correct ? 'challenge-fill-input--correct' : 'challenge-fill-input--wrong') : ''}`}
-                                          value={userAnswer}
-                                          onChange={(e) => setUserAnswer(e.target.value)}
-                                          placeholder="..."
-                                          disabled={!!feedback}
-                                          onKeyDown={(e) => e.key === 'Enter' && handleChallengeSubmit()}
-                                          style={{ borderColor: track.color }}
-                                        />
+                        {quizScore >= 4 ? (
+                          <Button 
+                            onClick={() => handleTabClick(4)} 
+                            variant="primary" 
+                            size="lg" 
+                            className="w-full" 
+                            style={{ background: 'var(--accent-green)' }}
+                          >
+                            Continue to Summary →
+                          </Button>
+                        ) : (
+                          <>
+                            <div className="quiz-explanation-list">
+                              <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-3)' }}>Review Your Answers</h3>
+                              {lesson.challenges.map((challenge, idx) => {
+                                const ans = quizAnswers[idx] || {};
+                                return (
+                                  <div 
+                                    key={idx} 
+                                    className={`quiz-explanation-item ${ans.isCorrect ? 'quiz-explanation-item--correct' : 'quiz-explanation-item--wrong'}`}
+                                  >
+                                    <div className="quiz-explanation-q">
+                                      <span>{idx + 1}.</span>
+                                      <span>{challenge.question}</span>
+                                    </div>
+                                    <div className="quiz-explanation-ans-block">
+                                      <div className="quiz-explanation-ans">
+                                        <strong style={{ color: ans.isCorrect ? 'var(--accent-green)' : 'var(--accent-rose)' }}>
+                                          Your Answer:
+                                        </strong>
+                                        <span>{ans.userAnswer || 'No answer'}</span>
+                                      </div>
+                                      {!ans.isCorrect && (
+                                        <div className="quiz-explanation-ans">
+                                          <strong style={{ color: 'var(--accent-green)' }}>Correct Answer:</strong>
+                                          <span>{ans.correctAnswer}</span>
+                                        </div>
                                       )}
-                                    </span>
-                                  ))}
-                                </code>
-                              </div>
+                                    </div>
+                                    <p className="quiz-explanation-text">
+                                      <strong>Explanation:</strong> {challenge.explanation}
+                                    </p>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          )}
-
-                          {feedback && (
-                            <motion.div
-                              className={`challenge-feedback ${feedback.correct ? 'challenge-feedback--correct' : 'challenge-feedback--wrong'}`}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                            >
-                              <span className="challenge-feedback__icon">{feedback.correct ? '✓' : '✗'}</span>
-                              <div>
-                                <strong>{feedback.correct ? 'Correct!' : 'Not quite'}</strong>
-                                <p>{feedback.explanation}</p>
-                              </div>
-                            </motion.div>
-                          )}
-
-                          {!feedback && (
-                            <Button
-                              onClick={handleChallengeSubmit}
-                              variant="primary"
-                              size="lg"
-                              className="lesson-next"
-                              disabled={selectedOption === null && !userAnswer.trim()}
+                            <Button 
+                              onClick={handleRetryQuiz} 
+                              variant="primary" 
+                              size="lg" 
+                              className="retry-btn" 
                               style={{ background: track.color }}
                             >
-                              Submit Answer
+                              🔄 Retry Quiz
                             </Button>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
+                    ) : (
+                      lesson.challenges?.[challengeIndex] && (
+                        <div className="lesson-card">
+                          <div className="lesson-challenge">
+                            <div className="quiz-progress-container">
+                              <span className="quiz-progress-text">Question {challengeIndex + 1} of {lesson.challenges.length}</span>
+                              <div className="quiz-progress-bar-bg">
+                                <div className="quiz-progress-bar-fill" style={{ width: `${((challengeIndex) / lesson.challenges.length) * 100}%`, background: track.color }} />
+                              </div>
+                            </div>
+                            <h3 style={{ fontSize: 'var(--text-lg)', margin: 'var(--space-2) 0 var(--space-6)' }}>
+                              {lesson.challenges[challengeIndex].question}
+                            </h3>
+
+                            {lesson.challenges[challengeIndex].type === 'multiple-choice' && (
+                              <div className="lesson-challenge__options">
+                                {lesson.challenges[challengeIndex].options?.map((opt, i) => (
+                                  <button
+                                    key={i}
+                                    className={`challenge-option ${selectedOption === i ? 'challenge-option--selected' : ''} ${
+                                      feedback
+                                        ? i === lesson.challenges[challengeIndex].correctIndex
+                                          ? 'challenge-option--correct'
+                                          : selectedOption === i
+                                          ? 'challenge-option--wrong'
+                                          : ''
+                                        : ''
+                                    }`}
+                                    onClick={() => !feedback && setSelectedOption(i)}
+                                    disabled={!!feedback}
+                                    style={selectedOption === i ? { borderColor: track.color } : {}}
+                                  >
+                                    <span className="challenge-option__letter">{String.fromCharCode(65 + i)}</span>
+                                    {opt}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {lesson.challenges[challengeIndex].type === 'fill-blank' && (
+                              <div className="lesson-challenge__fill">
+                                <div className="lesson-challenge__template" style={{ background: 'var(--bg-primary)' }}>
+                                  <code>
+                                    {lesson.challenges[challengeIndex].template?.split('___').map((part, i, arr) => (
+                                      <span key={i}>
+                                        {part}
+                                        {i < arr.length - 1 && (
+                                          <input
+                                            className={`challenge-fill-input ${feedback ? (feedback.correct ? 'challenge-fill-input--correct' : 'challenge-fill-input--wrong') : ''}`}
+                                            value={userAnswer}
+                                            onChange={(e) => setUserAnswer(e.target.value)}
+                                            placeholder="..."
+                                            disabled={!!feedback}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleChallengeSubmit()}
+                                            style={{ borderColor: track.color }}
+                                          />
+                                        )}
+                                      </span>
+                                    ))}
+                                  </code>
+                                </div>
+                              </div>
+                            )}
+
+                            {feedback && (
+                              <motion.div
+                                className={`challenge-feedback ${feedback.correct ? 'challenge-feedback--correct' : 'challenge-feedback--wrong'}`}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                              >
+                                <span className="challenge-feedback__icon">{feedback.correct ? '✓' : '✗'}</span>
+                                <div>
+                                  <strong>{feedback.correct ? 'Correct!' : 'Not quite'}</strong>
+                                  <p>{feedback.explanation}</p>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {!feedback && (
+                              <Button
+                                onClick={handleChallengeSubmit}
+                                variant="primary"
+                                size="lg"
+                                className="lesson-next"
+                                disabled={selectedOption === null && !userAnswer.trim()}
+                                style={{ background: track.color }}
+                              >
+                                Submit Answer
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )
                     )}
                   </motion.div>
                 )}
@@ -735,6 +843,15 @@ export default function LessonPage() {
                         <span className="lesson-reward__xp-label">XP Earned</span>
                         <span className="lesson-reward__xp-value">+{reward?.xpEarned || lesson.xpReward} XP</span>
                       </div>
+
+                      {reward?.bonusXp > 0 && (
+                        <div style={{ display: 'block', marginTop: 'var(--space-2)' }}>
+                          <div className="quiz-bonus-badge">
+                            <span>🏆</span>
+                            <span>Perfect Score Bonus! +{reward.bonusXp} XP Awarded</span>
+                          </div>
+                        </div>
+                      )}
 
                       {reward?.newAchievements?.length > 0 && (
                         <div className="lesson-reward__achievements" style={{ marginTop: 'var(--space-4)' }}>
