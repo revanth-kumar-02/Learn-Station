@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { usePathSelection } from '../context/PathSelectionContext';
 import { trackService } from '../services/trackService';
 import { userService } from '../services/userService';
 import { progressService } from '../services/progressService';
@@ -16,6 +17,7 @@ const TRACK_ICONS = { sql: '🗄️', python: '🐍', webdev: '🌐', ai: '🤖'
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { openOverlay } = usePathSelection();
   const navigate = useNavigate();
   const [tracks, setTracks] = useState([]);
   const [achievements, setAchievements] = useState([]);
@@ -83,9 +85,9 @@ export default function HomePage() {
                     Continue Learning →
                   </Link>
                 ) : (
-                  <Link to="/tracks" className="btn btn--primary btn--lg home-hero__cta">
+                  <button onClick={openOverlay} className="btn btn--primary btn--lg home-hero__cta">
                     Browse Tracks →
-                  </Link>
+                  </button>
                 )}
               </div>
               <div className="home-hero__right">

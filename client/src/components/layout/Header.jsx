@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { usePathSelection } from '../../context/PathSelectionContext';
 import { useState, useEffect } from 'react';
 
 const NAV_LINKS = [
@@ -38,6 +39,7 @@ const Icons = {
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const { openOverlay } = usePathSelection();
   const navigate = useNavigate();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -85,9 +87,23 @@ export default function Header() {
             </nav>
 
             <div className="header__actions">
-              <Link to="/generate" className="header__generate-btn" style={{ marginRight: '16px', color: 'var(--accent-blue)', fontWeight: 'var(--font-semibold)' }}>
+              <button
+                onClick={openOverlay}
+                className="header__generate-btn"
+                style={{
+                  marginRight: '16px',
+                  color: 'var(--accent-blue)',
+                  fontWeight: 'var(--font-semibold)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                }}
+              >
                 Generate Path ✦
-              </Link>
+              </button>
               <div className="header__xp-badge">
                 <span className="header__xp-icon">✦</span>
                 <span>{user.xp?.toLocaleString() || 0} XP</span>
