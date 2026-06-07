@@ -99,15 +99,16 @@ export default function Header() {
                   <span>{link.label}</span>
                 </Link>
               ))}
+              <button
+                onClick={openOverlay}
+                className="header__nav-link header__nav-btn"
+              >
+                <span>Generate Path</span>
+                <span className="header__nav-btn-icon">✦</span>
+              </button>
             </nav>
 
             <div className="header__actions">
-              <button
-                onClick={openOverlay}
-                className="header__generate-btn"
-              >
-                Generate Path ✦
-              </button>
               <div className="header__xp-badge">
                 <span className="header__xp-icon">⚡</span>
                 <span>{user.xp?.toLocaleString() || 0} XP</span>
