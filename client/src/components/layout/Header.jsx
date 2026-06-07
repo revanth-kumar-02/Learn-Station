@@ -105,17 +105,6 @@ export default function Header() {
               <button
                 onClick={openOverlay}
                 className="header__generate-btn"
-                style={{
-                  marginRight: '16px',
-                  color: 'var(--accent-blue)',
-                  fontWeight: 'var(--font-semibold)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontFamily: 'inherit',
-                  fontSize: 'inherit',
-                }}
               >
                 Generate Path ✦
               </button>

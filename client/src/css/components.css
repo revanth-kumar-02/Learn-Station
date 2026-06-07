@@ -268,7 +268,9 @@
 .header__nav {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 28px;
+  margin-left: 48px;
+  margin-right: auto;
 }
 
 .header__nav-link {
@@ -294,10 +296,28 @@
   color: var(--text-primary);
 }
 
+.header__nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--accent-blue);
+  font-weight: var(--font-semibold);
+}
+
+.header__nav-btn:hover {
+  color: var(--accent-blue);
+  background: var(--bg-tertiary);
+}
+
+.header__nav-btn-icon {
+  color: var(--accent-blue);
+  font-size: var(--text-base);
+}
+
 .header__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
 }
 
 .header__xp-badge {
@@ -335,6 +355,7 @@
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
+  margin-left: 24px;
 }
 
 .header__streak-fire {
@@ -343,17 +364,24 @@
 }
 
 .header__logout-btn {
-  background: none;
+  background: var(--bg-tertiary);
   border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: var(--space-1) var(--space-3);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin-left: 32px;
   transition: all var(--duration-fast) ease;
 }
 
 .header__logout-btn:hover {
+  background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: var(--text-muted);
 }
