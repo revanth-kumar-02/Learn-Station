@@ -2338,7 +2338,7 @@
   gap: var(--space-8);
   width: 100%;
   max-width: var(--content-max-width);
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-4);
   align-items: start;
 }
 
