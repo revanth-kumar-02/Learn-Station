@@ -50,16 +50,22 @@ function LandingHero() {
             </motion.div>
 
             <h1 className="landing-hero__headline">
-              {words.map((word, i) => (
+              {[
+                { prefix: 'Learn to ', highlight: 'code.' },
+                { prefix: 'Build real ', highlight: 'skills.' },
+                { prefix: 'Track your ', highlight: 'growth.' }
+              ].map((line, i) => (
                 <motion.span
                   key={i}
-                  className="landing-hero__word"
-                  initial={{ opacity: 0, clipPath: 'inset(0 100% 0 0)' }}
-                  animate={{ opacity: 1, clipPath: 'inset(0 0% 0 0)' }}
-                  transition={{ duration: 0.6, delay: 0.3 + i * 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ '--word-color': `var(--track-${['sql', 'python', 'webdev'][i]})` }}
+                  className="landing-hero__line"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 + i * 0.2, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {word}
+                  {line.prefix}
+                  <span className="landing-hero__highlight">
+                    {line.highlight}
+                  </span>
                 </motion.span>
               ))}
             </h1>
@@ -127,45 +133,7 @@ function LandingHero() {
   );
 }
 
-/* ── Stats Bar ────────────────────────────────── */
-function LandingStats() {
-  const { ref, revealed } = useScrollReveal();
-  const stats = [
-    { value: 10000, label: 'Learners', suffix: '+' },
-    { value: 50000, label: 'Lessons Completed', suffix: '+' },
-    { value: 6, label: 'Learning Tracks', suffix: '' },
-    { value: 4.9, label: 'Rating', suffix: '★', isDecimal: true },
-  ];
 
-  return (
-    <section className="landing-stats" ref={ref}>
-      <div className="container">
-        <div className="landing-stats__grid">
-          {stats.map((stat, i) => (
-            <motion.div
-              key={i}
-              className="landing-stats__item"
-              initial={{ opacity: 0, y: 20 }}
-              animate={revealed ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.15 }}
-            >
-              <span className="landing-stats__number">
-                {revealed ? <CountUpValue target={stat.value} isDecimal={stat.isDecimal} /> : '0'}
-                {stat.suffix}
-              </span>
-              <span className="landing-stats__label">{stat.label}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CountUpValue({ target, isDecimal }) {
-  const val = useCountUp(isDecimal ? target * 10 : target, { duration: 2000 });
-  return isDecimal ? (val / 10).toFixed(1) : val.toLocaleString();
-}
 
 /* ── Features ─────────────────────────────────── */
 function LandingFeatures() {
@@ -410,7 +378,6 @@ function LandingCTA() {
           <Link to="/register" className="btn btn--primary btn--xl landing-cta__btn">
             Get Started Free
           </Link>
-          <span className="landing-cta__note">Free forever · No credit card required</span>
         </motion.div>
       </div>
     </section>
@@ -423,7 +390,6 @@ export default function LandingPage() {
     <PageTransition>
       <div className="landing-page">
         <LandingHero />
-        <LandingStats />
         <LandingFeatures />
         <LandingTracks />
         <LandingHowItWorks />

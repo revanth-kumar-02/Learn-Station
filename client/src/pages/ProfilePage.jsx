@@ -14,6 +14,23 @@ export default function ProfilePage() {
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Dark mode toggle states
+  const [darkMode, setDarkMode] = useState(() => {
+    return document.documentElement.classList.contains('dark-theme');
+  });
+
+  const toggleDarkMode = () => {
+    const nextVal = !darkMode;
+    setDarkMode(nextVal);
+    if (nextVal) {
+      document.documentElement.classList.add('dark-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -72,27 +89,64 @@ export default function ProfilePage() {
                 <ProgressBar value={levelInfo.progress * 100} max={100} color="var(--accent-violet)" size="md" />
                 <span className="profile-level-text">{levelInfo.xpInLevel} / {levelInfo.xpNeeded} XP to next level</span>
               </div>
-              <div className="profile-goal-setter" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Daily Goal:</span>
-                <select
-                  value={profile?.user?.dailyXpGoal || 50}
-                  onChange={handleGoalChange}
-                  style={{
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-xs)',
-                    padding: '2px 8px',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="20">20 XP (Casual)</option>
-                  <option value="50">50 XP (Regular)</option>
-                  <option value="100">100 XP (Serious)</option>
-                  <option value="200">200 XP (Insane)</option>
-                </select>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
+                <div className="profile-goal-setter" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Daily Goal:</span>
+                  <select
+                    value={profile?.user?.dailyXpGoal || 50}
+                    onChange={handleGoalChange}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
+                      fontSize: 'var(--text-xs)',
+                      padding: '2px 8px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="20">20 XP (Casual)</option>
+                    <option value="50">50 XP (Regular)</option>
+                    <option value="100">100 XP (Serious)</option>
+                    <option value="200">200 XP (Insane)</option>
+                  </select>
+                </div>
+
+                <div className="profile-theme-toggle" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Dark Mode:</span>
+                  <button
+                    type="button"
+                    onClick={toggleDarkMode}
+                    style={{
+                      background: darkMode ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-full)',
+                      width: '36px',
+                      height: '20px',
+                      padding: '2px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: darkMode ? 'flex-end' : 'flex-start',
+                      transition: 'background-color var(--duration-fast) ease',
+                      outline: 'none'
+                    }}
+                    aria-label="Toggle Dark Mode"
+                  >
+                    <motion.div
+                      layout
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

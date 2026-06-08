@@ -93,16 +93,22 @@
 
 /* --- Card --- */
 .card {
-  background: var(--bg-secondary);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
+  box-shadow: var(--shadow-glass);
   will-change: transform;
 }
 
 .card--clickable { cursor: pointer; }
 .card--clickable:hover {
   border-color: var(--border-focus);
+  background: var(--bg-glass-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .card--glow {
@@ -225,16 +231,21 @@
   left: 0;
   right: 0;
   height: var(--header-height);
-  z-index: var(--z-sticky);
+  z-index: 1000;
   transition: all var(--duration-normal) ease;
   background: transparent;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .header--scrolled {
-  background: hsla(228, 14%, 8%, 0.85);
+  background: var(--bg-header-scrolled);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-light);
+  box-shadow: 0 1px 0 0 var(--border-light);
+  background-clip: padding-box;
 }
 
 .header--landing:not(.header--scrolled) {
@@ -444,18 +455,22 @@
 /* --- Track Card --- */
 .track-card {
   position: relative;
-  background: var(--bg-secondary);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
+  box-shadow: var(--shadow-glass);
   transition: all var(--duration-normal) var(--ease-out);
 }
 
 .track-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
   border-color: var(--border-focus);
+  background: var(--bg-glass-hover);
 }
 
 .track-card__accent {
