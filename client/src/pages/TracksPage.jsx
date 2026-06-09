@@ -470,32 +470,60 @@ const CATEGORIES = [
 
 const CAREER_PATHS = [
   {
+    title: 'Frontend Developer',
+    description: 'Build interactive, pixel-perfect user interfaces and modern web applications.',
+    icon: 'Monitor',
+    recommended: ['webdev', 'react', 'tailwindcss'],
+    color: '#a855f7'
+  },
+  {
     title: 'Backend Developer',
-    description: 'Build fast, scalable server-side systems and databases.',
+    description: 'Build fast, scalable server-side systems, secure APIs, and databases.',
     icon: 'Server',
     recommended: ['sql', 'python', 'java'],
     color: '#3b82f6'
   },
   {
+    title: 'Full Stack Engineer',
+    description: 'Design interactive frontends and connect them to databases and services.',
+    icon: 'Globe',
+    recommended: ['webdev', 'sql', 'javascript'],
+    color: '#ec4899'
+  },
+  {
+    title: 'Mobile Developer',
+    description: 'Build native and cross-platform applications for iOS and Android devices.',
+    icon: 'Smartphone',
+    recommended: ['android-dev', 'flutter', 'swiftui'],
+    color: '#f43f5e'
+  },
+  {
     title: 'Data Scientist',
-    description: 'Clean data, build models, and discover business intelligence.',
+    description: 'Clean data, build predictive models, and discover business intelligence.',
     icon: 'LineChart',
     recommended: ['python', 'datascience', 'sql'],
     color: '#10b981'
   },
   {
     title: 'AI Architect',
-    description: 'Integrate LLMs, neural networks, and prompt systems.',
+    description: 'Integrate LLMs, neural networks, agents, and prompt workflows.',
     icon: 'Brain',
-    recommended: ['python', 'ai'],
-    color: '#a855f7'
+    recommended: ['python', 'ai', 'prompt-eng'],
+    color: '#6366f1'
   },
   {
-    title: 'Full Stack Engineer',
-    description: 'Design interactive frontends and connect them to databases.',
-    icon: 'Globe',
-    recommended: ['webdev', 'sql'],
-    color: '#ec4899'
+    title: 'DevOps Engineer',
+    description: 'Automate delivery pipelines, container deployments, and SRE operations.',
+    icon: 'RefreshCw',
+    recommended: ['docker', 'kubernetes', 'cicd'],
+    color: '#eab308'
+  },
+  {
+    title: 'Cyber Security Analyst',
+    description: 'Audit network threats, perform penetration testing, and secure interfaces.',
+    icon: 'Shield',
+    recommended: ['security-fundamentals', 'network-security', 'ethical-hacking'],
+    color: '#ef4444'
   }
 ];
 
