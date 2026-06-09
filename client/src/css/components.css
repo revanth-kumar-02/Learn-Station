@@ -451,6 +451,10 @@
   padding-top: var(--header-height);
 }
 
+.layout__main--landing {
+  padding-top: 0;
+}
+
 
 /* --- Track Card --- */
 .track-card {

@@ -19,15 +19,62 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Not authorized, token invalid' });
     }
 
-    // Fetch public profile details
-    const { data: profile, error } = await supabase
+    // Fetch public profile details or create if not found
+    let profile;
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
-      .single();
+      .maybeSingle();
 
-    if (error || !profile) {
-      return res.status(401).json({ message: 'User profile not found' });
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+    }
+
+    if (!profileData) {
+      const username = authUser.email ? authUser.email.split('@')[0] + Math.floor(Math.random() * 1000) : 'user_' + Math.floor(Math.random() * 100000);
+      const name = authUser.user_metadata?.name || (authUser.email ? authUser.email.split('@')[0] : 'Learner');
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const { data: createdProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authUser.id,
+          name: name,
+          email: authUser.email || '',
+          username: username,
+          xp: 0,
+          level: 1,
+          streak: 0,
+          longest_streak: 0,
+          daily_xp_goal: 50,
+          daily_xp_earned: 0,
+          last_active_date: new Date().toISOString(),
+          daily_missions: {
+            date: todayStr,
+            missions: [
+              { id: 'm1', text: 'Earn 50 XP today', xp: 20, target: 50, current: 0, type: 'xp', completed: false },
+              { id: 'm2', text: 'Complete 1 lesson', xp: 20, target: 1, current: 0, type: 'lesson', completed: false },
+              { id: 'm3', text: 'Solve 1 quiz challenge', xp: 10, target: 1, current: 0, type: 'quiz', completed: false }
+            ],
+            stats: {
+              lessonsCompleted: 0,
+              quizzesSolved: 0,
+              perfectQuizzes: 0,
+              projectsSubmitted: 0
+            }
+          }
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating profile on the fly:', createError);
+        return res.status(401).json({ message: 'User profile not found and could not be created' });
+      }
+      profile = createdProfile;
+    } else {
+      profile = profileData;
     }
 
     // Map fields to match custom Mongoose properties to preserve interface compatibility
