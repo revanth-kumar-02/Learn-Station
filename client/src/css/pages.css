@@ -875,8 +875,10 @@
 
 .generate-page {
   position: relative;
+  margin-top: calc(-1 * var(--header-height));
+  padding-top: calc(var(--header-height) + var(--space-8));
+  padding-bottom: var(--space-16);
   overflow: hidden;
-  padding: var(--space-8) 0 var(--space-16);
 }
 
 .generate-container {
@@ -3427,7 +3429,8 @@ html.dark-theme .path-overlay-title {
 
 .tracks-discover-page {
   position: relative;
-  padding: 72px 0 80px; /* Navbar -> First Section: 72px */
+  margin-top: calc(-1 * var(--header-height));
+  padding-top: calc(var(--header-height) + 72px); /* Navbar -> First Section: 72px */
   overflow: hidden;
 }
 
@@ -4323,7 +4326,8 @@ html.dark-theme .track-preview-backdrop {
 
 @media (max-width: 768px) {
   .tracks-discover-page {
-    padding: 48px 0 64px; /* Fluid spacing on mobile */
+    padding-top: calc(var(--header-height) + 24px); /* Fluid spacing on mobile */
+    padding-bottom: 64px;
   }
   .discover-header {
     margin-bottom: 40px;
