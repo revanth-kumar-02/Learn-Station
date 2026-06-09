@@ -6,7 +6,92 @@ import { trackService } from '../services/trackService';
 import ProgressBar from '../components/common/ProgressBar';
 import PageTransition from '../components/layout/PageTransition';
 
-const TRACK_ICONS = { sql: '🗄️', python: '🐍', webdev: '🌐', ai: '🤖', datascience: '📈', java: '☕' };
+const TRACK_ICONS = {
+  sql: '🗄️',
+  python: '🐍',
+  webdev: '🌐',
+  ai: '🤖',
+  datascience: '📈',
+  java: '☕',
+  javascript: '⚡',
+  typescript: '🟦',
+  'c-lang': '📟',
+  cpp: '🚀',
+  csharp: '🎯',
+  'go-lang': '🐹',
+  rust: '🦀',
+  kotlin: '🎯',
+  swift: '🦅',
+  php: '🐘',
+  html: '📄',
+  css: '🎨',
+  react: '⚛️',
+  nextjs: '🌐',
+  angular: '🅰️',
+  vuejs: '🟢',
+  nodejs: '🟢',
+  expressjs: '🚂',
+  tailwindcss: '🍃',
+  'android-dev': '🤖',
+  flutter: '🦋',
+  'react-native': '⚛️',
+  swiftui: '🦅',
+  'ios-dev': '🍎',
+  'advanced-sql': '🗄️',
+  postgresql: '🐘',
+  mysql: '🐬',
+  mongodb: '🍃',
+  redis: '🟥',
+  'db-design': '📐',
+  'data-analysis': '📊',
+  numpy: '📐',
+  pandas: '🐼',
+  'data-viz': '📈',
+  statistics: '🧮',
+  'prompt-eng': '💬',
+  nlp: '🗣️',
+  'computer-vision': '👁️',
+  'generative-ai': '🎨',
+  'llm-engineering': '🤖',
+  'ai-agents': '🕵️',
+  'rag-systems': '📚',
+  'deep-learning': '🧠',
+  linux: '🐧',
+  'git-github': '🐙',
+  docker: '🐳',
+  kubernetes: '☸️',
+  aws: '☁️',
+  azure: '☁️',
+  'google-cloud': '☁️',
+  cicd: '🤖',
+  terraform: '🏗️',
+  'security-fundamentals': '🛡️',
+  'network-security': '🔒',
+  'ethical-hacking': '🕵️',
+  pentesting: '🎯',
+  'web-security': '🌐',
+  'digital-forensics': '🔍',
+  'data-structures': '🧱',
+  algorithms: '🧮',
+  'system-design': '📐',
+  'design-patterns': '🧩',
+  oop: '⚙️',
+  'software-arch': '🏛️',
+  'frontend-career': '💼',
+  'backend-career': '💼',
+  'fullstack-career': '💼',
+  'mobile-career': '💼',
+  'data-analyst': '💼',
+  'ml-engineer': '💼',
+  'devops-engineer': '💼',
+  'cloud-engineer': '💼',
+  'cyber-analyst': '💼',
+  'product-management-track': '📊',
+  'uiux-design': '🎨',
+  'agile-framework': '🔄',
+  'scrum-framework': '🏉',
+  'business-analysis': '📈'
+};
 
 // Extended premium static metadata for tracks
 const TRACK_PREMIUM_META = {
@@ -105,8 +190,249 @@ const TRACK_PREMIUM_META = {
       'Exception Handling & Robust Logging',
       'Multithreading, Streams API & Backend Server Basics'
     ]
+  },
+  javascript: {
+    difficulty: 'Beginner',
+    time: '5 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Frontend Developer', 'Full Stack Developer'],
+    syllabus: ['Variables & Scoping Rules', 'Arrow Functions', 'DOM manipulation', 'Async-await Operations']
+  },
+  react: {
+    difficulty: 'Intermediate',
+    time: '6 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Frontend Developer', 'React Developer'],
+    syllabus: ['JSX & Virtual DOM', 'Components & Props', 'useState & useEffect hooks', 'State Management Context']
+  },
+  'git-github': {
+    difficulty: 'Beginner',
+    time: '3 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Software Developer', 'DevOps Specialist'],
+    syllabus: ['Git Commits & Branching', 'Merge Conflict Resolution', 'Rebase vs Merge', 'GitHub PR workflow']
+  },
+  'data-structures': {
+    difficulty: 'Intermediate',
+    time: '7 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Algorithm Engineer', 'Backend Developer'],
+    syllabus: ['Linear lists, Queues & Stacks', 'Hash tables collisions', 'Binary search trees', 'Graphs representation']
+  },
+  algorithms: {
+    difficulty: 'Advanced',
+    time: '8 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Algorithm Scientist', 'Software Architect'],
+    syllabus: ['Big O notation analysis', 'Recursion & Sorting', 'Dynamic Programming', 'Graph traversals']
+  },
+  'prompt-eng': {
+    difficulty: 'Beginner',
+    time: '4 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['AI Prompt Engineer', 'NLP Architect'],
+    syllabus: ['System directives', 'Few-Shot priming', 'Chain-of-thought methods', 'JSON output schemas']
+  },
+  docker: {
+    difficulty: 'Intermediate',
+    time: '4 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['DevOps Engineer', 'Infrastructure Engineer'],
+    syllabus: ['Docker Containers concepts', 'Dockerfile configurations', 'Volumes persistence', 'Compose multi-container']
+  },
+  nodejs: {
+    difficulty: 'Intermediate',
+    time: '6 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Node.js Backend Developer', 'API Engineer'],
+    syllabus: ['Event Loop runtime', 'File System operations', 'HTTP core modules', 'Buffers & Stream pipelines']
+  },
+  typescript: {
+    difficulty: 'Intermediate',
+    time: '5 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Frontend Engineer', 'TS Architect'],
+    syllabus: ['Static types annotations', 'Interfaces & Aliases', 'Generics foundations', 'Decorators & tsconfig']
+  },
+  flutter: {
+    difficulty: 'Intermediate',
+    time: '7 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Mobile Developer', 'Flutter Developer'],
+    syllabus: ['Dart grammar basics', 'Stateless & Stateful widgets', 'Widget layouts tree', 'State management models']
+  },
+  aws: {
+    difficulty: 'Intermediate',
+    time: '8 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Cloud Architect', 'AWS Administrator'],
+    syllabus: ['AWS Account IAM permissions', 'VPC virtual networks', 'EC2 Virtual instances', 'S3 Object buckets']
+  },
+  kubernetes: {
+    difficulty: 'Advanced',
+    time: '8 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['DevOps Specialist', 'SRE Engineer'],
+    syllabus: ['Kubernetes Cluster layout', 'Pods & Deployment templates', 'Services networking routing', 'Ingress controllers']
+  },
+  'system-design': {
+    difficulty: 'Advanced',
+    time: '9 hours',
+    xp: '300 XP',
+    quizzes: 12,
+    projects: '3 mini-projects',
+    careers: ['Systems Architect', 'Lead Developer'],
+    syllabus: ['Load Balancers scaling', 'Caching architectures CDN', 'Database scaling replicas', 'Message Queues Kafka']
   }
 };
+
+const TRACK_CATEGORIES = {
+  // Databases
+  sql: 'Databases',
+  'advanced-sql': 'Databases',
+  postgresql: 'Databases',
+  mysql: 'Databases',
+  mongodb: 'Databases',
+  redis: 'Databases',
+  'db-design': 'Databases',
+
+  // Programming
+  python: 'Programming',
+  java: 'Programming',
+  javascript: 'Programming',
+  typescript: 'Programming',
+  'c-lang': 'Programming',
+  cpp: 'Programming',
+  csharp: 'Programming',
+  'go-lang': 'Programming',
+  rust: 'Programming',
+  kotlin: 'Programming',
+  swift: 'Programming',
+  php: 'Programming',
+
+  // Web Development
+  webdev: 'Web Development',
+  html: 'Web Development',
+  css: 'Web Development',
+  react: 'Web Development',
+  nextjs: 'Web Development',
+  angular: 'Web Development',
+  vuejs: 'Web Development',
+  nodejs: 'Web Development',
+  expressjs: 'Web Development',
+  tailwindcss: 'Web Development',
+
+  // Mobile Development
+  'android-dev': 'Mobile Development',
+  flutter: 'Mobile Development',
+  'react-native': 'Mobile Development',
+  swiftui: 'Mobile Development',
+  'ios-dev': 'Mobile Development',
+
+  // Data Science
+  datascience: 'Data Science',
+  'data-analysis': 'Data Science',
+  numpy: 'Data Science',
+  pandas: 'Data Science',
+  'data-viz': 'Data Science',
+  statistics: 'Data Science',
+
+  // Artificial Intelligence
+  ai: 'Artificial Intelligence',
+  'prompt-eng': 'Artificial Intelligence',
+  nlp: 'Artificial Intelligence',
+  'computer-vision': 'Artificial Intelligence',
+  'generative-ai': 'Artificial Intelligence',
+  'llm-engineering': 'Artificial Intelligence',
+  'ai-agents': 'Artificial Intelligence',
+  'rag-systems': 'Artificial Intelligence',
+  'deep-learning': 'Artificial Intelligence',
+
+  // Cloud & DevOps
+  linux: 'Cloud & DevOps',
+  'git-github': 'Cloud & DevOps',
+  docker: 'Cloud & DevOps',
+  kubernetes: 'Cloud & DevOps',
+  aws: 'Cloud & DevOps',
+  azure: 'Cloud & DevOps',
+  'google-cloud': 'Cloud & DevOps',
+  cicd: 'Cloud & DevOps',
+  terraform: 'Cloud & DevOps',
+
+  // Cyber Security
+  'security-fundamentals': 'Cyber Security',
+  'network-security': 'Cyber Security',
+  'ethical-hacking': 'Cyber Security',
+  pentesting: 'Cyber Security',
+  'web-security': 'Cyber Security',
+  'digital-forensics': 'Cyber Security',
+
+  // Software Engineering
+  'data-structures': 'Software Engineering',
+  algorithms: 'Software Engineering',
+  'system-design': 'Software Engineering',
+  'design-patterns': 'Software Engineering',
+  oop: 'Software Engineering',
+  'software-arch': 'Software Engineering',
+
+  // Career Tracks
+  'frontend-career': 'Career Tracks',
+  'backend-career': 'Career Tracks',
+  'fullstack-career': 'Career Tracks',
+  'mobile-career': 'Career Tracks',
+  'data-analyst': 'Career Tracks',
+  'ml-engineer': 'Career Tracks',
+  'devops-engineer': 'Career Tracks',
+  'cloud-engineer': 'Career Tracks',
+  'cyber-analyst': 'Career Tracks',
+
+  // Business & Product
+  'product-management-track': 'Business & Product',
+  'uiux-design': 'Business & Product',
+  'agile-framework': 'Business & Product',
+  'scrum-framework': 'Business & Product',
+  'business-analysis': 'Business & Product'
+};
+
+const CATEGORIES = [
+  { id: 'All', name: 'All Categories', icon: '🌐' },
+  { id: 'Programming', name: 'Programming', icon: '💻' },
+  { id: 'Web Development', name: 'Web Development', icon: '🖥️' },
+  { id: 'Mobile Development', name: 'Mobile Development', icon: '📱' },
+  { id: 'Databases', name: 'Databases', icon: '🗄️' },
+  { id: 'Data Science', name: 'Data Science', icon: '📊' },
+  { id: 'Artificial Intelligence', name: 'Artificial Intelligence', icon: '🤖' },
+  { id: 'Cloud & DevOps', name: 'Cloud & DevOps', icon: '☁️' },
+  { id: 'Cyber Security', name: 'Cyber Security', icon: '🛡️' },
+  { id: 'Software Engineering', name: 'Software Engineering', icon: '📐' },
+  { id: 'Career Tracks', name: 'Career Tracks', icon: '💼' },
+  { id: 'Business & Product', name: 'Business & Product', icon: '📈' },
+  { id: 'Custom Path', name: 'Custom Paths', icon: '🪄' }
+];
 
 const CAREER_PATHS = [
   {
@@ -146,6 +472,7 @@ export default function TracksPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [previewTrack, setPreviewTrack] = useState(null);
 
   useEffect(() => {
@@ -179,7 +506,11 @@ export default function TracksPage() {
     const matchesDifficulty = selectedDifficulty === 'All' || 
       track.meta.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
 
-    return matchesSearch && matchesDifficulty;
+    const trackCategory = track.isAiGenerated ? 'Custom Path' : (TRACK_CATEGORIES[track.slug] || 'Other');
+    const matchesCategory = selectedCategory === 'All' || 
+      trackCategory === selectedCategory;
+
+    return matchesSearch && matchesDifficulty && matchesCategory;
   });
 
   // Current track / Continue learning spot
@@ -239,10 +570,24 @@ export default function TracksPage() {
                 ))}
               </div>
             </div>
+
+            <div className="discover-category-filters">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`category-chip ${selectedCategory === cat.id ? 'category-chip--active' : ''}`}
+                  onClick={() => setSelectedCategory(cat.id)}
+                >
+                  <span className="category-chip__icon">{cat.icon}</span>
+                  <span className="category-chip__name">{cat.name}</span>
+                </button>
+              ))}
+            </div>
           </header>
 
           {/* Continue Learning Spotlight */}
-          {activeTrack && !searchQuery && selectedDifficulty === 'All' && (
+          {activeTrack && !searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (
             <section className="discover-section continue-spotlight">
               <h2 className="section-title">Continue Learning</h2>
               <div className="spotlight-card" style={{ '--border-glow': activeTrack.color }}>
@@ -290,7 +635,7 @@ export default function TracksPage() {
           )}
 
           {/* Recommendations Row */}
-          {recommendedTracks.length > 0 && !searchQuery && selectedDifficulty === 'All' && (
+          {recommendedTracks.length > 0 && !searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (
             <section className="discover-section recommendations-row">
               <h2 className="section-title">Recommended For You</h2>
               <div className="netflix-row">
@@ -337,7 +682,9 @@ export default function TracksPage() {
           {/* All Tracks Discovery Catalog */}
           <section className="discover-section catalog-grid-section">
             <h2 className="section-title">
-              {searchQuery || selectedDifficulty !== 'All' ? 'Filtered Discoveries' : 'All Learning Tracks'}
+              {searchQuery || selectedDifficulty !== 'All' || selectedCategory !== 'All' 
+                ? `${selectedCategory !== 'All' ? selectedCategory : 'Filtered'} Tracks` 
+                : 'All Learning Tracks'}
             </h2>
             
             {loading ? (
@@ -405,7 +752,7 @@ export default function TracksPage() {
           </section>
 
           {/* Career Path Recommendations */}
-          {!searchQuery && selectedDifficulty === 'All' && (
+          {!searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (
             <section className="discover-section career-paths-section">
               <div className="career-section-header">
                 <h2 className="section-title">Career Alignment Paths</h2>
@@ -447,7 +794,7 @@ export default function TracksPage() {
           )}
 
           {/* Achievement Rewards Preview */}
-          {!searchQuery && selectedDifficulty === 'All' && (
+          {!searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (
             <section className="discover-section achievements-spotlight">
               <div className="achievements-card">
                 <div className="achievements-card__info">

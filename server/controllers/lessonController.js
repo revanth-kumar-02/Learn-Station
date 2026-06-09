@@ -594,8 +594,21 @@ const completeLesson = async (req, res, next) => {
     const newlyCompletedMissions = checkMissionsCompletions(missionsBefore, missionsAfter);
     const dailyMissionBonusXp = newlyCompletedMissions * 100; // +100 XP per mission
 
-    const totalXp = profile.xp + earnedXp + dailyMissionBonusXp;
-    const newLevel = calculateLevel(totalXp);
+    const baseTotalXp = profile.xp + earnedXp + dailyMissionBonusXp;
+    let finalTotalXp = baseTotalXp;
+
+    // Initialize/update stats in daily_missions
+    if (!dailyMissionsObj.stats) {
+      dailyMissionsObj.stats = {
+        perfectQuizzes: 0,
+        challengesSolved: 0,
+        projectsSubmitted: 0,
+        aiRoadmaps: 0
+      };
+    }
+    if (quizScore === 5) {
+      dailyMissionsObj.stats.perfectQuizzes = (dailyMissionsObj.stats.perfectQuizzes || 0) + 1;
+    }
 
     // 7. Check Achievements
     const { data: allProgress, error: allProgressError } = await supabase
@@ -614,9 +627,29 @@ const completeLesson = async (req, res, next) => {
     const completedTracksList = (allProgress || []).filter((p) => p.progress_percent >= 100).map(p => p.track?.slug || '');
     const aiPathsGenerated = (allProgress || []).filter((p) => p.track?.is_ai_generated).length;
 
+    // Calculate completed challenges across all progress tables
+    const completedChallengesCount = (allProgress || []).reduce(
+      (sum, p) => sum + (p.completed_challenges?.length || 0),
+      0
+    );
+
+    // Get completed capstone submissions
+    const { data: submissions, error: subError } = await supabase
+      .from('capstone_submissions')
+      .select('id')
+      .eq('user_id', req.user.id);
+    const completedProjectsCount = submissions?.length || 0;
+
+    // Time-based checks (for rare badges)
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+    const isNightLearning = currentHour >= 0 && currentHour < 4;
+    const isEarlyLearning = currentHour >= 5 && currentHour < 8;
+    const isWeekendLearning = currentDay === 0 || currentDay === 6;
+
     const userData = {
-      xp: totalXp,
-      level: newLevel,
+      xp: baseTotalXp,
+      level: calculateLevel(baseTotalXp),
       streak,
       longestStreak,
       achievements: profile.achievements || [],
@@ -625,23 +658,34 @@ const completeLesson = async (req, res, next) => {
       completedTracks,
       completedTracksList,
       aiPathsGenerated,
-      perfectQuizzes: (quizScore === 5 ? 1 : 0),
+      perfectQuizzesCount: dailyMissionsObj.stats.perfectQuizzes,
+      completedChallengesCount,
+      completedProjectsCount,
+      isNightLearning,
+      isEarlyLearning,
+      isWeekendLearning,
     };
 
     const newAchievements = checkAchievements(userData);
     const updatedAchievements = [...(profile.achievements || [])];
+    let achievementBonusXp = 0;
     if (newAchievements.length > 0) {
-      updatedAchievements.push(...newAchievements.map((a) => a.id));
+      newAchievements.forEach((a) => {
+        achievementBonusXp += (a.xpBonus || 0);
+        updatedAchievements.push(a.id);
+      });
+      finalTotalXp = baseTotalXp + achievementBonusXp;
     }
+    const finalLevel = calculateLevel(finalTotalXp);
 
-    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}". Base XP: +${lesson.xp_reward}, Quiz Bonus: +${bonusXp}, Missions Bonus: +${dailyMissionBonusXp}. Total XP: ${totalXp}. Streak: ${streak}.`);
+    console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}". Base XP: +${lesson.xp_reward}, Quiz Bonus: +${bonusXp}, Missions Bonus: +${dailyMissionBonusXp}, Achievement Bonus: +${achievementBonusXp}. Total XP: ${finalTotalXp}. Streak: ${streak}.`);
 
     // Update profiles table in DB
     const { error: updateProfileError } = await supabase
       .from('profiles')
       .update({
-        xp: totalXp,
-        level: newLevel,
+        xp: finalTotalXp,
+        level: finalLevel,
         streak,
         longest_streak: longestStreak,
         last_active_date: new Date().toISOString(),
@@ -658,9 +702,9 @@ const completeLesson = async (req, res, next) => {
     res.json({
       passed: true,
       xpEarned: lesson.xp_reward,
-      bonusXp: bonusXp + dailyMissionBonusXp,
-      totalXp,
-      level: newLevel,
+      bonusXp: bonusXp + dailyMissionBonusXp + achievementBonusXp,
+      totalXp: finalTotalXp,
+      level: finalLevel,
       streak,
       dailyXpEarned,
       dailyGoalMet,

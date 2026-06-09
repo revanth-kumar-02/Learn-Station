@@ -295,6 +295,21 @@ const submitCapstoneProject = async (req, res, next) => {
     const completedTracksCount = completedTracksList.length;
     const aiPathsGenerated = (allProgress || []).filter((p) => p.track?.is_ai_generated).length;
 
+    // Calculate completed challenges across all progress tables
+    const completedChallengesCount = (allProgress || []).reduce(
+      (sum, p) => sum + (p.completed_challenges?.length || 0),
+      0
+    );
+
+    const completedProjectsCount = completedTracksCount;
+
+    // Time-based checks (for rare badges)
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+    const isNightLearning = currentHour >= 0 && currentHour < 4;
+    const isEarlyLearning = currentHour >= 5 && currentHour < 8;
+    const isWeekendLearning = currentDay === 0 || currentDay === 6;
+
     const userData = {
       xp: totalXp,
       level: newLevel,
@@ -306,21 +321,33 @@ const submitCapstoneProject = async (req, res, next) => {
       completedTracks: completedTracksCount,
       completedTracksList,
       aiPathsGenerated,
-      perfectQuizzes: 0,
+      perfectQuizzesCount: dailyMissionsObj?.stats?.perfectQuizzes || 0,
+      completedChallengesCount,
+      completedProjectsCount,
+      isNightLearning,
+      isEarlyLearning,
+      isWeekendLearning,
     };
 
     const newAchievements = checkAchievements(userData);
     const updatedAchievements = [...(profile.achievements || [])];
+    let achievementBonusXp = 0;
+    let finalTotalXp = totalXp;
     if (newAchievements.length > 0) {
-      updatedAchievements.push(...newAchievements.map((a) => a.id));
+      newAchievements.forEach((a) => {
+        achievementBonusXp += (a.xpBonus || 0);
+        updatedAchievements.push(a.id);
+      });
+      finalTotalXp = totalXp + achievementBonusXp;
     }
+    const finalLevel = calculateLevel(finalTotalXp);
 
     // Save profile changes
     await supabase
       .from('profiles')
       .update({
-        xp: totalXp,
-        level: newLevel,
+        xp: finalTotalXp,
+        level: finalLevel,
         achievements: updatedAchievements,
         daily_missions: dailyMissionsObj,
       })
@@ -346,7 +373,7 @@ const submitCapstoneProject = async (req, res, next) => {
     res.json({
       success: true,
       xpEarned: xpReward,
-      level: newLevel,
+      level: finalLevel,
       newAchievements,
       certificate: cert,
       submission,

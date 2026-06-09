@@ -49,7 +49,7 @@ const getProfile = async (req, res, next) => {
     // 2. Fetch progress with track details
     const { data: allProgress, error: progressError } = await supabase
       .from('progress')
-      .select('*, track:tracks(id, slug, name, color, icon)')
+      .select('*, track:tracks(id, slug, name, color, icon, is_ai_generated)')
       .eq('user_id', req.user.id);
 
     if (progressError) throw progressError;
@@ -58,6 +58,28 @@ const getProfile = async (req, res, next) => {
       (sum, p) => sum + (p.completed_lessons?.length || 0),
       0
     );
+
+    // Calculate dynamic counts for achievements checking
+    const completedChallengesCount = (allProgress || []).reduce(
+      (sum, p) => sum + (p.completed_challenges?.length || 0),
+      0
+    );
+
+    const { data: submissions } = await supabase
+      .from('capstone_submissions')
+      .select('id')
+      .eq('user_id', req.user.id);
+    const completedProjectsCount = submissions?.length || 0;
+
+    const aiPathsGenerated = (allProgress || []).filter((p) => p.track?.is_ai_generated).length;
+    const completedTracksList = (allProgress || []).filter((p) => p.progress_percent >= 100).map(p => p.track?.slug || '');
+
+    // Time-based checks (for rare badges)
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+    const isNightLearning = currentHour >= 0 && currentHour < 4;
+    const isEarlyLearning = currentHour >= 5 && currentHour < 8;
+    const isWeekendLearning = currentDay === 0 || currentDay === 6;
 
     const levelInfo = xpProgressInLevel(profile.xp);
 
@@ -78,6 +100,7 @@ const getProfile = async (req, res, next) => {
             name: p.track.name,
             color: p.track.color,
             icon: p.track.icon,
+            is_ai_generated: p.track.is_ai_generated,
           }
         : null,
     }));
@@ -109,6 +132,14 @@ const getProfile = async (req, res, next) => {
         lessonsCompleted: totalLessonsCompleted,
         tracksStarted: allProgress?.length || 0,
         tracksCompleted: (allProgress || []).filter((p) => p.progress_percent >= 100).length,
+        completedTracksList,
+        aiPathsGenerated,
+        completedChallengesCount,
+        completedProjectsCount,
+        perfectQuizzesCount: dailyMissionsObj?.stats?.perfectQuizzes || 0,
+        isNightLearning,
+        isEarlyLearning,
+        isWeekendLearning,
       },
       levelInfo,
       trackProgress: formattedTrackProgress,
@@ -205,7 +236,7 @@ const getAchievements = async (req, res, next) => {
 const getActivity = async (req, res, next) => {
   try {
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 29); // Return 30 days for rich analytics charts
+    startDate.setDate(startDate.getDate() - 364); // Return 365 days for contribution heatmap
     const startDateStr = startDate.toISOString().split('T')[0];
 
     const { data: rows, error: activityError } = await supabase
@@ -221,22 +252,25 @@ const getActivity = async (req, res, next) => {
       activityMap[r.date] = r.xp_earned;
     });
 
-    const last30Days = [];
+    const last365Days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 29; i >= 0; i--) {
+    for (let i = 364; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
+      const xp = activityMap[dateStr] || 0;
 
-      last30Days.push({
+      last365Days.push({
         date: dateStr,
-        xp: activityMap[dateStr] || 0,
+        xp,
+        lessonsCompleted: xp ? Math.max(1, Math.floor(xp / 25)) : 0,
+        minutesLearned: xp ? Math.max(5, Math.round(xp * 0.7)) : 0,
       });
     }
 
-    res.json({ activity: last30Days });
+    res.json({ activity: last365Days });
   } catch (error) {
     next(error);
   }
