@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -9,7 +9,6 @@ import InteractivePlayground from '../components/common/InteractivePlayground';
 
 export default function AiWorkspacePage() {
   const { slug } = useParams();
-  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [track, setTrack] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -18,7 +17,6 @@ export default function AiWorkspacePage() {
   const [activeTab, setActiveTab] = useState('concept'); // concept, example, practice, check, summary
 
   // Interactive practice states
-  const [practiceInput, setPracticeInput] = useState('');
   const [practiceCorrect, setPracticeCorrect] = useState(null); // null, true, false
 
   // Challenge states
@@ -140,24 +138,13 @@ export default function AiWorkspacePage() {
     }
   }
 
-  // Handle Practice check
-  const handleCheckPractice = () => {
-    if (!activeLesson) return;
-    const isCorrect = practiceInput.trim().toLowerCase() === activeLesson.practice.answer.trim().toLowerCase();
-    setPracticeCorrect(isCorrect);
-  };
-
   // Handle Challenge answer
   const handleCheckChallenge = () => {
     if (!activeLesson) return;
     const challenge = activeLesson.challenges[currentChallengeIndex];
-    let isCorrect = false;
-
-    if (challenge.type === 'multiple-choice') {
-      isCorrect = selectedOption === challenge.correctIndex;
-    } else {
-      isCorrect = challengeInput.trim().toLowerCase() === challenge.answer.trim().toLowerCase();
-    }
+    const isCorrect = challenge.type === 'multiple-choice'
+      ? selectedOption === challenge.correctIndex
+      : challengeInput.trim().toLowerCase() === challenge.answer.trim().toLowerCase();
 
     setChallengeCorrect(isCorrect);
     setChallengeSubmitted(true);
@@ -752,7 +739,6 @@ export default function AiWorkspacePage() {
                           const isUnlocked = isCompleted || (isModUnlocked && (li === 0 || (completedLessonsSet.has(mod.lessons[li - 1]?.id?.toString()) && areLessonChallengesCompleted(mod.lessons[li - 1]))));
                           const isCurrent = !isCompleted && isUnlocked;
                           
-                          const statusLabel = isCompleted ? 'Completed' : isCurrent ? 'Current' : 'Locked';
                           const statusClass = isCompleted ? 'premium-lesson-card--completed' : isCurrent ? 'premium-lesson-card--current' : 'premium-lesson-card--locked';
                           
                           return (

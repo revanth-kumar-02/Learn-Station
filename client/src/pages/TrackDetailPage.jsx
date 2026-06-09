@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { trackService } from '../services/trackService';
 import { progressService } from '../services/userService';
 import ProgressBar from '../components/common/ProgressBar';

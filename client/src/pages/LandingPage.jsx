@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useScrollReveal, useCountUp, useTypewriter } from '../hooks/useAnimations';
+import { useScrollReveal } from '../hooks/useAnimations';
 import PageTransition from '../components/layout/PageTransition';
 
 /* ── Gradient Orb ─────────────────────────────── */
@@ -29,7 +29,7 @@ function LandingHero() {
     return () => clearTimeout(t);
   }, []);
 
-  const words = ['Learn to code.', 'Build real skills.', 'Track your growth.'];
+
 
   return (
     <section className="landing-hero">
@@ -208,7 +208,10 @@ function LandingFeatures() {
 function LessonMiniDemo({ active }) {
   const [step, setStep] = useState(0);
   useEffect(() => {
-    if (!active) { setStep(0); return; }
+    if (!active) {
+      setStep((prev) => prev !== 0 ? 0 : prev);
+      return;
+    }
     const t = setTimeout(() => setStep(1), 800);
     return () => clearTimeout(t);
   }, [active]);

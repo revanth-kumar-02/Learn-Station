@@ -173,16 +173,6 @@ const GLOSSARY = {
  */
 function generateFallbackEnhancement(lesson) {
   const title = lesson.title || 'Topic';
-  const track = lesson.track || '';
-  
-  // Clean track key
-  let trackName = 'Programming';
-  if (track.includes('sql')) trackName = 'SQL Databases';
-  else if (track.includes('python')) trackName = 'Python Programming';
-  else if (track.includes('webdev')) trackName = 'Web Development';
-  else if (track.includes('ai')) trackName = 'AI & Machine Learning';
-  else if (track.includes('datascience')) trackName = 'Data Science';
-  else if (track.includes('java')) trackName = 'Java Development';
 
   return {
     learningObjective: [

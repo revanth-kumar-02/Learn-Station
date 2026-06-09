@@ -5,12 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { usePathSelection } from '../context/PathSelectionContext';
 import { trackService } from '../services/trackService';
 import { userService } from '../services/userService';
-import { progressService } from '../services/progressService';
 import ProgressBar from '../components/common/ProgressBar';
 import ProgressRing from '../components/common/ProgressRing';
 import AnimatedCounter from '../components/common/AnimatedCounter';
 import { SkeletonCard } from '../components/common/Skeleton';
-import Skeleton from '../components/common/Skeleton';
 import PageTransition from '../components/layout/PageTransition';
 
 const TRACK_ICONS = { sql: '🗄️', python: '🐍', webdev: '🌐', ai: '🤖', datascience: '📈', java: '☕' };

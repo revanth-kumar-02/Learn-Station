@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { supabase } from '../supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -12,7 +12,7 @@ const api = axios.create({
 
 // Request interceptor — attach token and log
 api.interceptors.request.use(
-  async (config) => {
+  async (config: InternalAxiosRequestConfig) => {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
     if (token) {
@@ -34,7 +34,7 @@ api.interceptors.request.use(
 
 // Response interceptor — handle 401 and log
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     console.log(`✅ [API Response] ${response.status} ${response.config.url}`, response.data);
     return response;
   },

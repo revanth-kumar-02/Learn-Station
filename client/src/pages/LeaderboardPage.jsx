@@ -13,7 +13,6 @@ const CATEGORIES = [
   { key: 'tracksCompleted', label: 'Tracks Done', icon: '🏆', valueKey: 'completedTracksCount', suffix: ' tracks' },
 ];
 
-const RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function LeaderboardPage() {
   const { user } = useAuth();

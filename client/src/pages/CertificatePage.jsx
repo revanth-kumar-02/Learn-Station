@@ -41,7 +41,7 @@ export default function CertificatePage() {
           text: `I completed the ${cert?.track?.name} track on Learn Station! 🎓`,
           url,
         });
-      } catch (err) {
+      } catch {
         // Share cancelled
       }
     } else {

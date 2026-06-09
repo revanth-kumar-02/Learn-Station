@@ -62,12 +62,13 @@ const getMockModules = (skillName, levelName, goalName) => {
   const normLevel = levelName.toLowerCase();
   const normGoal = goalName.toLowerCase();
 
-  // Helper to determine the goal flavor
-  let suffix = '';
+  let suffix;
   if (normGoal.includes('job')) suffix = ' [Job Prep: Portfolio Focus]';
   else if (normGoal.includes('interview')) suffix = ' [Interview: Assessment Prep]';
   else if (normGoal.includes('academic')) suffix = ' [Academic: Theory Focus]';
   else suffix = ' [Skill Development]';
+
+
 
   // Specific mappings for Flutter
   if (normSkill.includes('flutter')) {
@@ -327,14 +328,10 @@ export default function GenerateTrackPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let interval;
-    if (generating) {
-      interval = setInterval(() => {
-        setStageIndex((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev));
-      }, 3500);
-    } else {
-      setStageIndex(0);
-    }
+    if (!generating) return;
+    const interval = setInterval(() => {
+      setStageIndex((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev));
+    }, 3500);
     return () => clearInterval(interval);
   }, [generating]);
 
@@ -343,6 +340,7 @@ export default function GenerateTrackPage() {
     if (!skill.trim()) return;
 
     setGenerating(true);
+    setStageIndex(0);
     setError('');
 
     try {

@@ -100,7 +100,6 @@ export default function LessonPage() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [practiceDone, setPracticeDone] = useState(false);
-  const [allCorrect, setAllCorrect] = useState(true);
   const [reward, setReward] = useState(null);
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState([]);
@@ -145,7 +144,6 @@ export default function LessonPage() {
         setSelectedOption(null);
         setFeedback(null);
         setPracticeDone(false);
-        setAllCorrect(true);
         setReward(null);
         setQuizScore(0);
         setQuizAnswers([]);
@@ -391,7 +389,7 @@ export default function LessonPage() {
     try {
       const result = await aiService.mentor(msg, lesson?.slug, track?.slug, mode);
       setMentorMessages((prev) => [...prev, { role: 'assistant', text: result.response }]);
-    } catch (err) {
+    } catch {
       setMentorMessages((prev) => [...prev, { role: 'assistant', text: '⚠️ Could not reach the AI Mentor. Make sure the backend server is running.' }]);
     } finally {
       setMentorLoading(false);
@@ -418,7 +416,7 @@ export default function LessonPage() {
               </h3>
             </div>
             <div className="lesson-sidebar-modules">
-              {track.modules?.map((mod, mi) => (
+              {track.modules?.map((mod) => (
                 <div key={mod.id} className="lesson-sidebar-module">
                   <div className="lesson-sidebar-module-title" title={mod.name}>
                     {mod.name}
