@@ -1,96 +1,130 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as LucideIcons from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { trackService } from '../services/trackService';
 import ProgressBar from '../components/common/ProgressBar';
 import PageTransition from '../components/layout/PageTransition';
 
-const TRACK_ICONS = {
-  sql: '🗄️',
-  python: '🐍',
-  webdev: '🌐',
-  ai: '🤖',
-  datascience: '📈',
-  java: '☕',
-  javascript: '⚡',
-  typescript: '🟦',
-  'c-lang': '📟',
-  cpp: '🚀',
-  csharp: '🎯',
-  'go-lang': '🐹',
-  rust: '🦀',
-  kotlin: '🎯',
-  swift: '🦅',
-  php: '🐘',
-  html: '📄',
-  css: '🎨',
-  react: '⚛️',
-  nextjs: '🌐',
-  angular: '🅰️',
-  vuejs: '🟢',
-  nodejs: '🟢',
-  expressjs: '🚂',
-  tailwindcss: '🍃',
-  'android-dev': '🤖',
-  flutter: '🦋',
-  'react-native': '⚛️',
-  swiftui: '🦅',
-  'ios-dev': '🍎',
-  'advanced-sql': '🗄️',
-  postgresql: '🐘',
-  mysql: '🐬',
-  mongodb: '🍃',
-  redis: '🟥',
-  'db-design': '📐',
-  'data-analysis': '📊',
-  numpy: '📐',
-  pandas: '🐼',
-  'data-viz': '📈',
-  statistics: '🧮',
-  'prompt-eng': '💬',
-  nlp: '🗣️',
-  'computer-vision': '👁️',
-  'generative-ai': '🎨',
-  'llm-engineering': '🤖',
-  'ai-agents': '🕵️',
-  'rag-systems': '📚',
-  'deep-learning': '🧠',
-  linux: '🐧',
-  'git-github': '🐙',
-  docker: '🐳',
-  kubernetes: '☸️',
-  aws: '☁️',
-  azure: '☁️',
-  'google-cloud': '☁️',
-  cicd: '🤖',
-  terraform: '🏗️',
-  'security-fundamentals': '🛡️',
-  'network-security': '🔒',
-  'ethical-hacking': '🕵️',
-  pentesting: '🎯',
-  'web-security': '🌐',
-  'digital-forensics': '🔍',
-  'data-structures': '🧱',
-  algorithms: '🧮',
-  'system-design': '📐',
-  'design-patterns': '🧩',
-  oop: '⚙️',
-  'software-arch': '🏛️',
-  'frontend-career': '💼',
-  'backend-career': '💼',
-  'fullstack-career': '💼',
-  'mobile-career': '💼',
-  'data-analyst': '💼',
-  'ml-engineer': '💼',
-  'devops-engineer': '💼',
-  'cloud-engineer': '💼',
-  'cyber-analyst': '💼',
-  'product-management-track': '📊',
-  'uiux-design': '🎨',
-  'agile-framework': '🔄',
-  'scrum-framework': '🏉',
-  'business-analysis': '📈'
+const TrackIcon = ({ name, color, size = 24, className }) => {
+  const IconComponent = LucideIcons[name] || LucideIcons.BookOpen;
+  return (
+    <IconComponent 
+      size={size} 
+      style={color ? { color } : undefined} 
+      className={className} 
+    />
+  );
+};
+
+const generateFallbackDescription = (track) => {
+  const name = track.name;
+  if (!name) return 'Explore and master this specialized learning track.';
+  return `Master ${name} fundamentals, key concepts, hands-on practices, and build a capstone project.`;
+};
+
+const CATEGORY_LUCIDE_MAP = {
+  All: 'Globe',
+  Programming: 'Code',
+  'Web Development': 'Monitor',
+  'Mobile Development': 'Smartphone',
+  Databases: 'Database',
+  'Data Science': 'BarChart2',
+  'Artificial Intelligence': 'Brain',
+  'Cloud & DevOps': 'Cloud',
+  'Cyber Security': 'Shield',
+  'Software Engineering': 'GitMerge',
+  'Career Tracks': 'Briefcase',
+  'Business & Product': 'TrendingUp',
+  'Custom Path': 'Wand2'
+};
+
+const TRACK_LUCIDE_MAP = {
+  sql: 'Database',
+  python: 'Code',
+  webdev: 'Globe',
+  ai: 'Brain',
+  datascience: 'LineChart',
+  java: 'Code',
+  javascript: 'Code',
+  typescript: 'Code',
+  'c-lang': 'Terminal',
+  cpp: 'Terminal',
+  csharp: 'Terminal',
+  'go-lang': 'Code',
+  rust: 'Terminal',
+  kotlin: 'Code',
+  swift: 'Code',
+  php: 'Code',
+  html: 'FileCode',
+  css: 'Palette',
+  react: 'Atom',
+  nextjs: 'Globe',
+  angular: 'Code',
+  vuejs: 'Code',
+  nodejs: 'Server',
+  expressjs: 'Server',
+  tailwindcss: 'Layers',
+  'android-dev': 'Smartphone',
+  flutter: 'Smartphone',
+  'react-native': 'Atom',
+  swiftui: 'Smartphone',
+  'ios-dev': 'Smartphone',
+  'advanced-sql': 'Database',
+  postgresql: 'Database',
+  mysql: 'Database',
+  mongodb: 'Database',
+  redis: 'Database',
+  'db-design': 'Database',
+  'data-analysis': 'BarChart2',
+  numpy: 'Sigma',
+  pandas: 'Table',
+  'data-viz': 'PieChart',
+  statistics: 'Calculator',
+  'prompt-eng': 'Wand2',
+  nlp: 'MessageSquare',
+  'computer-vision': 'Eye',
+  'generative-ai': 'Sparkles',
+  'llm-engineering': 'Bot',
+  'ai-agents': 'UserCheck',
+  'rag-systems': 'BookOpen',
+  'deep-learning': 'Cpu',
+  linux: 'Terminal',
+  'git-github': 'GitBranch',
+  docker: 'Box',
+  kubernetes: 'Network',
+  aws: 'Cloud',
+  azure: 'Cloud',
+  'google-cloud': 'Cloud',
+  cicd: 'RefreshCw',
+  terraform: 'Hammer',
+  'security-fundamentals': 'Shield',
+  'network-security': 'Lock',
+  'ethical-hacking': 'Terminal',
+  pentesting: 'Target',
+  'web-security': 'Globe',
+  'digital-forensics': 'Search',
+  'data-structures': 'GitMerge',
+  algorithms: 'Cpu',
+  'system-design': 'Layers',
+  'design-patterns': 'Grid',
+  oop: 'Hexagon',
+  'software-arch': 'Compass',
+  'frontend-career': 'Briefcase',
+  'backend-career': 'Briefcase',
+  'fullstack-career': 'Briefcase',
+  'mobile-career': 'Briefcase',
+  'data-analyst': 'Briefcase',
+  'ml-engineer': 'Briefcase',
+  'devops-engineer': 'Briefcase',
+  'cloud-engineer': 'Briefcase',
+  'cyber-analyst': 'Briefcase',
+  'product-management-track': 'TrendingUp',
+  'uiux-design': 'Palette',
+  'agile-framework': 'RotateCw',
+  'scrum-framework': 'Activity',
+  'business-analysis': 'FileText'
 };
 
 // Extended premium static metadata for tracks
@@ -419,47 +453,47 @@ const TRACK_CATEGORIES = {
 };
 
 const CATEGORIES = [
-  { id: 'All', name: 'All Categories', icon: '🌐' },
-  { id: 'Programming', name: 'Programming', icon: '💻' },
-  { id: 'Web Development', name: 'Web Development', icon: '🖥️' },
-  { id: 'Mobile Development', name: 'Mobile Development', icon: '📱' },
-  { id: 'Databases', name: 'Databases', icon: '🗄️' },
-  { id: 'Data Science', name: 'Data Science', icon: '📊' },
-  { id: 'Artificial Intelligence', name: 'Artificial Intelligence', icon: '🤖' },
-  { id: 'Cloud & DevOps', name: 'Cloud & DevOps', icon: '☁️' },
-  { id: 'Cyber Security', name: 'Cyber Security', icon: '🛡️' },
-  { id: 'Software Engineering', name: 'Software Engineering', icon: '📐' },
-  { id: 'Career Tracks', name: 'Career Tracks', icon: '💼' },
-  { id: 'Business & Product', name: 'Business & Product', icon: '📈' },
-  { id: 'Custom Path', name: 'Custom Paths', icon: '🪄' }
+  { id: 'All', name: 'All Categories' },
+  { id: 'Programming', name: 'Programming' },
+  { id: 'Web Development', name: 'Web Development' },
+  { id: 'Mobile Development', name: 'Mobile Development' },
+  { id: 'Databases', name: 'Databases' },
+  { id: 'Data Science', name: 'Data Science' },
+  { id: 'Artificial Intelligence', name: 'Artificial Intelligence' },
+  { id: 'Cloud & DevOps', name: 'Cloud & DevOps' },
+  { id: 'Cyber Security', name: 'Cyber Security' },
+  { id: 'Software Engineering', name: 'Software Engineering' },
+  { id: 'Career Tracks', name: 'Career Tracks' },
+  { id: 'Business & Product', name: 'Business & Product' },
+  { id: 'Custom Path', name: 'Custom Paths' }
 ];
 
 const CAREER_PATHS = [
   {
     title: 'Backend Developer',
     description: 'Build fast, scalable server-side systems and databases.',
-    icon: '⚡',
+    icon: 'Server',
     recommended: ['sql', 'python', 'java'],
     color: '#3b82f6'
   },
   {
     title: 'Data Scientist',
     description: 'Clean data, build models, and discover business intelligence.',
-    icon: '📈',
+    icon: 'LineChart',
     recommended: ['python', 'datascience', 'sql'],
     color: '#10b981'
   },
   {
     title: 'AI Architect',
     description: 'Integrate LLMs, neural networks, and prompt systems.',
-    icon: '🧠',
+    icon: 'Brain',
     recommended: ['python', 'ai'],
     color: '#a855f7'
   },
   {
     title: 'Full Stack Engineer',
     description: 'Design interactive frontends and connect them to databases.',
-    icon: '🌐',
+    icon: 'Globe',
     recommended: ['webdev', 'sql'],
     color: '#ec4899'
   }
@@ -548,7 +582,9 @@ export default function TracksPage() {
             
             <div className="discover-controls">
               <div className="discover-search__wrapper">
-                <span className="search-icon">🔍</span>
+                <span className="search-icon">
+                  <TrackIcon name="Search" size={16} />
+                </span>
                 <input
                   type="text"
                   placeholder="What would you like to master today?"
@@ -579,7 +615,9 @@ export default function TracksPage() {
                   className={`category-chip ${selectedCategory === cat.id ? 'category-chip--active' : ''}`}
                   onClick={() => setSelectedCategory(cat.id)}
                 >
-                  <span className="category-chip__icon">{cat.icon}</span>
+                  <span className="category-chip__icon">
+                    <TrackIcon name={CATEGORY_LUCIDE_MAP[cat.id]} size={16} />
+                  </span>
                   <span className="category-chip__name">{cat.name}</span>
                 </button>
               ))}
@@ -627,7 +665,7 @@ export default function TracksPage() {
                 
                 <div className="spotlight-card__graphic">
                   <div className="spotlight-icon" style={{ background: `${activeTrack.color}15`, color: activeTrack.color }}>
-                    {TRACK_ICONS[activeTrack.slug] || '📚'}
+                    <TrackIcon name={TRACK_LUCIDE_MAP[activeTrack.slug]} size={48} color={activeTrack.color} />
                   </div>
                 </div>
               </div>
@@ -648,7 +686,7 @@ export default function TracksPage() {
                   >
                     <div className="netflix-card__header">
                       <div className="netflix-card__icon" style={{ background: `${track.color}12`, color: track.color }}>
-                        {TRACK_ICONS[track.slug] || '📚'}
+                        <TrackIcon name={TRACK_LUCIDE_MAP[track.slug]} size={24} color={track.color} />
                       </div>
                       <span className="netflix-badge font-semibold" style={{ background: `${track.color}15`, color: track.color }}>
                         {track.meta.difficulty}
@@ -658,13 +696,21 @@ export default function TracksPage() {
                     <p className="netflix-card__desc">{track.description}</p>
                     
                     <div className="netflix-card__meta">
-                      <span>⏱ {track.meta.time}</span>
-                      <span>✦ {track.meta.xp}</span>
+                      <span>
+                        <TrackIcon name="Clock" size={12} className="inline-icon" /> {track.meta.time}
+                      </span>
+                      <span>
+                        <TrackIcon name="Award" size={12} className="inline-icon" /> {track.meta.xp}
+                      </span>
                     </div>
                     
                     <div className="netflix-card__hover-details">
-                      <div className="hover-stat">📂 {track.meta.projects}</div>
-                      <div className="hover-stat">🏆 {track.meta.quizzes} Quizzes</div>
+                      <div className="hover-stat">
+                        <TrackIcon name="Folder" size={12} className="inline-icon" /> {track.meta.projects}
+                      </div>
+                      <div className="hover-stat">
+                        <TrackIcon name="FileCheck" size={12} className="inline-icon" /> {track.meta.quizzes} Quizzes
+                      </div>
                       <button 
                         type="button" 
                         className="netflix-hover-btn" 
@@ -689,12 +735,14 @@ export default function TracksPage() {
             
             {loading ? (
               <div className="discover-catalog__loading">
-                <span className="catalog-spinner">⏳</span>
+                <span className="catalog-spinner-wrapper">
+                  <TrackIcon name="Loader2" size={24} className="animate-spin" />
+                </span>
                 <p>Loading course catalog...</p>
               </div>
             ) : filteredTracks.length === 0 ? (
               <div className="discover-catalog__empty">
-                <span>🗂️</span>
+                <TrackIcon name="FolderOpen" size={48} color="var(--text-muted)" />
                 <h3>No Tracks Found</h3>
                 <p>Try clearing your filters or search query to explore other tracks.</p>
               </div>
@@ -712,24 +760,55 @@ export default function TracksPage() {
                         <span className="difficulty-badge" style={{ borderColor: `${track.color}40`, color: track.color }}>
                           {track.meta.difficulty}
                         </span>
-                        <span className="time-badge">⏱ {track.meta.time}</span>
+                        <span className="time-badge">
+                          <TrackIcon name="Clock" size={12} className="inline-icon" /> {track.meta.time}
+                        </span>
                       </div>
                       
-                      <h3 className="catalog-card__title">{track.name}</h3>
-                      <p className="catalog-card__desc">{track.description}</p>
+                      <div className="catalog-card__header-row">
+                        <div className="catalog-card__icon-wrapper" style={{ background: `${track.color}15`, color: track.color }}>
+                          <TrackIcon name={TRACK_LUCIDE_MAP[track.slug]} size={20} color={track.color} />
+                        </div>
+                        <h3 className="catalog-card__title">{track.name}</h3>
+                      </div>
+                      
+                      <p className="catalog-card__desc">
+                        {track.description?.trim() || generateFallbackDescription(track)}
+                      </p>
+
+                      {track.progress && track.progress.progressPercent > 0 && (
+                        <div className="catalog-card__progress-block">
+                          <div className="catalog-card__progress-labels">
+                            <span>{track.progress.progressPercent}% Completed</span>
+                            <span>{track.progress.completedLessons || 0} / {track.totalLessons} Lessons</span>
+                          </div>
+                          <ProgressBar
+                            value={track.progress.completedLessons || 0}
+                            max={track.totalLessons || 12}
+                            color={track.color}
+                            size="xs"
+                          />
+                        </div>
+                      )}
                       
                       <div className="catalog-card__metrics">
                         <div className="metric-item">
-                          <span className="metric-icon">🏆</span>
-                          <span className="metric-text">{track.meta.quizzes} Quizzes</span>
+                          <span className="metric-icon">
+                            <TrackIcon name="BookOpen" size={14} color="var(--text-muted)" />
+                          </span>
+                          <span className="metric-text">{track.totalLessons} Lessons</span>
                         </div>
                         <div className="metric-item">
-                          <span className="metric-icon">📂</span>
-                          <span className="metric-text">{track.meta.projects}</span>
-                        </div>
-                        <div className="metric-item">
-                          <span className="metric-icon">✦</span>
+                          <span className="metric-icon">
+                            <TrackIcon name="Award" size={14} color="var(--text-muted)" />
+                          </span>
                           <span className="metric-text">{track.meta.xp}</span>
+                        </div>
+                        <div className="metric-item">
+                          <span className="metric-icon">
+                            <TrackIcon name="FileCode" size={14} color="var(--text-muted)" />
+                          </span>
+                          <span className="metric-text">{track.meta.projects}</span>
                         </div>
                       </div>
                     </div>
@@ -742,7 +821,7 @@ export default function TracksPage() {
                         onClick={(e) => { e.stopPropagation(); handleStartTrack(track); }}
                         style={{ background: track.color }}
                       >
-                        Start →
+                        {track.progress?.progressPercent > 0 ? 'Resume' : 'Start'} →
                       </button>
                     </div>
                   </div>
@@ -763,7 +842,9 @@ export default function TracksPage() {
                 {CAREER_PATHS.map((path) => (
                   <div key={path.title} className="career-card" style={{ '--career-accent-color': path.color }}>
                     <div className="career-card__header">
-                      <span className="career-card__icon">{path.icon}</span>
+                      <span className="career-card__icon">
+                        <TrackIcon name={path.icon} size={24} color={path.color} />
+                      </span>
                       <h3 className="career-card__title">{path.title}</h3>
                     </div>
                     <p className="career-card__desc">{path.description}</p>
@@ -798,7 +879,9 @@ export default function TracksPage() {
             <section className="discover-section achievements-spotlight">
               <div className="achievements-card">
                 <div className="achievements-card__info">
-                  <span className="achievements-card__icon">🏆</span>
+                  <span className="achievements-card__icon">
+                    <TrackIcon name="Trophy" size={32} color="var(--accent-amber)" />
+                  </span>
                   <h2 className="achievements-title">Collect Completion Badges</h2>
                   <p className="achievements-desc">
                     Finish the lessons, clear the quiz gating with a 4/5 or better, and pass the final Capstone project in any track to unlock exclusive profile badges and boost your total XP ranking!
@@ -806,19 +889,27 @@ export default function TracksPage() {
                 </div>
                 <div className="badges-preview">
                   <div className="badge-preview-item" title="SQL Master">
-                    <span className="badge-icon">🗄️</span>
+                    <span className="badge-icon">
+                      <TrackIcon name="Database" size={24} color="var(--accent-blue)" />
+                    </span>
                     <strong>SQL Master</strong>
                   </div>
                   <div className="badge-preview-item" title="Python Guru">
-                    <span className="badge-icon">🐍</span>
+                    <span className="badge-icon">
+                      <TrackIcon name="Code" size={24} color="var(--accent-green)" />
+                    </span>
                     <strong>Python Guru</strong>
                   </div>
                   <div className="badge-preview-item" title="Vanguard Dev">
-                    <span className="badge-icon">🌐</span>
+                    <span className="badge-icon">
+                      <TrackIcon name="Globe" size={24} color="var(--accent-violet)" />
+                    </span>
                     <strong>Web Expert</strong>
                   </div>
                   <div className="badge-preview-item" title="Neural Pioneer">
-                    <span className="badge-icon">🤖</span>
+                    <span className="badge-icon">
+                      <TrackIcon name="Brain" size={24} color="var(--accent-pink)" />
+                    </span>
                     <strong>AI Pioneer</strong>
                   </div>
                 </div>
@@ -853,7 +944,7 @@ export default function TracksPage() {
                 
                 <div className="drawer-header">
                   <div className="drawer-icon" style={{ background: `${previewTrack.color}15`, color: previewTrack.color }}>
-                    {TRACK_ICONS[previewTrack.slug] || previewTrack.icon || '📚'}
+                    <TrackIcon name={TRACK_LUCIDE_MAP[previewTrack.slug]} size={48} color={previewTrack.color} />
                   </div>
                   <span className="difficulty-badge" style={{ borderColor: `${previewTrack.color}40`, color: previewTrack.color }}>
                     {previewTrack.meta.difficulty}
@@ -867,19 +958,27 @@ export default function TracksPage() {
                   <div className="drawer-stats-grid">
                     <div className="drawer-stat-item">
                       <span className="stat-label">Estimated Time</span>
-                      <span className="stat-value">⏱ {previewTrack.meta.time}</span>
+                      <span className="stat-value">
+                        <TrackIcon name="Clock" size={14} className="inline-icon" /> {previewTrack.meta.time}
+                      </span>
                     </div>
                     <div className="drawer-stat-item">
                       <span className="stat-label">XP Pool</span>
-                      <span className="stat-value">✦ {previewTrack.meta.xp}</span>
+                      <span className="stat-value">
+                        <TrackIcon name="Award" size={14} className="inline-icon" /> {previewTrack.meta.xp}
+                      </span>
                     </div>
                     <div className="drawer-stat-item">
                       <span className="stat-label">Quiz Gating</span>
-                      <span className="stat-value">📋 {previewTrack.meta.quizzes} Quizzes</span>
+                      <span className="stat-value">
+                        <TrackIcon name="FileCheck" size={14} className="inline-icon" /> {previewTrack.meta.quizzes} Quizzes
+                      </span>
                     </div>
                     <div className="drawer-stat-item">
                       <span className="stat-label">Projects</span>
-                      <span className="stat-value">📂 {previewTrack.meta.projects}</span>
+                      <span className="stat-value">
+                        <TrackIcon name="FileCode" size={14} className="inline-icon" /> {previewTrack.meta.projects}
+                      </span>
                     </div>
                   </div>
 
@@ -889,7 +988,7 @@ export default function TracksPage() {
                     <div className="career-rec-tags">
                       {previewTrack.meta.careers.map((role) => (
                         <span key={role} className="career-rec-tag">
-                          💼 {role}
+                          <TrackIcon name="Briefcase" size={14} className="inline-icon" /> {role}
                         </span>
                       ))}
                     </div>
