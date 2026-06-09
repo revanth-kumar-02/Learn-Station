@@ -1,19 +1,25 @@
-/**
- * lessonHelper.js
- * 
- * Enriches lesson data with structured educational components:
- * - Learning Objectives
- * - Real World Scenarios (Why it matters, Industry usage, Realistic Example)
- * - Key Terms Glossary definitions
- * - Summary & Key Takeaways points
- */
+import { Lesson } from '../types/Lesson';
+
+interface EnhancedLessonData {
+  learningObjective: string[];
+  realWorldScenario: {
+    whyItMatters: string;
+    industryUsage: string;
+    realisticExample: string;
+  };
+  summaryPoints: string[];
+  keyTerms: {
+    term: string;
+    definition: string;
+  }[];
+}
 
 /**
  * Lightweight markdown-to-HTML parser for AI-generated lesson content.
  * Handles: ### headings, **bold**, `inline code`, - list items, --- hr
  * Safe to pass into dangerouslySetInnerHTML — no external scripts.
  */
-export function parseMarkdown(text) {
+export function parseMarkdown(text: string | undefined | null): string {
   if (!text) return '';
 
   const lines = text.split('\n');
@@ -21,7 +27,7 @@ export function parseMarkdown(text) {
   let inList = false;
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines[i];
 
     // Headings
     if (line.startsWith('### ')) {
@@ -73,7 +79,7 @@ export function parseMarkdown(text) {
 /**
  * Converts inline markdown tokens: **bold**, `code`
  */
-function inlineMarkdown(text) {
+function inlineMarkdown(text: string): string {
   return text
     // Bold: **text** or __text__
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -85,7 +91,7 @@ function inlineMarkdown(text) {
 }
 
 // Global glossary of terms used across SQL, Python, Web Dev, AI, Data Science, and Java tracks
-const GLOSSARY = {
+const GLOSSARY: Record<string, string> = {
   // SQL Terms
   'sql': 'Structured Query Language, the standard declarative language for communicating with relational database management systems.',
   'relational database': 'A database that stores data in structured tables consisting of columns and rows, representing real-world entities and relationships.',
@@ -171,7 +177,7 @@ const GLOSSARY = {
 /**
  * Fallback generator when specific templates are not defined
  */
-function generateFallbackEnhancement(lesson) {
+function generateFallbackEnhancement(lesson: Lesson): Omit<EnhancedLessonData, 'keyTerms'> {
   const title = lesson.title || 'Topic';
 
   return {
@@ -196,18 +202,18 @@ function generateFallbackEnhancement(lesson) {
 /**
  * Main function to enrich lesson data on the client side
  */
-export function getEnhancedLessonData(lesson) {
+export function getEnhancedLessonData(lesson: Lesson | undefined | null): EnhancedLessonData | null {
   if (!lesson) return null;
 
   const slug = lesson.slug || '';
   const highlights = lesson.concept?.highlights || [];
-  
+
   // 1. Resolve Key Terms definitions
   const keyTerms = highlights.map(term => {
     const cleanTerm = term.toLowerCase().trim();
     // Find matching definition in glossary
     let definition = 'Glossary definition coming soon for this specialized term.';
-    
+
     // Exact or partial match check
     for (const [key, val] of Object.entries(GLOSSARY)) {
       if (cleanTerm === key || cleanTerm.includes(key) || key.includes(cleanTerm)) {
@@ -219,9 +225,9 @@ export function getEnhancedLessonData(lesson) {
   });
 
   // 2. Specific lesson data overrides
-  let objective = null;
-  let scenario = null;
-  let summary = null;
+  let objective: string[] | null = null;
+  let scenario: EnhancedLessonData['realWorldScenario'] | null = null;
+  const summary: string[] | null = null;
 
   // Track SQL Overrides
   if (slug.startsWith('sql-')) {
@@ -316,7 +322,7 @@ export function getEnhancedLessonData(lesson) {
       objective = [
         'Structure pages using HTML5 elements like nav, main, section, and article.',
         'Improve SEO rankings and screen-reader accessibility.',
-        'Maintain a clean document outlines outline tree.'
+        'Maintain a clean document outline tree.'
       ];
       scenario = {
         whyItMatters: 'Generic <div> layouts look identical to search indexing bots. Semantic elements tell crawlers exactly where headers, footers, and articles are.',
@@ -393,7 +399,7 @@ export function getEnhancedLessonData(lesson) {
 
   // Fallback generation if fields are empty
   const fallback = generateFallbackEnhancement(lesson);
-  
+
   return {
     learningObjective: objective || fallback.learningObjective,
     realWorldScenario: scenario || fallback.realWorldScenario,

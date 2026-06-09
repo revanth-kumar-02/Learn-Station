@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 
+interface UseScrollRevealOptions {
+  threshold?: number;
+  rootMargin?: string;
+  once?: boolean;
+}
+
 /**
  * Scroll reveal hook using IntersectionObserver.
  * Returns a ref to attach to the element and a boolean `revealed`.
  */
-export function useScrollReveal(options = {}) {
+export function useScrollReveal(options: UseScrollRevealOptions = {}) {
   const { threshold = 0.1, rootMargin = '0px 0px -50px 0px', once = true } = options;
-  const ref = useRef(null);
+  const ref = useRef<HTMLElement | null>(null);
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -36,14 +42,14 @@ export function useScrollReveal(options = {}) {
  * Mouse position tracker relative to an element.
  * Returns x, y normalized to [-1, 1] range.
  */
-export function useMousePosition(elementRef) {
+export function useMousePosition(elementRef: React.RefObject<HTMLElement | null> | null) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const el = elementRef?.current;
     if (!el) return;
 
-    const handleMove = (e) => {
+    const handleMove = (e: MouseEvent) => {
       const rect = el.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
@@ -52,11 +58,11 @@ export function useMousePosition(elementRef) {
 
     const handleLeave = () => setPosition({ x: 0, y: 0 });
 
-    el.addEventListener('mousemove', handleMove);
+    el.addEventListener('mousemove', handleMove as EventListener);
     el.addEventListener('mouseleave', handleLeave);
 
     return () => {
-      el.removeEventListener('mousemove', handleMove);
+      el.removeEventListener('mousemove', handleMove as EventListener);
       el.removeEventListener('mouseleave', handleLeave);
     };
   }, [elementRef]);
@@ -64,11 +70,17 @@ export function useMousePosition(elementRef) {
   return position;
 }
 
+interface UseCountUpOptions {
+  duration?: number;
+  enabled?: boolean;
+  startFrom?: number;
+}
+
 /**
  * Animated count-up hook.
  * Animates from 0 (or previous value) to target.
  */
-export function useCountUp(target, options = {}) {
+export function useCountUp(target: number, options: UseCountUpOptions = {}) {
   const { duration = 2000, enabled = true, startFrom = 0 } = options;
   const [value, setValue] = useState(startFrom);
   const prevTarget = useRef(startFrom);
@@ -82,7 +94,7 @@ export function useCountUp(target, options = {}) {
 
     const start = performance.now();
 
-    const animate = (now) => {
+    const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
 
@@ -105,10 +117,16 @@ export function useCountUp(target, options = {}) {
   return value;
 }
 
+interface UseTypewriterOptions {
+  speed?: number;
+  delay?: number;
+  enabled?: boolean;
+}
+
 /**
  * Typewriter effect hook.
  */
-export function useTypewriter(text, options = {}) {
+export function useTypewriter(text: string, options: UseTypewriterOptions = {}) {
   const { speed = 30, delay = 0, enabled = true } = options;
   const [displayText, setDisplayText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
@@ -116,10 +134,10 @@ export function useTypewriter(text, options = {}) {
   useEffect(() => {
     if (!enabled || !text) return;
 
-    setDisplayText('');
-    setIsComplete(false);
+    setDisplayText((prev) => prev !== '' ? '' : prev);
+    setIsComplete((prev) => prev !== false ? false : prev);
     let index = 0;
-    let timeout;
+    let timeout: any;
 
     const type = () => {
       if (index < text.length) {

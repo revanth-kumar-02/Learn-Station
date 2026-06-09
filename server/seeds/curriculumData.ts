@@ -1363,6 +1363,4 @@ const compileCurriculum = () => {
   return tracks;
 };
 
-module.exports = {
-  tracksData: compileCurriculum()
-};
+export const tracksData = compileCurriculum();

@@ -1,8 +1,15 @@
-import { createContext, useContext, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, ReactNode } from 'react';
 
-const PathSelectionContext = createContext(null);
+interface PathSelectionContextType {
+  isOpen: boolean;
+  openOverlay: () => void;
+  closeOverlay: () => void;
+}
 
-export function PathSelectionProvider({ children }) {
+const PathSelectionContext = createContext<PathSelectionContextType | null>(null);
+
+export function PathSelectionProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const openOverlay = () => setIsOpen(true);

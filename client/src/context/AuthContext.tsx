@@ -1,17 +1,31 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '../supabase';
 import api from '../services/api';
+import { User, UserResponse } from '../types/User';
+import { Session } from '@supabase/supabase-js';
 
-const AuthContext = createContext(null);
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  register: (name: string, email: string, password: string) => Promise<any>;
+  logout: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
+  loadUser: () => Promise<void>;
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async () => {
     try {
-      const { data } = await api.get('/auth/me');
+      const { data } = await api.get<UserResponse>('/auth/me');
       setUser(data.user);
     } catch (err) {
       console.error('Error loading user profile:', err);
@@ -34,7 +48,7 @@ export function AuthProvider({ children }) {
     });
 
     // 2. Listen to authentication changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
         await loadProfile();
@@ -49,7 +63,7 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfile]);
 
-  const login = async (email, password) => {
+  const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -58,7 +72,7 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name: string, email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -79,7 +93,7 @@ export function AuthProvider({ children }) {
     setSession(null);
   };
 
-  const updateUser = (updates) => {
+  const updateUser = (updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
   };
 

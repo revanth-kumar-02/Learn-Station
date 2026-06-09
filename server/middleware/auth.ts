@@ -1,8 +1,29 @@
-const { supabase } = require('../config/db');
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../config/db';
 
-const protect = async (req, res, next) => {
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        _id: string;
+        id: string;
+        name: string;
+        email: string;
+        xp: number;
+        level: number;
+        streak: number;
+        longestStreak: number;
+        lastActiveDate: string;
+        dailyXpGoal: number;
+        dailyXpEarned: number;
+      };
+    }
+  }
+}
+
+export const protect = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    let token;
+    let token: string | undefined;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
@@ -20,7 +41,7 @@ const protect = async (req, res, next) => {
     }
 
     // Fetch public profile details or create if not found
-    let profile;
+    let profile: any;
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -101,11 +122,8 @@ const protect = async (req, res, next) => {
       dailyXpEarned,
     };
 
-
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Not authorized, token invalid' });
   }
 };
-
-module.exports = { protect };

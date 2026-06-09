@@ -1,7 +1,29 @@
-const { supabase } = require('../config/db');
-const { calculateLevel, checkAchievements } = require('../utils/xpCalculator');
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../config/db';
+import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
 
-const checkIsLessonUnlocked = async (userId, lesson) => {
+interface Lesson {
+  id: string;
+  slug: string;
+  title: string;
+  track_id: string;
+  module_id: string;
+  display_order: number;
+  estimated_minutes?: number;
+  xp_reward: number;
+  concept_title?: string;
+  concept_content?: string;
+  concept_highlights?: string[];
+  example_language?: string;
+  example_code?: string;
+  example_explanation?: string;
+  practice_type?: string;
+  practice_instruction?: string;
+  practice_template?: string;
+  practice_answer?: string;
+}
+
+const checkIsLessonUnlocked = async (userId: string, lesson: Lesson): Promise<boolean> => {
   // 1. Fetch user progress
   const { data: progress, error: progressError } = await supabase
     .from('progress')
@@ -15,8 +37,8 @@ const checkIsLessonUnlocked = async (userId, lesson) => {
     return false;
   }
 
-  const completedSet = new Set(progress ? progress.completed_lessons || [] : []);
-  const completedChallengesSet = new Set(progress ? progress.completed_challenges || [] : []);
+  const completedSet = new Set<string>(progress ? progress.completed_lessons || [] : []);
+  const completedChallengesSet = new Set<string>(progress ? progress.completed_challenges || [] : []);
 
   // Already completed is unlocked
   if (completedSet.has(lesson.id)) {
@@ -38,7 +60,7 @@ const checkIsLessonUnlocked = async (userId, lesson) => {
   const sortedModules = [...(modules || [])].sort((a, b) => a.display_order - b.display_order);
 
   // 3. Determine which modules are unlocked
-  const unlockedModules = new Set();
+  const unlockedModules = new Set<string>();
   if (sortedModules.length > 0) {
     unlockedModules.add(sortedModules[0].id); // First module is unlocked
   }
@@ -120,8 +142,10 @@ const checkIsLessonUnlocked = async (userId, lesson) => {
 
 // @desc    Get lesson by slug
 // @route   GET /api/lessons/:slug
-const getLesson = async (req, res, next) => {
+export const getLesson = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch lesson
     const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
@@ -134,7 +158,7 @@ const getLesson = async (req, res, next) => {
     }
 
     // Check if lesson is unlocked
-    const isUnlocked = await checkIsLessonUnlocked(req.user.id, lesson);
+    const isUnlocked = await checkIsLessonUnlocked(userId, lesson);
     if (!isUnlocked) {
       return res.status(403).json({ message: 'This lesson is locked. Complete the previous lesson to continue.' });
     }
@@ -151,7 +175,7 @@ const getLesson = async (req, res, next) => {
     const { data: progress, error: progressError } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', lesson.track_id)
       .maybeSingle();
 
@@ -190,7 +214,7 @@ const getLesson = async (req, res, next) => {
 
     // Fetch challenge IDs map for the track's lessons
     const lessonIds = (lessons || []).map(l => l.id);
-    const challengeIdsMap = {};
+    const challengeIdsMap: Record<string, string[]> = {};
     if (lessonIds.length > 0) {
       const { data: challengesList, error: challengesListError } = await supabase
         .from('challenges')
@@ -317,8 +341,10 @@ const getLesson = async (req, res, next) => {
 
 // @desc    Complete a lesson
 // @route   POST /api/lessons/:slug/complete
-const completeLesson = async (req, res, next) => {
+export const completeLesson = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch lesson
     const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
@@ -345,7 +371,7 @@ const completeLesson = async (req, res, next) => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -356,7 +382,7 @@ const completeLesson = async (req, res, next) => {
     let { data: progress, error: progressError } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', lesson.track_id)
       .maybeSingle();
 
@@ -366,7 +392,7 @@ const completeLesson = async (req, res, next) => {
       const { data: newProgress, error: createError } = await supabase
         .from('progress')
         .insert({
-          user_id: req.user.id,
+          user_id: userId,
           track_id: lesson.track_id,
           completed_lessons: [],
           completed_challenges: [],
@@ -447,7 +473,7 @@ const completeLesson = async (req, res, next) => {
 
     const completedChallenges = progress.completed_challenges || [];
     if (lessonChallenges && lessonChallenges.length > 0) {
-      lessonChallenges.forEach(c => {
+      lessonChallenges.forEach((c: any) => {
         if (!completedChallenges.includes(c.id)) {
           completedChallenges.push(c.id);
         }
@@ -471,7 +497,7 @@ const completeLesson = async (req, res, next) => {
     if (lessonsError) throw lessonsError;
 
     const sortedModules = [...(modules || [])].sort((a, b) => a.display_order - b.display_order);
-    const moduleOrder = {};
+    const moduleOrder: Record<string, number> = {};
     sortedModules.forEach((m, idx) => {
       moduleOrder[m.id] = idx;
     });
@@ -545,7 +571,7 @@ const completeLesson = async (req, res, next) => {
     const { data: dailyActivity, error: activityError } = await supabase
       .from('activity')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('date', todayStr)
       .maybeSingle();
 
@@ -562,17 +588,16 @@ const completeLesson = async (req, res, next) => {
     } else {
       await supabase
         .from('activity')
-        .insert({ user_id: req.user.id, date: todayStr, xp_earned: earnedXp });
+        .insert({ user_id: userId, date: todayStr, xp_earned: earnedXp });
     }
 
     // Daily Missions Logic
-    const { generateDailyMissions, updateDailyMissions } = require('../utils/xpCalculator');
     let dailyMissionsObj = profile.daily_missions;
     if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
       dailyMissionsObj = generateDailyMissions(todayStr);
     }
 
-    const checkMissionsCompletions = (before, after) => {
+    const checkMissionsCompletions = (before: any[], after: any[]) => {
       let count = 0;
       for (let i = 0; i < after.length; i++) {
         if (after[i].completed && !before[i].completed) {
@@ -614,7 +639,7 @@ const completeLesson = async (req, res, next) => {
     const { data: allProgress, error: allProgressError } = await supabase
       .from('progress')
       .select('*, track:tracks(slug, is_ai_generated)')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
 
     if (allProgressError) throw allProgressError;
 
@@ -637,7 +662,7 @@ const completeLesson = async (req, res, next) => {
     const { data: submissions, error: subError } = await supabase
       .from('capstone_submissions')
       .select('id')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
     const completedProjectsCount = submissions?.length || 0;
 
     // Time-based checks (for rare badges)
@@ -693,7 +718,7 @@ const completeLesson = async (req, res, next) => {
         achievements: updatedAchievements,
         daily_missions: dailyMissionsObj,
       })
-      .eq('id', req.user.id);
+      .eq('id', userId);
 
     if (updateProfileError) throw updateProfileError;
 
@@ -716,5 +741,3 @@ const completeLesson = async (req, res, next) => {
     next(error);
   }
 };
-
-module.exports = { getLesson, completeLesson };

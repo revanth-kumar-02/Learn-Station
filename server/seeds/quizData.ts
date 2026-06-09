@@ -9504,4 +9504,4 @@ const quizData = {
   ]
 };
 
-module.exports = quizData;
+export default quizData;

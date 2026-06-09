@@ -1,7 +1,10 @@
-const { supabase } = require('../config/db');
+import { Request, Response, NextFunction } from 'express';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { supabase } from '../config/db';
+
 
 // Helper to slugify track name
-const slugify = (text) => {
+const slugify = (text: string | number): string => {
   return text
     .toString()
     .toLowerCase()
@@ -12,7 +15,7 @@ const slugify = (text) => {
 };
 
 // Helper to pad challenges to exactly 5 for getMockBlueprint
-const padChallenges = (challenges, lessonTitle, trackName) => {
+const padChallenges = (challenges: any[], lessonTitle: string, trackName: string): any[] => {
   const padded = [...challenges];
   
   if (padded.length < 3) {
@@ -67,7 +70,7 @@ const padChallenges = (challenges, lessonTitle, trackName) => {
 };
 
 // Seeding/Mock blueprint content when Gemini key is not present or fails
-const getMockBlueprint = (skill, level, goal) => {
+const getMockBlueprint = (skill: string, level: string, goal: string): any => {
   const normalizedSkill = skill.trim();
   const normalizedLevel = level.toLowerCase().trim();
   const normalizedGoal = goal.toLowerCase().trim();
@@ -1486,7 +1489,7 @@ const getMockBlueprint = (skill, level, goal) => {
 
 // @desc    Generate AI learning path
 // @route   POST /api/ai/generate
-const generatePath = async (req, res, next) => {
+export const generatePath = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { skill, level, goal } = req.body;
     console.log(`📥 [API Route Hit] POST /api/ai/generate - Skill: "${skill}", Level: "${level}", Goal: "${goal}"`);
@@ -1817,7 +1820,7 @@ Enforce:
         const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         blueprint = JSON.parse(rawJsonText);
         console.log(`✨ [AI Response Success] Gemini API returned valid blueprint for: "${skill}"`);
-      } catch (geminiError) {
+      } catch (geminiError: any) {
         console.error('⚠️ [AI Response Error] Gemini generation failed or returned invalid JSON, falling back to mock:', geminiError.message);
         blueprint = getMockBlueprint(skill, level, goal);
       }
@@ -1848,7 +1851,7 @@ Enforce:
         display_order: 100, // Custom tracks listed at the bottom
         total_lessons: blueprint.lessons.length,
         is_ai_generated: true,
-        user_id: req.user.id,
+        user_id: req.user!.id,
         capstone_project: blueprint.track.capstone_project || {},
       })
       .select()
@@ -1934,7 +1937,7 @@ Enforce:
       message: 'Learning blueprint generated and initialized.',
       trackSlug,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [API Route Error] POST /api/ai/generate failed:', error);
     next(error);
   }
@@ -1942,7 +1945,7 @@ Enforce:
 
 // @desc    AI Mentor — contextual lesson help
 // @route   POST /api/ai/mentor
-const mentorChat = async (req, res, next) => {
+export const mentorChat = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { message, lessonSlug, trackSlug, mode } = req.body;
 
@@ -2012,7 +2015,7 @@ Do NOT:
       return res.status(500).json({ message: 'AI service not configured.' });
     }
 
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash',
@@ -2031,4 +2034,4 @@ Do NOT:
   }
 };
 
-module.exports = { generatePath, mentorChat };
+

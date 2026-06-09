@@ -1,13 +1,16 @@
-const { supabase } = require('../config/db');
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../config/db';
 
 // @desc    Get all tracks with user progress
-const getTracks = async (req, res, next) => {
+export const getTracks = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch tracks: either public (non-AI) tracks OR tracks created by this user
     const { data: tracks, error: tracksError } = await supabase
       .from('tracks')
       .select('*')
-      .or(`is_ai_generated.eq.false,user_id.eq.${req.user.id}`)
+      .or(`is_ai_generated.eq.false,user_id.eq.${userId}`)
       .order('display_order');
 
     if (tracksError) throw tracksError;
@@ -16,7 +19,7 @@ const getTracks = async (req, res, next) => {
     const { data: progressList, error: progressError } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
 
     if (progressError) throw progressError;
 
@@ -34,22 +37,22 @@ const getTracks = async (req, res, next) => {
     if (modulesError) throw modulesError;
 
     // Group modules by track
-    const modulesByTrack = {};
+    const modulesByTrack: Record<string, any[]> = {};
     (allModules || []).forEach(m => {
       if (!modulesByTrack[m.track_id]) modulesByTrack[m.track_id] = [];
       modulesByTrack[m.track_id].push(m);
     });
 
     // Sort lessons per track using module orders and display_order
-    const firstLessonSlugMap = {};
-    const lessonsMap = {};
+    const firstLessonSlugMap: Record<string, string> = {};
+    const lessonsMap: Record<string, any> = {};
     (allLessons || []).forEach(l => {
       lessonsMap[l.id] = l;
     });
 
     Object.keys(modulesByTrack).forEach(trackId => {
       const trackMods = modulesByTrack[trackId].sort((a, b) => a.display_order - b.display_order);
-      const modOrder = {};
+      const modOrder: Record<string, number> = {};
       trackMods.forEach((m, idx) => {
         modOrder[m.id] = idx;
       });
@@ -68,7 +71,7 @@ const getTracks = async (req, res, next) => {
       }
     });
 
-    const progressMap = {};
+    const progressMap: Record<string, any> = {};
     (progressList || []).forEach((p) => {
       const currentLessonSlug = p.current_lesson ? (lessonsMap[p.current_lesson]?.slug || firstLessonSlugMap[p.track_id] || '') : (firstLessonSlugMap[p.track_id] || '');
       progressMap[p.track_id] = {
@@ -113,14 +116,16 @@ const getTracks = async (req, res, next) => {
 
 // @desc    Get single track with full details
 // @route   GET /api/tracks/:slug
-const getTrack = async (req, res, next) => {
+export const getTrack = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch track details
     const { data: track, error: trackError } = await supabase
       .from('tracks')
       .select('*')
       .eq('slug', req.params.slug)
-      .or(`is_ai_generated.eq.false,user_id.eq.${req.user.id}`)
+      .or(`is_ai_generated.eq.false,user_id.eq.${userId}`)
       .maybeSingle();
 
     if (trackError || !track) {
@@ -147,7 +152,7 @@ const getTrack = async (req, res, next) => {
 
     // Fetch challenges to know which ones belong to which lesson
     const lessonIds = (lessons || []).map(l => l.id);
-    const challengeIdsMap = {};
+    const challengeIdsMap: Record<string, string[]> = {};
     if (lessonIds.length > 0) {
       const { data: challenges, error: challengesError } = await supabase
         .from('challenges')
@@ -188,7 +193,7 @@ const getTrack = async (req, res, next) => {
     const { data: progress, error: progressError } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', track.id)
       .maybeSingle();
 
@@ -233,5 +238,3 @@ const getTrack = async (req, res, next) => {
     next(error);
   }
 };
-
-module.exports = { getTracks, getTrack };

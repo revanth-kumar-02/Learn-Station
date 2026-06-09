@@ -1,15 +1,18 @@
-const { supabase } = require('../config/db');
-const { getAllAchievements, xpProgressInLevel, generateDailyMissions } = require('../utils/xpCalculator');
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../config/db';
+import { getAllAchievements, xpProgressInLevel, generateDailyMissions } from '../utils/xpCalculator';
 
 // @desc    Get current user profile
 // @route   GET /api/users/me
-const getProfile = async (req, res, next) => {
+export const getProfile = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch user profile from DB
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -22,7 +25,7 @@ const getProfile = async (req, res, next) => {
     // Check if new day, reset daily missions and daily XP earned
     let dailyXpEarned = profile.daily_xp_earned || 0;
     let dbUpdatesNeeded = false;
-    const updates = {};
+    const updates: Record<string, any> = {};
 
     if (profile.last_active_date) {
       const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
@@ -43,14 +46,14 @@ const getProfile = async (req, res, next) => {
       await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', req.user.id);
+        .eq('id', userId);
     }
 
     // 2. Fetch progress with track details
     const { data: allProgress, error: progressError } = await supabase
       .from('progress')
       .select('*, track:tracks(id, slug, name, color, icon, is_ai_generated)')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
 
     if (progressError) throw progressError;
 
@@ -68,7 +71,7 @@ const getProfile = async (req, res, next) => {
     const { data: submissions } = await supabase
       .from('capstone_submissions')
       .select('id')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
     const completedProjectsCount = submissions?.length || 0;
 
     const aiPathsGenerated = (allProgress || []).filter((p) => p.track?.is_ai_generated).length;
@@ -111,7 +114,7 @@ const getProfile = async (req, res, next) => {
         name: profile.name,
         username: profile.username || `user_${profile.id.substring(0, 8)}`,
         bio: profile.bio || '',
-        email: req.user.email,
+        email: req.user!.email,
         xp: profile.xp,
         level: profile.level,
         streak: profile.streak,
@@ -151,10 +154,10 @@ const getProfile = async (req, res, next) => {
 
 // @desc    Update user profile
 // @route   PUT /api/users/me
-const updateProfile = async (req, res, next) => {
+export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { name, dailyXpGoal, username, bio } = req.body;
-    const updates = {};
+    const updates: Record<string, any> = {};
     if (name) updates.name = name;
     if (dailyXpGoal) updates.daily_xp_goal = dailyXpGoal;
     if (bio !== undefined) updates.bio = bio;
@@ -170,7 +173,7 @@ const updateProfile = async (req, res, next) => {
         .from('profiles')
         .select('id')
         .eq('username', cleanUsername)
-        .neq('id', req.user.id)
+        .neq('id', req.user!.id)
         .maybeSingle();
 
       if (existingUser) {
@@ -182,7 +185,7 @@ const updateProfile = async (req, res, next) => {
     const { data: updated, error: updateError } = await supabase
       .from('profiles')
       .update(updates)
-      .eq('id', req.user.id)
+      .eq('id', req.user!.id)
       .select()
       .single();
 
@@ -194,7 +197,7 @@ const updateProfile = async (req, res, next) => {
         name: updated.name,
         username: updated.username,
         bio: updated.bio,
-        email: req.user.email,
+        email: req.user!.email,
         dailyXpGoal: updated.daily_xp_goal,
         xp: updated.xp,
         level: updated.level,
@@ -207,12 +210,12 @@ const updateProfile = async (req, res, next) => {
 
 // @desc    Get achievements
 // @route   GET /api/users/me/achievements
-const getAchievements = async (req, res, next) => {
+export const getAchievements = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('achievements')
-      .eq('id', req.user.id)
+      .eq('id', req.user!.id)
       .single();
 
     if (profileError) throw profileError;
@@ -233,7 +236,7 @@ const getAchievements = async (req, res, next) => {
 
 // @desc    Get activity history
 // @route   GET /api/users/me/activity
-const getActivity = async (req, res, next) => {
+export const getActivity = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 364); // Return 365 days for contribution heatmap
@@ -242,17 +245,17 @@ const getActivity = async (req, res, next) => {
     const { data: rows, error: activityError } = await supabase
       .from('activity')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', req.user!.id)
       .gte('date', startDateStr);
 
     if (activityError) throw activityError;
 
-    const activityMap = {};
+    const activityMap: Record<string, number> = {};
     (rows || []).forEach((r) => {
       activityMap[r.date] = r.xp_earned;
     });
 
-    const last365Days = [];
+    const last365Days: any[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -278,7 +281,7 @@ const getActivity = async (req, res, next) => {
 
 // @desc    Get public profile details by username
 // @route   GET /api/users/public/:username
-const getPublicProfile = async (req, res, next) => {
+export const getPublicProfile = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -336,7 +339,7 @@ const getPublicProfile = async (req, res, next) => {
 
 // @desc    Get rankings for Leaderboards
 // @route   GET /api/users/leaderboard
-const getLeaderboard = async (req, res, next) => {
+export const getLeaderboard = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     // 1. Global XP rankings
     const { data: globalXP } = await supabase
@@ -376,13 +379,13 @@ const getLeaderboard = async (req, res, next) => {
       .from('profiles')
       .select('id, name, username, level');
 
-    const userMap = {};
+    const userMap: Record<string, { name: string; username: string; level: number }> = {};
     (allUsers || []).forEach(u => {
       userMap[u.id] = { name: u.name, username: u.username || `user_${u.id.substring(0, 8)}`, level: u.level };
     });
 
     // Aggregate Weekly
-    const weeklyMap = {};
+    const weeklyMap: Record<string, number> = {};
     (weeklyActivity || []).forEach(act => {
       weeklyMap[act.user_id] = (weeklyMap[act.user_id] || 0) + act.xp_earned;
     });
@@ -396,7 +399,7 @@ const getLeaderboard = async (req, res, next) => {
       .slice(0, 10);
 
     // Aggregate Monthly
-    const monthlyMap = {};
+    const monthlyMap: Record<string, number> = {};
     (monthlyActivity || []).forEach(act => {
       monthlyMap[act.user_id] = (monthlyMap[act.user_id] || 0) + act.xp_earned;
     });
@@ -415,7 +418,7 @@ const getLeaderboard = async (req, res, next) => {
       .select('user_id')
       .gte('progress_percent', 100);
 
-    const completedMap = {};
+    const completedMap: Record<string, number> = {};
     (progress || []).forEach(p => {
       completedMap[p.user_id] = (completedMap[p.user_id] || 0) + 1;
     });
@@ -438,13 +441,4 @@ const getLeaderboard = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-module.exports = {
-  getProfile,
-  updateProfile,
-  getAchievements,
-  getActivity,
-  getPublicProfile,
-  getLeaderboard
 };

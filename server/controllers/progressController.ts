@@ -1,10 +1,13 @@
-const { supabase } = require('../config/db');
-const { calculateLevel, checkAchievements } = require('../utils/xpCalculator');
+import { Request, Response, NextFunction } from 'express';
+import { supabase } from '../config/db';
+import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
 
 // @desc    Get all progress for current user
 // @route   GET /api/progress
-const getAllProgress = async (req, res, next) => {
+export const getAllProgress = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Fetch progress with joined track and current lesson info
     const { data: progress, error: progressError } = await supabase
       .from('progress')
@@ -13,7 +16,7 @@ const getAllProgress = async (req, res, next) => {
         track:tracks(id, slug, name, color, icon),
         current_lesson:lessons(id, slug, title)
       `)
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
 
     if (progressError) throw progressError;
 
@@ -21,13 +24,13 @@ const getAllProgress = async (req, res, next) => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError) throw profileError;
 
     // 3. Format response to preserve interface structures
-    const formattedProgress = (progress || []).map((p) => ({
+    const formattedProgress = (progress || []).map((p: any) => ({
       _id: p.id,
       id: p.id,
       completedLessons: p.completed_lessons || [],
@@ -78,8 +81,10 @@ const getAllProgress = async (req, res, next) => {
 
 // @desc    Get progress for a specific track
 // @route   GET /api/progress/:trackSlug
-const getTrackProgress = async (req, res, next) => {
+export const getTrackProgress = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
+
     // 1. Find track by slug
     const { data: track, error: trackError } = await supabase
       .from('tracks')
@@ -95,15 +100,15 @@ const getTrackProgress = async (req, res, next) => {
     const { data: progress, error: progressError } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', track.id)
       .maybeSingle();
 
     if (progressError) throw progressError;
 
     // 3. If progress exists, populate related items manually for Mongoose compliance
-    let completedLessonsPopulated = [];
-    let currentLessonPopulated = null;
+    let completedLessonsPopulated: any[] = [];
+    let currentLessonPopulated: any = null;
 
     if (progress) {
       if (progress.completed_lessons && progress.completed_lessons.length > 0) {
@@ -112,7 +117,7 @@ const getTrackProgress = async (req, res, next) => {
           .select('id, slug, title')
           .in('id', progress.completed_lessons);
         
-        completedLessonsPopulated = (completedLessonsData || []).map((l) => ({
+        completedLessonsPopulated = (completedLessonsData || []).map((l: any) => ({
           _id: l.id,
           id: l.id,
           slug: l.slug,
@@ -166,8 +171,9 @@ const getTrackProgress = async (req, res, next) => {
 
 // @desc    Submit capstone project repository and demo links
 // @route   POST /api/progress/capstone/submit
-const submitCapstoneProject = async (req, res, next) => {
+export const submitCapstoneProject = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+    const userId = req.user!.id;
     const { trackId, repoUrl, demoUrl } = req.body;
 
     if (!trackId || !repoUrl) {
@@ -178,7 +184,7 @@ const submitCapstoneProject = async (req, res, next) => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -200,7 +206,7 @@ const submitCapstoneProject = async (req, res, next) => {
     const { data: existingSubmit } = await supabase
       .from('capstone_submissions')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', trackId)
       .maybeSingle();
 
@@ -212,7 +218,7 @@ const submitCapstoneProject = async (req, res, next) => {
     const { data: submission, error: submitError } = await supabase
       .from('capstone_submissions')
       .insert({
-        user_id: req.user.id,
+        user_id: userId,
         track_id: trackId,
         repo_url: repoUrl,
         demo_url: demoUrl || null,
@@ -227,7 +233,7 @@ const submitCapstoneProject = async (req, res, next) => {
     let { data: progress } = await supabase
       .from('progress')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', userId)
       .eq('track_id', trackId)
       .maybeSingle();
 
@@ -247,7 +253,7 @@ const submitCapstoneProject = async (req, res, next) => {
       const { data: newProgress } = await supabase
         .from('progress')
         .insert({
-          user_id: req.user.id,
+          user_id: userId,
           track_id: trackId,
           completed_lessons: [],
           completed_challenges: [],
@@ -267,7 +273,6 @@ const submitCapstoneProject = async (req, res, next) => {
 
     // Update daily mission goals
     const todayStr = new Date().toISOString().split('T')[0];
-    const { generateDailyMissions, updateDailyMissions } = require('../utils/xpCalculator');
     let dailyMissionsObj = profile.daily_missions;
     if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
       dailyMissionsObj = generateDailyMissions(todayStr);
@@ -278,7 +283,7 @@ const submitCapstoneProject = async (req, res, next) => {
     const { data: allProgress } = await supabase
       .from('progress')
       .select('*, track:tracks(slug, is_ai_generated)')
-      .eq('user_id', req.user.id);
+      .eq('user_id', userId);
 
     const totalCompleted = (allProgress || []).reduce(
       (sum, p) => sum + (p.completed_lessons?.length || 0),
@@ -351,7 +356,7 @@ const submitCapstoneProject = async (req, res, next) => {
         achievements: updatedAchievements,
         daily_missions: dailyMissionsObj,
       })
-      .eq('id', req.user.id);
+      .eq('id', userId);
 
     // 7. Generate a unique Certificate ID
     const randomHash = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -360,7 +365,7 @@ const submitCapstoneProject = async (req, res, next) => {
     const { data: cert, error: certError } = await supabase
       .from('certificates')
       .insert({
-        user_id: req.user.id,
+        user_id: userId,
         track_id: trackId,
         xp_earned: xpReward,
         certificate_id: certificateId,
@@ -385,7 +390,7 @@ const submitCapstoneProject = async (req, res, next) => {
 
 // @desc    Get certificate details by ID
 // @route   GET /api/progress/certificate/:certId
-const getCertificate = async (req, res, next) => {
+export const getCertificate = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { data: cert, error: certError } = await supabase
       .from('certificates')
@@ -405,11 +410,4 @@ const getCertificate = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-module.exports = {
-  getAllProgress,
-  getTrackProgress,
-  submitCapstoneProject,
-  getCertificate,
 };

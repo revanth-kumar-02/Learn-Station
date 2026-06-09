@@ -3,8 +3,58 @@
  * Phase 2 — Learn Station Evolution
  */
 
+export interface UserDataStats {
+  completedLessonsCount?: number;
+  xp?: number;
+  streak?: number;
+  longestStreak?: number;
+  completedTracksList?: string[];
+  perfectQuizzesCount?: number;
+  completedChallengesCount?: number;
+  aiPathsGenerated?: number;
+  completedProjectsCount?: number;
+  isNightLearning?: boolean;
+  isEarlyLearning?: boolean;
+  isWeekendLearning?: boolean;
+  achievements?: string[];
+  level?: number;
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  rarity: 'Standard' | 'Rare' | 'Legendary';
+  xpBonus: number;
+  target: number;
+  check: (stats: UserDataStats) => boolean;
+}
+
+export interface Mission {
+  id: string;
+  text: string;
+  target: number;
+  current: number;
+  xp_reward: number;
+  completed: boolean;
+}
+
+export interface DailyMissions {
+  date: string;
+  missions: Mission[];
+  bonusClaimed: boolean;
+  stats: {
+    perfectQuizzes: number;
+    challengesSolved: number;
+    projectsSubmitted: number;
+    aiRoadmaps: number;
+  };
+}
+
 // Level thresholds: Level N requires increasing XP cumulative steps
-const xpForLevel = (level) => {
+export const xpForLevel = (level: number): number => {
   if (level <= 1) return 0;
   let total = 250;
   let currentRequirement = 500;
@@ -17,7 +67,7 @@ const xpForLevel = (level) => {
   return total;
 };
 
-const calculateLevel = (totalXP) => {
+export const calculateLevel = (totalXP: number): number => {
   let level = 1;
   while (totalXP >= xpForLevel(level + 1)) {
     level++;
@@ -25,11 +75,11 @@ const calculateLevel = (totalXP) => {
   return level;
 };
 
-const xpForNextLevel = (level) => {
+export const xpForNextLevel = (level: number): number => {
   return xpForLevel(level + 1);
 };
 
-const xpProgressInLevel = (totalXP) => {
+export const xpProgressInLevel = (totalXP: number) => {
   const level = calculateLevel(totalXP);
   const currentLevelXP = xpForLevel(level);
   const nextLevelXP = xpForNextLevel(level);
@@ -44,7 +94,7 @@ const xpProgressInLevel = (totalXP) => {
 };
 
 // Achievement definitions
-const ACHIEVEMENTS = {
+export const ACHIEVEMENTS: Record<string, AchievementDef> = {
   // --- Learning Milestones ---
   'lesson-1': {
     id: 'lesson-1',
@@ -281,7 +331,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('sql'),
+    check: (stats) => !!stats.completedTracksList?.includes('sql'),
   },
   'track-python': {
     id: 'track-python',
@@ -292,7 +342,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('python'),
+    check: (stats) => !!stats.completedTracksList?.includes('python'),
   },
   'track-webdev': {
     id: 'track-webdev',
@@ -303,7 +353,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('webdev'),
+    check: (stats) => !!stats.completedTracksList?.includes('webdev'),
   },
   'track-ai': {
     id: 'track-ai',
@@ -314,7 +364,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('ai'),
+    check: (stats) => !!stats.completedTracksList?.includes('ai'),
   },
   'track-datascience': {
     id: 'track-datascience',
@@ -325,7 +375,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('datascience'),
+    check: (stats) => !!stats.completedTracksList?.includes('datascience'),
   },
   'track-java': {
     id: 'track-java',
@@ -336,7 +386,7 @@ const ACHIEVEMENTS = {
     rarity: 'Standard',
     xpBonus: 200,
     target: 1,
-    check: (stats) => stats.completedTracksList?.includes('java'),
+    check: (stats) => !!stats.completedTracksList?.includes('java'),
   },
 
   // --- Quiz Achievements ---
@@ -533,7 +583,7 @@ const ACHIEVEMENTS = {
     rarity: 'Rare',
     xpBonus: 150,
     target: 1,
-    check: (stats) => stats.isNightLearning,
+    check: (stats) => !!stats.isNightLearning,
   },
   'rare-early-bird': {
     id: 'rare-early-bird',
@@ -544,7 +594,7 @@ const ACHIEVEMENTS = {
     rarity: 'Rare',
     xpBonus: 150,
     target: 1,
-    check: (stats) => stats.isEarlyLearning,
+    check: (stats) => !!stats.isEarlyLearning,
   },
   'rare-weekend-warrior': {
     id: 'rare-weekend-warrior',
@@ -555,7 +605,7 @@ const ACHIEVEMENTS = {
     rarity: 'Rare',
     xpBonus: 150,
     target: 1,
-    check: (stats) => stats.isWeekendLearning,
+    check: (stats) => !!stats.isWeekendLearning,
   },
   'rare-consistency-king': {
     id: 'rare-consistency-king',
@@ -592,8 +642,8 @@ const ACHIEVEMENTS = {
   },
 };
 
-const checkAchievements = (userData) => {
-  const newAchievements = [];
+export const checkAchievements = (userData: UserDataStats): AchievementDef[] => {
+  const newAchievements: AchievementDef[] = [];
   const existing = new Set(userData.achievements || []);
 
   for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
@@ -605,12 +655,12 @@ const checkAchievements = (userData) => {
   return newAchievements;
 };
 
-const getAllAchievements = () => {
+export const getAllAchievements = () => {
   return Object.values(ACHIEVEMENTS).map(({ check, ...rest }) => rest);
 };
 
 // Daily Missions Generation and Update
-const generateDailyMissions = (dateStr) => {
+export const generateDailyMissions = (dateStr: string): DailyMissions => {
   return {
     date: dateStr,
     missions: [
@@ -629,7 +679,7 @@ const generateDailyMissions = (dateStr) => {
   };
 };
 
-const updateDailyMissions = (missionsObj, type, value) => {
+export const updateDailyMissions = (missionsObj: DailyMissions | null, type: string, value: number): DailyMissions | null => {
   if (!missionsObj || !missionsObj.missions) return null;
   
   let updated = false;
@@ -648,16 +698,4 @@ const updateDailyMissions = (missionsObj, type, value) => {
     ...missionsObj,
     missions: newMissions
   };
-};
-
-module.exports = {
-  calculateLevel,
-  xpForLevel,
-  xpForNextLevel,
-  xpProgressInLevel,
-  checkAchievements,
-  getAllAchievements,
-  ACHIEVEMENTS,
-  generateDailyMissions,
-  updateDailyMissions
 };

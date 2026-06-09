@@ -1,6 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { tracksData } from './curriculumData';
+
+
+
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -11,7 +16,7 @@ if (!GROQ_API_KEY) {
   process.exit(1);
 }
 
-const { tracksData } = require('./curriculumData');
+
 
 // Output file paths
 const JSON_FILE_PATH = path.join(__dirname, 'quizData.json');
@@ -23,7 +28,7 @@ if (fs.existsSync(JSON_FILE_PATH)) {
   try {
     quizDataStore = JSON.parse(fs.readFileSync(JSON_FILE_PATH, 'utf8'));
     console.log(`📂 Loaded existing quizData.json with ${Object.keys(quizDataStore).length} lessons.`);
-  } catch (err) {
+  } catch (err: any) {
     console.warn('⚠️ Could not parse existing quizData.json, starting fresh.', err.message);
   }
 }
@@ -166,7 +171,7 @@ const run = async () => {
         console.log(`✅ Saved batch. Total completed: ${Object.keys(quizDataStore).length}/${allLessons.length}`);
         
         success = true;
-      } catch (err) {
+      } catch (err: any) {
         retries--;
         console.error(`❌ Batch failed: ${err.message}. Retries remaining: ${retries}`);
         if (retries > 0) {
@@ -197,7 +202,7 @@ const run = async () => {
 
 const quizData = ${JSON.stringify(quizDataStore, null, 2)};
 
-module.exports = quizData;
+export default quizData;
 `;
   fs.writeFileSync(JS_FILE_PATH, jsContent, 'utf8');
   console.log('🎉 Generation complete! quizData.js has been successfully written.');

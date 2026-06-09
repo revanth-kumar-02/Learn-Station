@@ -97,7 +97,6 @@ export default function AiWorkspacePage() {
   const loadLessonDetails = async (lessonSlug) => {
     setLoading(true);
     setActiveTab('concept');
-    setPracticeInput('');
     setPracticeCorrect(null);
     setCurrentChallengeIndex(0);
     setSelectedOption(null);

@@ -1,6 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const { tracksData } = require('./curriculumData');
+import fs from 'fs';
+import path from 'path';
+import { tracksData } from './curriculumData';
+
+
+
 
 const JSON_FILE_PATH = path.join(__dirname, 'quizData.json');
 const JS_FILE_PATH = path.join(__dirname, 'quizData.js');
@@ -9,13 +12,13 @@ let quizDataStore = {};
 if (fs.existsSync(JSON_FILE_PATH)) {
   try {
     quizDataStore = JSON.parse(fs.readFileSync(JSON_FILE_PATH, 'utf8'));
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to read quizData.json', e);
   }
 }
 
 // Helper to pad challenges
-const padChallenges = (challenges, lessonTitle) => {
+const padChallenges = (challenges: any[], lessonTitle: string) => {
   const padded = [...challenges];
   
   if (padded.length < 3) {
@@ -111,7 +114,7 @@ const jsContent = `/**
 
 const quizData = ${JSON.stringify(quizDataStore, null, 2)};
 
-module.exports = quizData;
+export default quizData;
 `;
 fs.writeFileSync(JS_FILE_PATH, jsContent, 'utf8');
 console.log('🎉 quizData.js completed successfully!');

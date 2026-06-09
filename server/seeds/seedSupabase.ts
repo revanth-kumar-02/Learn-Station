@@ -1,12 +1,17 @@
-const dns = require('dns');
+import dns from 'dns';
+import dotenv from 'dotenv';
+import path from 'path';
+import { createClient } from '@supabase/supabase-js';
+import { tracksData as handcraftedTracks } from './curriculumData';
+
 dns.setDefaultResultOrder('ipv4first');
 
-const dotenv = require('dotenv');
-const path = require('path');
+
+
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const { createClient } = require('@supabase/supabase-js');
-const { tracksData: handcraftedTracks } = require('./curriculumData');
+
+
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env file');
@@ -442,7 +447,7 @@ const seed = async () => {
       }
 
       // 2. Insert Modules
-      const modulesToInsert = trackData.modules.map(mod => ({
+      const modulesToInsert = trackData.modules.map((mod: any) => ({
         id: mod.id,
         track_id: track.id,
         name: mod.name,
@@ -462,7 +467,7 @@ const seed = async () => {
       totalModules += modulesToInsert.length;
 
       // 3. Insert Lessons (in bulk per track)
-      const lessonsToInsert = trackData.lessons.map(lessonData => ({
+      const lessonsToInsert = trackData.lessons.map((lessonData: any) => ({
         slug: lessonData.slug,
         track_id: track.id,
         module_id: lessonData.moduleId,
@@ -496,16 +501,16 @@ const seed = async () => {
 
       // Create a map of lessonSlug -> lessonId
       const lessonIdMap = {};
-      insertedLessons.forEach(l => {
+      insertedLessons.forEach((l: any) => {
         lessonIdMap[l.slug] = l.id;
       });
 
       // 4. Insert Challenges in bulk per track
       const challengesToInsert = [];
-      trackData.lessons.forEach(lessonData => {
+      trackData.lessons.forEach((lessonData: any) => {
         const lessonId = lessonIdMap[lessonData.slug];
         if (lessonData.challenges && lessonData.challenges.length > 0) {
-          lessonData.challenges.forEach(challengeData => {
+          lessonData.challenges.forEach((challengeData: any) => {
             challengesToInsert.push({
               lesson_id: lessonId,
               type: challengeData.type || 'multiple-choice',
@@ -539,7 +544,7 @@ const seed = async () => {
     console.log(`\n🎉 Supabase Database Seeded Successfully!`);
     console.log(`📊 Total Seeded: ${totalTracks} tracks, ${totalModules} modules, ${totalLessons} lessons, ${totalChallenges} challenges.`);
     process.exit(0);
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Seeding failed:', error.message);
     process.exit(1);
   }

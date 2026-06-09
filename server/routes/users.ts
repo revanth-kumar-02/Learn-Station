@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { getProfile, updateProfile, getAchievements, getActivity, getPublicProfile, getLeaderboard } from '../controllers/userController';
+import { protect } from '../middleware/auth';
+
 const router = express.Router();
-const { getProfile, updateProfile, getAchievements, getActivity, getPublicProfile, getLeaderboard } = require('../controllers/userController');
-const { protect } = require('../middleware/auth');
 
 router.get('/me', protect, getProfile);
 router.put('/me', protect, updateProfile);
@@ -10,4 +11,4 @@ router.get('/me/activity', protect, getActivity);
 router.get('/leaderboard', getLeaderboard); // public route
 router.get('/public/:username', getPublicProfile); // public route
 
-module.exports = router;
+export default router;
