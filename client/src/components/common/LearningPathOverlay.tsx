@@ -39,13 +39,14 @@ export default function LearningPathOverlay() {
         .then((data) => {
           const allTracks = data.tracks || [];
           const studied = allTracks.filter(t => 
-            t.progress && (t.progress.completedLessons > 0 || t.progress.progressPercent > 0 || t.progress.xpEarned > 0)
+            t.progress && ((Array.isArray(t.progress.completedLessons) ? t.progress.completedLessons.length > 0 : false) || t.progress.progressPercent > 0 || t.progress.xpEarned > 0)
           );
           // Sort by last accessed if present, or percent
           studied.sort((a, b) => {
             const dateA = a.progress?.lastAccessedAt ? new Date(a.progress.lastAccessedAt) : new Date(0);
             const dateB = b.progress?.lastAccessedAt ? new Date(b.progress.lastAccessedAt) : new Date(0);
-            if (dateA - dateB !== 0) return dateB - dateA;
+            const diff = dateA.getTime() - dateB.getTime();
+            if (diff !== 0) return dateB.getTime() - dateA.getTime();
             return (b.progress?.progressPercent || 0) - (a.progress?.progressPercent || 0);
           });
           setRecentTracks(studied.slice(0, 3));
@@ -105,7 +106,7 @@ export default function LearningPathOverlay() {
       {isOpen && (
         <motion.div
           className="path-overlay-backdrop"
-          variants={backdropVariants}
+          variants={backdropVariants as any}
           initial="hidden"
           animate="visible"
           exit="hidden"
@@ -113,7 +114,7 @@ export default function LearningPathOverlay() {
         >
           <motion.div
             className="path-overlay-modal"
-            variants={modalVariants}
+            variants={modalVariants as any}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -137,7 +138,7 @@ export default function LearningPathOverlay() {
             <div className="path-overlay-grid">
               {/* Option 1: Structured Learning */}
               <div className="path-overlay-card" onClick={() => handleNavigate('/tracks')}>
-                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(59, 130, 246, 0.15)' }} />
+                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(59, 130, 246, 0.15)' } as React.CSSProperties} />
                 <div className="card-icon-container" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 20l-5-3V3l5 3 6-3 5 3v14l-5-3-6 3z" />
@@ -169,7 +170,7 @@ export default function LearningPathOverlay() {
 
               {/* Option 2: AI Generated roadmap */}
               <div className="path-overlay-card" onClick={() => handleNavigate('/generate')}>
-                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(168, 85, 247, 0.15)' }} />
+                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(168, 85, 247, 0.15)' } as React.CSSProperties} />
                 <div className="card-icon-container" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9.93 10.93L12 4l2.07 6.93L21 13l-6.93 2.07L12 20l-2.07-6.93L3 13l6.93-2.07z" />

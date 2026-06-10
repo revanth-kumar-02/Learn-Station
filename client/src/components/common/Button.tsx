@@ -1,4 +1,16 @@
-import { useRef } from 'react';
+import React, { useRef } from 'react';
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: React.ReactNode;
+  variant?: string;
+  size?: string;
+  icon?: React.ReactNode;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  [key: string]: any;
+}
 
 export default function Button({
   children,
@@ -10,7 +22,7 @@ export default function Button({
   className = '',
   onClick,
   ...props
-}) {
+}: ButtonProps) {
   const btnRef = useRef(null);
 
   const handleClick = (e) => {

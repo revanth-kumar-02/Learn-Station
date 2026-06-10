@@ -241,7 +241,7 @@ const runJSCode = (code) => {
 };
 
 // --- SIMULATED TERMINAL/BASH COMMANDS RUNNER ---
-const runBashCommand = (command) => {
+const runBashCommand = (command: string): { success: boolean; logs: string[]; error?: string } => {
   const cleanCmd = command.trim().toLowerCase();
   
   if (cleanCmd.includes('docker ps -a')) {

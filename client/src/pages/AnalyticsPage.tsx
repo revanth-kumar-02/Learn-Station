@@ -7,7 +7,12 @@ import Loader from '../components/common/Loader';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#3b82f6'];
 
-function MiniBarChart({ data, color }) {
+interface MiniBarChartProps {
+  data: Array<{ date: string; xp: number }>;
+  color: string;
+}
+
+function MiniBarChart({ data, color }: MiniBarChartProps) {
   if (!data || data.length === 0) return null;
   const maxVal = Math.max(...data.map((d) => d.xp), 1);
 
@@ -34,11 +39,19 @@ function MiniBarChart({ data, color }) {
   );
 }
 
-function StatCard({ icon, label, value, color, delay = 0 }) {
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  color: string;
+  delay?: number;
+}
+
+function StatCard({ icon, label, value, color, delay = 0 }: StatCardProps) {
   return (
     <motion.div
       className="analytics-stat-card"
-      style={{ '--stat-color': color }}
+      style={{ '--stat-color': color } as React.CSSProperties}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}

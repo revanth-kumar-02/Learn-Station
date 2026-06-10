@@ -51,7 +51,7 @@ const xpProgressInLevel = (totalXP) => {
   };
 };
 
-const AiMentorIcon = ({ className }) => (
+const AiMentorIcon = ({ className = '' }: { className?: string }) => (
   <span className="ai-mentor-icon-container">
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
       <defs>
@@ -380,7 +380,7 @@ export default function LessonPage() {
     exit: (dir) => ({ x: dir > 0 ? -150 : 150, opacity: 0 }),
   };
 
-  const sendMentorMessage = async (text, mode = 'default') => {
+  const sendMentorMessage = async (text?: string, mode = 'default') => {
     const msg = text || mentorInput.trim();
     if (!msg || mentorLoading) return;
     setMentorInput('');
@@ -600,7 +600,7 @@ export default function LessonPage() {
                             <div
                               key={i}
                               className="key-term-chip-container"
-                              ref={(el) => (popoverRefs.current[term] = el)}
+                              ref={(el) => { popoverRefs.current[term] = el; }}
                             >
                               <button
                                 className="key-term-chip"

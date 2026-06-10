@@ -5,7 +5,15 @@ import { useScrollReveal } from '../hooks/useAnimations';
 import PageTransition from '../components/layout/PageTransition';
 
 /* ── Gradient Orb ─────────────────────────────── */
-function GradientOrb({ color, size, top, left, delay = 0 }) {
+interface GradientOrbProps {
+  color: string;
+  size: string;
+  top: string;
+  left: string;
+  delay?: number;
+}
+
+function GradientOrb({ color, size, top, left, delay = 0 }: GradientOrbProps) {
   return (
     <div
       className="gradient-orb"
@@ -15,7 +23,7 @@ function GradientOrb({ color, size, top, left, delay = 0 }) {
         top,
         left,
         animationDelay: `${delay}s`,
-      }}
+      } as React.CSSProperties}
     />
   );
 }
@@ -183,7 +191,7 @@ function LandingFeatures() {
               transition={{ duration: 0.5, delay: 0.2 + i * 0.15 }}
               onMouseEnter={() => setActiveDemo(i)}
               onMouseLeave={() => setActiveDemo(null)}
-              style={{ '--feature-color': feature.color }}
+              style={{ '--feature-color': feature.color } as React.CSSProperties}
             >
               <div className="landing-feature-card__icon" style={{ background: `${feature.color}15`, color: feature.color }}>
                 {i === 0 ? '📖' : i === 1 ? '🧩' : '📊'}

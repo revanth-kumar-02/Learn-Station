@@ -27,7 +27,14 @@ const STAGES = [
   'Finalizing database schemas...'
 ];
 
-const SegmentedControl = ({ options, value, onChange, uniqueId }) => {
+interface SegmentedControlProps {
+  options: string[];
+  value: string;
+  onChange: (val: string) => void;
+  uniqueId: string;
+}
+
+const SegmentedControl = ({ options, value, onChange, uniqueId }: SegmentedControlProps) => {
   return (
     <div className="segmented-control">
       {options.map((opt) => {
@@ -364,8 +371,8 @@ export default function GenerateTrackPage() {
     <PageTransition>
       <div className="generate-page">
         {/* Decorative blur blobs */}
-        <div className="gradient-orb gradient-orb--1" style={{ '--orb-color': 'var(--accent-blue)', '--orb-size': '500px', top: '-10%', left: '-10%' }} />
-        <div className="gradient-orb gradient-orb--2" style={{ '--orb-color': 'var(--accent-violet)', '--orb-size': '400px', bottom: '-10%', right: '-10%' }} />
+        <div className="gradient-orb gradient-orb--1" style={{ '--orb-color': 'var(--accent-blue)', '--orb-size': '500px', top: '-10%', left: '-10%' } as React.CSSProperties} />
+        <div className="gradient-orb gradient-orb--2" style={{ '--orb-color': 'var(--accent-violet)', '--orb-size': '400px', bottom: '-10%', right: '-10%' } as React.CSSProperties} />
 
         <div className="container">
           <AnimatePresence mode="wait">

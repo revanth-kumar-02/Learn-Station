@@ -12,14 +12,14 @@ const pageTransition = {
   duration: 0.3,
 };
 
-export default function PageTransition({ children }) {
+export default function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
       variants={pageVariants}
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={pageTransition}
+      transition={pageTransition as any}
     >
       {children}
     </motion.div>

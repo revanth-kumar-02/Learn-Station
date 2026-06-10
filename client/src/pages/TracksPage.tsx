@@ -7,8 +7,15 @@ import { trackService } from '../services/trackService';
 import ProgressBar from '../components/common/ProgressBar';
 import PageTransition from '../components/layout/PageTransition';
 
-const TrackIcon = ({ name, color, size = 24, className }) => {
-  const IconComponent = LucideIcons[name] || LucideIcons.BookOpen;
+interface TrackIconProps {
+  name: string;
+  color?: string;
+  size?: number;
+  className?: string;
+}
+
+const TrackIcon = ({ name, color, size = 24, className = '' }: TrackIconProps) => {
+  const IconComponent = (LucideIcons as any)[name] || LucideIcons.BookOpen;
   return (
     <IconComponent 
       size={size} 
@@ -598,8 +605,8 @@ export default function TracksPage() {
     <PageTransition>
       <div className="tracks-discover-page">
         {/* Abstract design blobs */}
-        <div className="gradient-orb gradient-orb--1" style={{ '--orb-color': 'var(--accent-blue)', '--orb-size': '600px', top: '-15%', left: '-10%' }} />
-        <div className="gradient-orb gradient-orb--2" style={{ '--orb-color': 'var(--accent-violet)', '--orb-size': '450px', bottom: '10%', right: '-5%' }} />
+        <div className="gradient-orb gradient-orb--1" style={{ '--orb-color': 'var(--accent-blue)', '--orb-size': '600px', top: '-15%', left: '-10%' } as React.CSSProperties} />
+        <div className="gradient-orb gradient-orb--2" style={{ '--orb-color': 'var(--accent-violet)', '--orb-size': '450px', bottom: '10%', right: '-5%' } as React.CSSProperties} />
 
         <div className="container discover-container">
           
@@ -656,7 +663,7 @@ export default function TracksPage() {
           {activeTrack && !searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (
             <section className="discover-section continue-spotlight">
               <h2 className="section-title">Continue Learning</h2>
-              <div className="spotlight-card" style={{ '--border-glow': activeTrack.color }}>
+              <div className="spotlight-card" style={{ '--border-glow': activeTrack.color } as React.CSSProperties}>
                 <div className="spotlight-card__info">
                   <div className="spotlight-card__tag" style={{ background: `${activeTrack.color}15`, color: activeTrack.color }}>
                     Active Track
@@ -709,7 +716,7 @@ export default function TracksPage() {
                   <div 
                     key={track.id} 
                     className="netflix-card" 
-                    style={{ '--track-accent': track.color }}
+                    style={{ '--track-accent': track.color } as React.CSSProperties}
                     onClick={() => setPreviewTrack(track)}
                   >
                     <div className="netflix-card__header">
@@ -780,7 +787,7 @@ export default function TracksPage() {
                   <div 
                     key={track.id} 
                     className="catalog-card"
-                    style={{ '--catalog-accent': track.color }}
+                    style={{ '--catalog-accent': track.color } as React.CSSProperties}
                     onClick={() => setPreviewTrack(track)}
                   >
                     <div className="catalog-card__body">
@@ -868,7 +875,7 @@ export default function TracksPage() {
               
               <div className="careers-deck">
                 {CAREER_PATHS.map((path) => (
-                  <div key={path.title} className="career-card" style={{ '--career-accent-color': path.color }}>
+                  <div key={path.title} className="career-card" style={{ '--career-accent-color': path.color } as React.CSSProperties}>
                     <div className="career-card__header">
                       <span className="career-card__icon">
                         <TrackIcon name={path.icon} size={24} color={path.color} />
@@ -964,7 +971,7 @@ export default function TracksPage() {
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 220 }}
                 onClick={(e) => e.stopPropagation()}
-                style={{ '--drawer-accent-color': previewTrack.color }}
+                style={{ '--drawer-accent-color': previewTrack.color } as React.CSSProperties}
               >
                 <button className="drawer-close-btn" onClick={() => setPreviewTrack(null)}>
                   ✕
