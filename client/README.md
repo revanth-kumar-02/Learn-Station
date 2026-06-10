@@ -1,16 +1,34 @@
-# React + Vite
+# LearnStation - Frontend Client 🌐
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend React client for the LearnStation platform. It is built using **React 19**, **TypeScript**, and **Vite** with **Vanilla CSS** and **Framer Motion**.
 
-Currently, two official plugins are available:
+For detailed setup guidelines, features description, and full codebase architecture, please refer to the **[Root README.md](../README.md)**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Development Setup
 
-## React Compiler
+1. Make sure you have installed client dependencies:
+   ```bash
+   npm install
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2. Configure your environment variables in `.env`:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_API_URL=http://localhost:5000/api
+   ```
 
-## Expanding the ESLint configuration
+3. Launch the local dev server:
+   ```bash
+   npm run dev
+   ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+4. Build the production application bundle:
+   ```bash
+   npm run build
+   ```
+
+5. Run type checks:
+   ```bash
+   npx tsc --noEmit
+   ```
