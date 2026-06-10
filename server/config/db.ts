@@ -1,4 +1,9 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load env vars immediately to prevent hoisting issues
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Initialize the Supabase client using Service Role Key to bypass RLS (admin access)
 let supabase: SupabaseClient;
