@@ -15,7 +15,18 @@ interface TrackIconProps {
 }
 
 const TrackIcon = ({ name, color, size = 24, className = '' }: TrackIconProps) => {
-  const IconComponent = (LucideIcons as any)[name] || LucideIcons.BookOpen;
+  let IconComponent = (LucideIcons as any)[name];
+  if (!IconComponent) {
+    if (name === 'BrainCircuit') {
+      IconComponent = (LucideIcons as any)['Brain'] || (LucideIcons as any)['Cpu'] || LucideIcons.BookOpen;
+    } else if (name === 'GitBranch') {
+      IconComponent = (LucideIcons as any)['GitMerge'] || LucideIcons.BookOpen;
+    } else if (name === 'WandSparkles') {
+      IconComponent = (LucideIcons as any)['Wand2'] || (LucideIcons as any)['Sparkles'] || LucideIcons.BookOpen;
+    } else {
+      IconComponent = LucideIcons.BookOpen;
+    }
+  }
   return (
     <IconComponent 
       size={size} 
@@ -34,17 +45,33 @@ const generateFallbackDescription = (track) => {
 const CATEGORY_LUCIDE_MAP = {
   All: 'Globe',
   Programming: 'Code',
-  'Web Development': 'Monitor',
+  'Web Development': 'Globe',
   'Mobile Development': 'Smartphone',
   Databases: 'Database',
   'Data Science': 'BarChart2',
-  'Artificial Intelligence': 'Brain',
+  'Artificial Intelligence': 'BrainCircuit',
   'Cloud & DevOps': 'Cloud',
   'Cyber Security': 'Shield',
-  'Software Engineering': 'GitMerge',
+  'Software Engineering': 'GitBranch',
   'Career Tracks': 'Briefcase',
   'Business & Product': 'TrendingUp',
-  'Custom Path': 'Wand2'
+  'Custom Path': 'WandSparkles'
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  All: '#3B82F6',
+  Programming: '#3B82F6',
+  'Web Development': '#06B6D4',
+  'Mobile Development': '#6366F1',
+  Databases: '#10B981',
+  'Data Science': '#F59E0B',
+  'Artificial Intelligence': '#8B5CF6',
+  'Cloud & DevOps': '#0EA5E9',
+  'Cyber Security': '#EF4444',
+  'Software Engineering': '#14B8A6',
+  'Career Tracks': '#F43F5E',
+  'Business & Product': '#F97316',
+  'Custom Path': '#D946EF'
 };
 
 const TRACK_LUCIDE_MAP = {
@@ -643,19 +670,31 @@ export default function TracksPage() {
             </div>
 
             <div className="discover-category-filters">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={`category-chip ${selectedCategory === cat.id ? 'category-chip--active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.id)}
-                >
-                  <span className="category-chip__icon">
-                    <TrackIcon name={CATEGORY_LUCIDE_MAP[cat.id]} size={16} />
-                  </span>
-                  <span className="category-chip__name">{cat.name}</span>
-                </button>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const catColor = CATEGORY_COLORS[cat.id] || '#3B82F6';
+                const isSelected = selectedCategory === cat.id;
+
+                const buttonStyle = {
+                  '--cat-color': catColor,
+                  '--cat-bg-hover': `${catColor}1a`,
+                  '--cat-glow': `${catColor}3b`
+                } as React.CSSProperties;
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    style={buttonStyle}
+                    className={`category-chip ${isSelected ? 'category-chip--active' : ''}`}
+                    onClick={() => setSelectedCategory(cat.id)}
+                  >
+                    <span className="category-chip__icon">
+                      <TrackIcon name={(CATEGORY_LUCIDE_MAP as any)[cat.id]} size={16} />
+                    </span>
+                    <span className="category-chip__name">{cat.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </header>
 
