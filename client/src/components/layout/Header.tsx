@@ -87,9 +87,6 @@ export default function Header() {
   };
 
   const navItems = [...NAV_LINKS];
-  if (user && (user.role === 'admin' || user.role === 'owner')) {
-    navItems.push({ path: '/admin', label: 'Admin', icon: 'admin' });
-  }
 
   return (
     <header className={`header ${scrolled ? 'header--scrolled' : ''} ${isLanding ? 'header--landing' : ''}`}>
