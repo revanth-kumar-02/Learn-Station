@@ -243,6 +243,155 @@ function DailyActivityAreaChart({ data, color }: DailyActivityAreaChartProps) {
   );
 }
 
+interface ActivityHeatmapProps {
+  activity: Array<{ date: string; xp: number }>;
+}
+
+function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
+  const [hoveredCell, setHoveredCell] = useState<{ date: string; xp: number; x: number; y: number } | null>(null);
+
+  // Heatmap Data Generation (Last 30 Days)
+  const heatmapData: Array<{ date: string; xp: number }> = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const match = activity.find((a: any) => a.date === dateStr);
+    heatmapData.push({
+      date: dateStr,
+      xp: match ? match.xp : 0
+    });
+  }
+
+  // Weekday layout calculations (padding start)
+  const firstDate = new Date(heatmapData[0].date + 'T00:00:00');
+  const firstDay = firstDate.getDay(); // 0 = Sunday, 1 = Monday...
+  const daysToSubtract = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0, ..., Sun = 6
+
+  // Generate heatmap cells (including placeholders at start)
+  const heatmapCells: React.ReactNode[] = [];
+  
+  // Add placeholder cells for the first week to align weekdays
+  for (let p = 0; p < daysToSubtract; p++) {
+    heatmapCells.push(
+      <div 
+        key={`placeholder-${p}`} 
+        className="analytics-heatmap__cell analytics-heatmap__cell--placeholder" 
+        style={{ opacity: 0, pointerEvents: 'none' }} 
+      />
+    );
+  }
+
+  // Add actual activity cells
+  heatmapData.forEach((day) => {
+    // Intensity mapping:
+    // 0 XP -> 0
+    // 1-25 XP -> 1
+    // 26-50 XP -> 2
+    // 51-100 XP -> 3
+    // 100+ XP -> 4
+    const intensity = day.xp === 0 ? 0 : day.xp <= 25 ? 1 : day.xp <= 50 ? 2 : day.xp <= 100 ? 3 : 4;
+    
+    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const wrapperEl = e.currentTarget.closest('.analytics-heatmap-wrapper');
+      if (wrapperEl) {
+        const parentRect = wrapperEl.getBoundingClientRect();
+        setHoveredCell({
+          date: day.date,
+          xp: day.xp,
+          x: rect.left - parentRect.left + rect.width / 2,
+          y: rect.top - parentRect.top
+        });
+      }
+    };
+
+    heatmapCells.push(
+      <div
+        key={day.date}
+        className={`analytics-heatmap__cell analytics-heatmap__cell--${intensity}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setHoveredCell(null)}
+        style={{ cursor: 'pointer' }}
+      />
+    );
+  });
+
+  // Calculate grid description/dimensions for debugging
+  const heatmapGrid = {
+    rows: 7,
+    columns: Math.ceil((daysToSubtract + heatmapData.length) / 7),
+    totalCellsCount: daysToSubtract + heatmapData.length,
+    startDayOfWeek: firstDay,
+    paddingCellsCount: daysToSubtract
+  };
+
+  // Perform debug console logging before rendering
+  console.log('📊 [Heatmap Debug Log]', {
+    heatmapData,
+    heatmapGrid,
+    heatmapCells
+  });
+
+  return (
+    <div className="analytics-heatmap-wrapper" style={{ position: 'relative' }}>
+      <div className="analytics-heatmap-container">
+        <div className="analytics-heatmap-weekdays">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+        <div className="analytics-heatmap-grid">
+          {heatmapCells}
+        </div>
+      </div>
+
+      {/* Heatmap Tooltip */}
+      {hoveredCell && (
+        <div
+          className="analytics-heatmap-tooltip"
+          style={{
+            position: 'absolute',
+            left: `${hoveredCell.x}px`,
+            top: `${hoveredCell.y}px`,
+            transform: 'translate(-50%, -125%)',
+            pointerEvents: 'none',
+            backgroundColor: '#1e293b',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            zIndex: 10,
+            whiteSpace: 'nowrap',
+            fontSize: '11px',
+            color: '#f8fafc',
+            textAlign: 'center'
+          }}
+        >
+          <div style={{ fontWeight: 600, color: '#94a3b8' }}>
+            {new Date(hoveredCell.date + 'T00:00:00').toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric'
+            })}
+          </div>
+          <div style={{ fontWeight: 700, marginTop: '2px', color: '#6366f1' }}>
+            {hoveredCell.xp} XP earned
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 interface StatCardProps {
   icon: React.ReactNode;
   label: string;
@@ -427,19 +576,8 @@ export default function AnalyticsPage() {
                 transition={{ delay: 0.4 }}
               >
                 <h2 className="analytics-section__title">Activity Heatmap (Last 30 Days)</h2>
-                <div className="analytics-heatmap">
-                  {dailyXpActivity.map((day) => {
-                    const intensity = day.xp === 0 ? 0 : day.xp < 25 ? 1 : day.xp < 75 ? 2 : day.xp < 150 ? 3 : 4;
-                    return (
-                      <div
-                        key={day.date}
-                        className={`analytics-heatmap__cell analytics-heatmap__cell--${intensity}`}
-                        title={`${day.date}: ${day.xp} XP`}
-                      />
-                    );
-                  })}
-                </div>
-                <div className="analytics-heatmap-legend">
+                <ActivityHeatmap activity={activity} />
+                <div className="analytics-heatmap-legend" style={{ marginTop: '16px' }}>
                   <span>Less</span>
                   {[0, 1, 2, 3, 4].map((level) => (
                     <div key={level} className={`analytics-heatmap__cell analytics-heatmap__cell--${level}`} />
