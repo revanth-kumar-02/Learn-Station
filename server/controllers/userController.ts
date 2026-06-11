@@ -341,17 +341,19 @@ export const getPublicProfile = async (req: Request, res: Response, next: NextFu
 // @route   GET /api/users/leaderboard
 export const getLeaderboard = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    // 1. Global XP rankings
+    // 1. Global XP rankings (exclude owner)
     const { data: globalXP } = await supabase
       .from('profiles')
       .select('name, username, xp, level, streak')
+      .neq('role', 'owner')
       .order('xp', { ascending: false })
       .limit(10);
 
-    // 2. Streaks rankings
+    // 2. Streaks rankings (exclude owner)
     const { data: streaks } = await supabase
       .from('profiles')
       .select('name, username, longest_streak, level')
+      .neq('role', 'owner')
       .order('longest_streak', { ascending: false })
       .limit(10);
 
@@ -375,9 +377,11 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
       .select('user_id, xp_earned')
       .gte('date', thirtyDaysAgoStr);
 
+    // Exclude owners from user mappings so they won't appear in aggregations
     const { data: allUsers } = await supabase
       .from('profiles')
-      .select('id, name, username, level');
+      .select('id, name, username, level')
+      .neq('role', 'owner');
 
     const userMap: Record<string, { name: string; username: string; level: number }> = {};
     (allUsers || []).forEach(u => {
@@ -394,7 +398,7 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
         ...userMap[userId],
         xp,
       }))
-      .filter(u => u.username)
+      .filter(u => u.username) // Since owner is excluded from userMap, u.username will be undefined
       .sort((a, b) => b.xp - a.xp)
       .slice(0, 10);
 

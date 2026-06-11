@@ -18,6 +18,7 @@ import PublicPortfolioPage from './pages/PublicPortfolioPage';
 import CertificatePage from './pages/CertificatePage';
 import Loader from './components/common/Loader';
 import { AnimatePresence } from 'framer-motion';
+import AdminControlCenter from './pages/AdminControlCenter';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -61,12 +62,39 @@ function PublicRoute({ children }) {
   return children;
 }
 
+// Admin Protected route wrapper
+function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <Loader fullPage />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== 'admin' && user.role !== 'owner') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        <Route
+          path="/admin/*"
+          element={
+            <AdminProtectedRoute>
+              <AdminControlCenter />
+            </AdminProtectedRoute>
+          }
+        />
         <Route element={<Layout />}>
           <Route path="/" element={<RootRoute />} />
           <Route

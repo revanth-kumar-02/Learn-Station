@@ -14,6 +14,8 @@ export interface User {
   bio?: string;
   username?: string;
   createdAt?: string;
+  role?: 'student' | 'admin' | 'owner';
+  isSuspended?: boolean;
 }
 
 export interface UserResponse {

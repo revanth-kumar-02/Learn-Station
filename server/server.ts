@@ -16,6 +16,7 @@ import lessonsRoutes from './routes/lessons';
 import progressRoutes from './routes/progress';
 import usersRoutes from './routes/users';
 import aiRoutes from './routes/ai';
+import adminRoutes from './routes/admin';
 
 // Connect to database
 connectDB();
@@ -36,6 +37,7 @@ app.use('/api/lessons', lessonsRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

@@ -231,7 +231,16 @@ export default function ProfilePage() {
           <motion.div className="profile-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="profile-avatar">{initials}</div>
             <div className="profile-info">
-              <h1>{user?.name}</h1>
+              <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                {user?.name}
+                {user?.role === 'owner' && (
+                  <span className="owner-badge">
+                    <span className="owner-badge__crown">👑</span>
+                    <span className="owner-badge__text">★ OWNER</span>
+                    <span className="owner-badge__shine" />
+                  </span>
+                )}
+              </h1>
               <span className="profile-level">Level {stats.level || 1}</span>
               <div className="profile-level-bar">
                 <ProgressBar value={levelInfo.progress * 100} max={100} color="var(--accent-violet)" size="md" />

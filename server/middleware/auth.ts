@@ -16,6 +16,8 @@ declare global {
         lastActiveDate: string;
         dailyXpGoal: number;
         dailyXpEarned: number;
+        role: 'student' | 'admin' | 'owner';
+        isSuspended: boolean;
       };
     }
   }
@@ -71,6 +73,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
           daily_xp_goal: 50,
           daily_xp_earned: 0,
           last_active_date: new Date().toISOString(),
+          role: 'student',
+          is_suspended: false,
           daily_missions: {
             date: todayStr,
             missions: [
@@ -98,6 +102,11 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       profile = profileData;
     }
 
+    // Block suspended accounts
+    if (profile.is_suspended) {
+      return res.status(403).json({ message: 'Your account has been suspended. Please contact the administrator.' });
+    }
+
     // Map fields to match custom Mongoose properties to preserve interface compatibility
     const todayStr = new Date().toISOString().split('T')[0];
     let dailyXpEarned = profile.daily_xp_earned || 0;
@@ -120,10 +129,36 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       lastActiveDate: profile.last_active_date,
       dailyXpGoal: profile.daily_xp_goal,
       dailyXpEarned,
+      role: profile.role || 'student',
+      isSuspended: profile.is_suspended || false,
     };
 
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Not authorized, token invalid' });
   }
+};
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): any => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Not authorized, no user profile found.' });
+  }
+
+  if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ message: 'Forbidden: Administrator privileges required.' });
+  }
+
+  next();
+};
+
+export const requireOwner = (req: Request, res: Response, next: NextFunction): any => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Not authorized, no user profile found.' });
+  }
+
+  if (req.user.role !== 'owner') {
+    return res.status(403).json({ message: 'Forbidden: Owner privileges required.' });
+  }
+
+  next();
 };
