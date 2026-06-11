@@ -5077,6 +5077,41 @@ html.dark-theme .track-preview-backdrop {
   overflow: hidden;
 }
 
+.analytics-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  margin: 16px 0;
+}
+
+.analytics-empty-state__icon {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
+}
+
+.analytics-empty-state__title {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.analytics-empty-state__desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: 320px;
+  margin-bottom: 24px;
+  line-height: var(--leading-relaxed);
+}
+
+
 .analytics-bar-chart {
   display: flex;
   align-items: flex-end;
