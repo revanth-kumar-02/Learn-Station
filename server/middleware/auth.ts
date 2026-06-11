@@ -42,6 +42,41 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       return res.status(401).json({ message: 'Not authorized, token invalid' });
     }
 
+    // First check if the user is in admin_users
+    const { data: adminUser, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (adminError) {
+      console.error('Error fetching admin user:', adminError);
+    }
+
+    if (adminUser) {
+      req.user = {
+        _id: adminUser.id,
+        id: adminUser.id,
+        name: adminUser.full_name || 'Admin',
+        email: authUser.email || adminUser.email,
+        xp: 0,
+        level: 1,
+        streak: 0,
+        longestStreak: 0,
+        lastActiveDate: '',
+        dailyXpGoal: 50,
+        dailyXpEarned: 0,
+        role: adminUser.role as any, // 'owner' or 'admin'
+        isSuspended: !adminUser.is_active,
+      };
+
+      if (req.user.isSuspended) {
+        return res.status(403).json({ message: 'Your account has been suspended. Please contact the administrator.' });
+      }
+
+      return next();
+    }
+
     // Fetch public profile details or create if not found
     let profile: any;
     const { data: profileData, error: profileError } = await supabase

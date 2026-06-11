@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -112,9 +112,22 @@ const SIDEBAR_ITEMS = [
 export default function AdminControlCenter() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Navigation states
-  const [currentModule, setCurrentModule] = useState('dashboard');
+  // Navigation states synced with URL subpaths
+  const getModuleFromPath = (pathname: string) => {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length <= 1) return 'dashboard';
+    const sub = parts[1];
+    if (sub === 'content') return 'lessons'; // Map content to lessons
+    return sub;
+  };
+
+  const currentModule = getModuleFromPath(location.pathname);
+  const setCurrentModule = (moduleId: string) => {
+    navigate(`/admin/${moduleId}`);
+  };
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Common UI states

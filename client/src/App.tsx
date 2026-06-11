@@ -19,6 +19,8 @@ import CertificatePage from './pages/CertificatePage';
 import Loader from './components/common/Loader';
 import { AnimatePresence } from 'framer-motion';
 import AdminControlCenter from './pages/AdminControlCenter';
+import AdminLoginPage from './pages/AdminLoginPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -71,11 +73,11 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   if (user.role !== 'admin' && user.role !== 'owner') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;
@@ -87,6 +89,14 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        <Route
+          path="/admin/login"
+          element={<AdminLoginPage />}
+        />
+        <Route
+          path="/unauthorized"
+          element={<UnauthorizedPage />}
+        />
         <Route
           path="/admin/*"
           element={
