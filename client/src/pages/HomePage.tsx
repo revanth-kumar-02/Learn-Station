@@ -165,7 +165,7 @@ export default function HomePage() {
             <div className="home-tracks__grid">
               {loading
                 ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-                : tracks.map((track, i) => (
+                : tracks.slice(0, 6).map((track, i) => (
                     <motion.div
                       key={track._id}
                       className="track-card"
@@ -207,6 +207,12 @@ export default function HomePage() {
                       </div>
                     </motion.div>
                   ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
+              <Link to="/tracks" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
+                Explore all learning tracks →
+              </Link>
             </div>
           </section>
         </div>
