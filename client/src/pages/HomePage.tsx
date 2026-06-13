@@ -208,12 +208,6 @@ export default function HomePage() {
                     </motion.div>
                   ))}
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
-              <Link to="/tracks" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
-                Explore all learning tracks →
-              </Link>
-            </div>
           </section>
         </div>
       </div>
