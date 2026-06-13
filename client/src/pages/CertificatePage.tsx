@@ -61,7 +61,7 @@ export default function CertificatePage() {
               <span>📜</span>
               <h2>{error}</h2>
               <p>The certificate <strong>{certId}</strong> could not be verified.</p>
-              <Link to="/" className="btn btn--primary">Go Home</Link>
+              <Link to="/" className="btn btn--primary btn--md">Go Home</Link>
             </div>
           </div>
         </div>
@@ -85,10 +85,10 @@ export default function CertificatePage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <button onClick={handlePrint} className="btn btn--secondary" id="cert-print-btn">
+            <button onClick={handlePrint} className="btn btn--secondary btn--md" id="cert-print-btn">
               🖨️ Print Certificate
             </button>
-            <button onClick={handleShare} className="btn btn--primary" id="cert-share-btn">
+            <button onClick={handleShare} className="btn btn--primary btn--md" id="cert-share-btn">
               🔗 Share Certificate
             </button>
           </motion.div>

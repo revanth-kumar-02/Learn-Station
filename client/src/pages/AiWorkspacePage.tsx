@@ -445,7 +445,7 @@ export default function AiWorkspacePage() {
                           ))}
                         </div>
                       </div>
-                      <button className="btn btn--primary mt-8" onClick={() => setActiveTab('example')}>
+                      <button className="btn btn--primary btn--md mt-8" onClick={() => setActiveTab('example')}>
                         Next: Code Example →
                       </button>
                     </motion.div>
@@ -471,7 +471,7 @@ export default function AiWorkspacePage() {
                         <p>{activeLesson.example?.explanation}</p>
                       </div>
                       
-                      <button className="btn btn--primary mt-8" onClick={() => setActiveTab('practice')}>
+                      <button className="btn btn--primary btn--md mt-8" onClick={() => setActiveTab('practice')}>
                         Next: Interactive Practice →
                       </button>
                     </motion.div>
@@ -492,7 +492,7 @@ export default function AiWorkspacePage() {
                       />
                       
                       {practiceCorrect === true && (
-                        <button className="btn btn--success mt-4" onClick={() => {
+                        <button className="btn btn--success btn--md mt-4" onClick={() => {
                           setPracticeCorrect(null);
                           setActiveTab('check');
                         }}>
@@ -577,14 +577,14 @@ export default function AiWorkspacePage() {
                             <div className="mt-8">
                               {!challengeSubmitted ? (
                                 <button
-                                  className="btn btn--primary"
+                                  className="btn btn--primary btn--md"
                                   onClick={handleCheckChallenge}
                                   disabled={challenge.type === 'multiple-choice' ? selectedOption === null : !challengeInput.trim()}
                                 >
                                   Submit Answer
                                 </button>
                               ) : (
-                                <button className="btn btn--primary" onClick={handleNextChallenge}>
+                                <button className="btn btn--primary btn--md" onClick={handleNextChallenge}>
                                   {currentChallengeIndex < activeLesson.challenges.length - 1 ? 'Next Question →' : 'Review Summary →'}
                                 </button>
                               )}
@@ -841,7 +841,7 @@ export default function AiWorkspacePage() {
                             <span><strong>Live Demo URL:</strong> <a href={demoUrl} target="_blank" rel="noopener noreferrer">{demoUrl}</a></span>
                           </div>
                           <button 
-                            className="btn btn--secondary mt-4" 
+                            className="btn btn--secondary btn--md mt-4" 
                             style={{ alignSelf: 'flex-start' }}
                             onClick={() => {
                               setCapstoneSubmitted(false);

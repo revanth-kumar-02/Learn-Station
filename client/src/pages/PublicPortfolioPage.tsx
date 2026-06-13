@@ -53,7 +53,7 @@ export default function PublicPortfolioPage() {
               <span>👤</span>
               <h2>{error}</h2>
               <p>The public profile for <strong>@{username}</strong> could not be found.</p>
-              <Link to="/" className="btn btn--primary">Go Home</Link>
+              <Link to="/" className="btn btn--primary btn--md">Go Home</Link>
             </div>
           </div>
         </div>

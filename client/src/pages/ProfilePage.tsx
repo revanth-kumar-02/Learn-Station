@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import AnimatedCounter from '../components/common/AnimatedCounter';
 import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
+import { Sun, Moon } from 'lucide-react';
 
 // Helper to calculate progress for achievements
 const getAchievementProgress = (id, stats) => {
@@ -287,37 +288,64 @@ export default function ProfilePage() {
                   </select>
                 </div>
 
-                <div className="profile-theme-toggle" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Dark Mode:</span>
+                <div className="profile-theme-toggle" style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center' }}>
                   <button
                     type="button"
                     onClick={toggleDarkMode}
+                    title="Switch Theme"
                     style={{
-                      background: darkMode ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                      position: 'relative',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-full)',
-                      width: '36px',
-                      height: '20px',
-                      padding: '2px',
+                      background: 'var(--bg-tertiary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: darkMode ? 'flex-end' : 'flex-start',
-                      transition: 'background-color var(--duration-fast) ease',
-                      outline: 'none'
+                      justifyContent: 'center',
+                      transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: darkMode 
+                        ? '0 0 10px rgba(99, 102, 241, 0.2)' 
+                        : '0 0 10px rgba(245, 158, 11, 0.2)',
+                      outline: 'none',
+                      overflow: 'hidden',
                     }}
-                    aria-label="Toggle Dark Mode"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = darkMode ? '#6366F1' : '#F59E0B';
+                      e.currentTarget.style.boxShadow = darkMode 
+                        ? '0 0 14px rgba(99, 102, 241, 0.4)' 
+                        : '0 0 14px rgba(245, 158, 11, 0.4)';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.boxShadow = darkMode 
+                        ? '0 0 10px rgba(99, 102, 241, 0.2)' 
+                        : '0 0 10px rgba(245, 158, 11, 0.2)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
                   >
-                    <motion.div
-                      layout
-                      style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: '#ffffff',
-                        boxShadow: 'var(--shadow-sm)'
-                      }}
-                    />
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={darkMode ? 'dark' : 'light'}
+                        initial={{ rotate: -90, scale: 0.7, opacity: 0 }}
+                        animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                        exit={{ rotate: 90, scale: 0.7, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {darkMode ? (
+                          <Moon size={16} color="#6366F1" style={{ filter: 'drop-shadow(0 0 4px rgba(99, 102, 241, 0.4))' }} />
+                        ) : (
+                          <Sun size={16} color="#F59E0B" style={{ filter: 'drop-shadow(0 0 4px rgba(245, 158, 11, 0.4))' }} />
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </button>
                 </div>
               </div>

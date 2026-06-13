@@ -250,12 +250,12 @@ interface ActivityHeatmapProps {
 function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{ date: string; xp: number; x: number; y: number } | null>(null);
 
-  // Heatmap Data Generation (Last 30 Days)
+  // Heatmap Data Generation (Last 365 Days)
   const heatmapData: Array<{ date: string; xp: number }> = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 364; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
@@ -320,6 +320,46 @@ function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
     );
   });
 
+  // Chunk cells (including placeholders) into columns of 7 for month labels
+  const columns: Array<Array<{ date: string; xp: number } | null>> = [];
+  let currentWeek: Array<{ date: string; xp: number } | null> = [];
+
+  // Pad first week in columns representation
+  for (let p = 0; p < daysToSubtract; p++) {
+    currentWeek.push(null);
+  }
+
+  heatmapData.forEach((day) => {
+    if (currentWeek.length === 7) {
+      columns.push(currentWeek);
+      currentWeek = [];
+    }
+    currentWeek.push(day);
+  });
+
+  if (currentWeek.length > 0) {
+    while (currentWeek.length < 7) {
+      currentWeek.push(null);
+    }
+    columns.push(currentWeek);
+  }
+
+  // Find month labels and their week column indices
+  const monthLabels: Array<{ weekIdx: number; label: string }> = [];
+  columns.forEach((week, weekIdx) => {
+    const firstDay = week.find(d => d !== null);
+    if (firstDay) {
+      const date = new Date(firstDay.date + 'T00:00:00');
+      // If first day is in the first 7 days of the month, place a label
+      if (date.getDate() <= 7) {
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        if (monthLabels.length === 0 || monthLabels[monthLabels.length - 1].label !== monthName) {
+          monthLabels.push({ weekIdx, label: monthName });
+        }
+      }
+    }
+  });
+
   // Calculate grid description/dimensions for debugging
   const heatmapGrid = {
     rows: 7,
@@ -339,7 +379,7 @@ function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
   return (
     <div className="analytics-heatmap-wrapper" style={{ position: 'relative' }}>
       <div className="analytics-heatmap-container">
-        <div className="analytics-heatmap-weekdays">
+        <div className="analytics-heatmap-weekdays" style={{ marginTop: '18px' }}>
           <div>Mon</div>
           <div>Tue</div>
           <div>Wed</div>
@@ -348,8 +388,29 @@ function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
           <div>Sat</div>
           <div>Sun</div>
         </div>
-        <div className="analytics-heatmap-grid">
-          {heatmapCells}
+        <div className="analytics-heatmap-right" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Month Labels */}
+          <div className="analytics-heatmap-months" style={{ position: 'relative', height: '14px', userSelect: 'none' }}>
+            {monthLabels.map((lbl, idx) => (
+              <span
+                key={idx}
+                style={{
+                  position: 'absolute',
+                  left: `${lbl.weekIdx * 18}px`, // 14px cell + 4px gap = 18px
+                  fontSize: '9px',
+                  color: 'var(--text-muted)',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {lbl.label}
+              </span>
+            ))}
+          </div>
+          {/* Heatmap Grid */}
+          <div className="analytics-heatmap-grid">
+            {heatmapCells}
+          </div>
         </div>
       </div>
 
@@ -525,7 +586,7 @@ export default function AnalyticsPage() {
                       <p className="analytics-empty-state__desc">
                         Complete lessons or solve quiz challenges to start building your analytics.
                       </p>
-                      <Link to="/tracks" className="btn btn--primary" style={{ textDecoration: 'none' }}>
+                      <Link to="/tracks" className="btn btn--primary btn--md" style={{ textDecoration: 'none' }}>
                         Start Learning
                       </Link>
                     </div>
@@ -575,7 +636,7 @@ export default function AnalyticsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <h2 className="analytics-section__title">Activity Heatmap (Last 30 Days)</h2>
+                <h2 className="analytics-section__title">Activity Heatmap (Last 365 Days)</h2>
                 <ActivityHeatmap activity={activity} />
                 <div className="analytics-heatmap-legend" style={{ marginTop: '16px' }}>
                   <span>Less</span>

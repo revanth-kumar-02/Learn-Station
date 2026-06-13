@@ -374,7 +374,7 @@ export default function TrackDetailPage() {
                   {capstoneResult.certificate && (
                     <Link
                       to={`/certificate/${capstoneResult.certificate.certificate_id}`}
-                      className="btn btn--primary"
+                      className="btn btn--primary btn--md"
                     >
                       View Certificate →
                     </Link>
@@ -385,7 +385,7 @@ export default function TrackDetailPage() {
                   {!showCapstone ? (
                     <button
                       type="button"
-                      className="btn btn--primary capstone-section__cta"
+                      className="btn btn--primary btn--md capstone-section__cta"
                       onClick={() => setShowCapstone(true)}
                       id="capstone-submit-btn"
                     >
@@ -423,14 +423,14 @@ export default function TrackDetailPage() {
                       <div className="capstone-form__actions">
                         <button
                           type="button"
-                          className="btn btn--ghost"
+                          className="btn btn--ghost btn--md"
                           onClick={() => setShowCapstone(false)}
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
-                          className="btn btn--primary"
+                          className="btn btn--primary btn--md"
                           disabled={capstoneSubmitting || !capstoneForm.repoUrl}
                           onClick={async () => {
                             if (!capstoneForm.repoUrl) return;
