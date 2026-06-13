@@ -76,7 +76,7 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  if (user.role !== 'admin' && user.role !== 'owner') {
+  if (user.role !== 'owner') {
     return <Navigate to="/unauthorized" replace />;
   }
 

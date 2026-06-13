@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import PageTransition from '../components/layout/PageTransition';
 import { Eye, EyeOff } from 'lucide-react';
+import GithubIcon from '../components/common/GithubIcon';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGithub } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -34,9 +35,20 @@ export default function LoginPage() {
     try {
       await login('demo@learnstation.com', 'demopass123');
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || err.response?.data?.message || 'Demo login failed');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loginWithGithub();
+    } catch (err: any) {
+      setError(err.message || 'GitHub login failed');
       setLoading(false);
     }
   };
@@ -109,16 +121,31 @@ export default function LoginPage() {
             <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            size="lg"
-            loading={loading}
-            onClick={handleDemoLogin}
-            className="auth-submit"
-          >
-            Try Demo Account ✨
-          </Button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              loading={loading}
+              onClick={handleGithubLogin}
+              className="auth-submit"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <GithubIcon size={18} />
+              <span>Continue with GitHub</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              loading={loading}
+              onClick={handleDemoLogin}
+              className="auth-submit"
+            >
+              Try Demo Account ✨
+            </Button>
+          </div>
 
           <p className="auth-switch">
             Don't have an account? <Link to="/register">Sign up</Link>

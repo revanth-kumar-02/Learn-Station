@@ -16,6 +16,8 @@ export interface User {
   createdAt?: string;
   role?: 'student' | 'admin' | 'owner';
   isSuspended?: boolean;
+  avatarUrl?: string;
+  provider?: string;
 }
 
 export interface UserResponse {

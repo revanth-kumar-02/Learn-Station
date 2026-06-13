@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import PageTransition from '../components/layout/PageTransition';
 import { Eye, EyeOff } from 'lucide-react';
+import GithubIcon from '../components/common/GithubIcon';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -12,7 +13,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, loginWithGithub } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,9 +23,20 @@ export default function RegisterPage() {
     try {
       await register(name, email, password);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || err.response?.data?.message || 'Registration failed');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loginWithGithub();
+    } catch (err: any) {
+      setError(err.message || 'GitHub registration failed');
       setLoading(false);
     }
   };
@@ -101,6 +113,25 @@ export default function RegisterPage() {
               Create Account
             </Button>
           </form>
+
+          <div className="auth-divider" style={{ margin: 'var(--space-4) 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+            <span>OR</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            loading={loading}
+            onClick={handleGithubLogin}
+            className="auth-submit"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}
+          >
+            <GithubIcon size={18} />
+            <span>Continue with GitHub</span>
+          </Button>
 
           <p className="auth-switch">
             Already have an account? <Link to="/login">Log in</Link>

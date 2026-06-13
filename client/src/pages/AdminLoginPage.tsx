@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import PageTransition from '../components/layout/PageTransition';
 import { Eye, EyeOff } from 'lucide-react';
+import GithubIcon from '../components/common/GithubIcon';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -11,18 +12,18 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, login, logout } = useAuth();
+  const { user, login, loginWithGithub, logout } = useAuth();
   const navigate = useNavigate();
 
-  // If already logged in as admin/owner, redirect to admin dashboard
+  // If already logged in as owner, redirect to admin dashboard
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin' || user.role === 'owner') {
+      if (user.role === 'owner') {
         navigate('/admin/dashboard');
       } else {
-        // If logged in as student, logout and show error
+        // If logged in as student or admin, logout and show error
         logout();
-        setError('Access denied: Student accounts are not permitted to access the admin command center.');
+        setError('Access denied: Only the owner account is permitted to access the admin command center.');
       }
     }
   }, [user, navigate, logout]);
@@ -39,6 +40,17 @@ export default function AdminLoginPage() {
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please check your credentials.');
+      setLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loginWithGithub();
+    } catch (err: any) {
+      setError(err.message || 'GitHub login failed');
       setLoading(false);
     }
   };
@@ -232,6 +244,34 @@ export default function AdminLoginPage() {
               }}
             >
               Sign In to Command Center
+            </Button>
+
+            <div style={{ margin: '8px 0', textAlign: 'center', color: '#64748B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }}></div>
+              <span>OR</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }}></div>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              loading={loading}
+              onClick={handleGithubLogin}
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#F8FAFC',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <GithubIcon size={18} />
+              <span>Continue with GitHub</span>
             </Button>
           </form>
         </div>

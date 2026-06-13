@@ -87,6 +87,9 @@ export default function Header() {
   };
 
   const navItems = [...NAV_LINKS];
+  if (user && user.role === 'owner') {
+    navItems.push({ path: '/admin/dashboard', label: 'Admin Panel', icon: 'admin' });
+  }
 
   return (
     <header className={`header ${scrolled ? 'header--scrolled' : ''} ${isLanding ? 'header--landing' : ''}`}>
@@ -130,6 +133,24 @@ export default function Header() {
                 <span className="header__streak-fire">🔥</span>
                 <span>{user.streak || 0}</span>
               </div>
+              {user.avatarUrl && (
+                <Link to="/profile" style={{ display: 'flex', marginLeft: '20px' }}>
+                  <img 
+                    src={user.avatarUrl} 
+                    alt={user.name || 'User Avatar'} 
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid var(--accent-blue)',
+                      transition: 'transform var(--duration-fast) ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  />
+                </Link>
+              )}
               <button onClick={handleLogout} className="header__logout-btn">
                 Log out
               </button>

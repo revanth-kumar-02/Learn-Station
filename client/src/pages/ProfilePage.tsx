@@ -229,7 +229,23 @@ export default function ProfilePage() {
         <div className="container container--narrow">
           {/* Profile Header */}
           <motion.div className="profile-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="profile-avatar">{initials}</div>
+            {user?.avatarUrl ? (
+              <img 
+                src={user.avatarUrl} 
+                alt={user.name || 'User'} 
+                className="profile-avatar" 
+                style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%', 
+                  objectFit: 'cover',
+                  border: '3px solid var(--accent-violet)',
+                  boxShadow: '0 0 15px rgba(124, 58, 237, 0.3)'
+                }} 
+              />
+            ) : (
+              <div className="profile-avatar">{initials}</div>
+            )}
             <div className="profile-info">
               <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 {user?.name}
