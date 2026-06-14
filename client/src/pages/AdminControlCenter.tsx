@@ -502,7 +502,15 @@ export default function AdminControlCenter() {
 
         <div className="admin-sidebar__profile">
           <div className="admin-sidebar__user-details">
-            <div className="admin-sidebar__avatar">{initials}</div>
+            {user?.avatarUrl ? (
+              <img 
+                src={user.avatarUrl} 
+                alt={user?.name || 'Owner'} 
+                className="admin-sidebar__avatar-img"
+              />
+            ) : (
+              <div className="admin-sidebar__avatar">{initials}</div>
+            )}
             <div>
               <div className="admin-sidebar__username">{user?.name}</div>
               <div className="admin-sidebar__role">
