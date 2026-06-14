@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
@@ -105,6 +105,28 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState({ name: '', username: '', bio: '', avatarUrl: '' });
   const [saveLoading, setSaveLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1.5 * 1024 * 1024) {
+      setErrorMessage('Image file is too large. Please select an image under 1.5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setEditForm(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      }
+    };
+    reader.onerror = () => {
+      setErrorMessage('Failed to read image file.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const openEditModal = () => {
     setEditForm({
@@ -680,7 +702,7 @@ export default function ProfilePage() {
                   )}
 
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Full Name</label>
+                    <label>Full Name</label>
                     <input
                       type="text"
                       required
@@ -691,7 +713,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Username</label>
+                    <label>Username</label>
                     <input
                       type="text"
                       required
@@ -702,7 +724,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Bio</label>
+                    <label>Bio</label>
                     <textarea
                       rows={3}
                       value={editForm.bio}
@@ -712,13 +734,50 @@ export default function ProfilePage() {
                     />
                   </div>
 
+                  <div style={{ marginBottom: '20px' }}>
+                    <label>Profile Picture</label>
+                    <div className="profile-edit-image-card">
+                      <div className="profile-edit-avatar-preview">
+                        <img 
+                          src={editForm.avatarUrl || 'https://via.placeholder.com/64'} 
+                          alt="Avatar Preview" 
+                        />
+                      </div>
+                      <div className="profile-edit-image-actions">
+                        <button
+                          type="button"
+                          className="btn btn--upload"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          📁 Upload from Device
+                        </button>
+                        {editForm.avatarUrl && (
+                          <button
+                            type="button"
+                            className="btn btn--remove"
+                            onClick={() => setEditForm({ ...editForm, avatarUrl: '' })}
+                          >
+                            Remove Image
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+
                   <div style={{ marginBottom: '8px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Avatar URL</label>
+                    <label>Or Paste Image URL</label>
                     <input
                       type="url"
-                      value={editForm.avatarUrl}
+                      value={editForm.avatarUrl.startsWith('data:') ? '' : editForm.avatarUrl}
                       onChange={(e) => setEditForm({ ...editForm, avatarUrl: e.target.value })}
-                      placeholder="Paste a link to your avatar image..."
+                      placeholder="https://example.com/avatar.png"
                     />
                   </div>
                 </div>
@@ -726,7 +785,7 @@ export default function ProfilePage() {
                 <div className="profile-edit-modal__footer">
                   <button
                     type="button"
-                    className="btn btn--secondary"
+                    className="btn btn--secondary btn--md"
                     onClick={() => setShowEditModal(false)}
                     disabled={saveLoading}
                   >
@@ -734,7 +793,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn--primary"
+                    className="btn btn--primary btn--md"
                     disabled={saveLoading}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                   >

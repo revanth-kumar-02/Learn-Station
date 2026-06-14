@@ -44,7 +44,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       return res.status(401).json({ message: 'Not authorized, token invalid' });
     }
 
-    // Automatically promote imposterz.rev02@gmail.com to owner
+    const OWNER_EMAILS = ['imposterz.rev02@gmail.com'];
+
+    // Automatically promote owner accounts to owner role
     if (authUser.email === 'imposterz.rev02@gmail.com') {
       try {
         // Ensure record exists in admin_users with role 'owner'
@@ -74,7 +76,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
           .maybeSingle();
 
         if (!profileCheck || profileCheck.role !== 'owner') {
-          const username = authUser.user_metadata?.preferred_username || authUser.user_metadata?.user_name || 'imposterz.rev02';
+          const username = authUser.user_metadata?.preferred_username || authUser.user_metadata?.user_name || (authUser.email ? authUser.email.split('@')[0] : 'imposterz.rev02');
           const name = authUser.user_metadata?.name || '★ OWNER';
           const avatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '';
           const provider = authUser.app_metadata?.provider || '';
@@ -143,7 +145,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
         lastActiveDate: '',
         dailyXpGoal: 50,
         dailyXpEarned: 0,
-        role: adminUser.role as any, // 'owner' or 'admin'
+        role: (authUser.email === 'imposterz.rev02@gmail.com' && adminUser.role === 'owner') ? 'owner' : (adminUser.role === 'admin' ? 'admin' : 'student'),
         isSuspended: !adminUser.is_active,
         avatarUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
         provider: authUser.app_metadata?.provider || '',
@@ -266,7 +268,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       lastActiveDate: profile.last_active_date,
       dailyXpGoal: profile.daily_xp_goal,
       dailyXpEarned,
-      role: profile.role || 'student',
+      role: (authUser.email === 'imposterz.rev02@gmail.com' && profile.role === 'owner') ? 'owner' : (profile.role === 'owner' ? 'student' : (profile.role || 'student')),
       isSuspended: profile.is_suspended || false,
       avatarUrl: profile.avatar_url || '',
       provider: profile.provider || '',
@@ -295,7 +297,7 @@ export const requireOwner = (req: Request, res: Response, next: NextFunction): a
     return res.status(401).json({ message: 'Not authorized, no user profile found.' });
   }
 
-  if (req.user.role !== 'owner') {
+  if (req.user.role !== 'owner' || req.user.email !== 'imposterz.rev02@gmail.com') {
     return res.status(403).json({ message: 'Forbidden: Owner privileges required.' });
   }
 

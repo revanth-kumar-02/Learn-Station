@@ -76,7 +76,7 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  if (user.role !== 'owner') {
+  if (user.role !== 'owner' || user.email !== 'imposterz.rev02@gmail.com') {
     return <Navigate to="/unauthorized" replace />;
   }
 

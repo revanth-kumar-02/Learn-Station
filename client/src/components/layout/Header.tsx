@@ -262,7 +262,7 @@ export default function Header() {
                         ⚙️ Theme Settings
                       </Link>
 
-                      {user.role === 'owner' && (
+                      {user.role === 'owner' && user.email === 'imposterz.rev02@gmail.com' && (
                         <Link 
                           to="/admin/dashboard" 
                           onClick={() => setDropdownOpen(false)}
@@ -362,7 +362,7 @@ export default function Header() {
                 </div>
               </div>
 
-              {user.role === 'owner' && (
+              {user.role === 'owner' && user.email === 'imposterz.rev02@gmail.com' && (
                 <Link
                   to="/admin/dashboard"
                   onClick={() => setMobileOpen(false)}
