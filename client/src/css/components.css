@@ -593,6 +593,115 @@
   .header__hamburger { display: flex; }
 }
 
+/* --- Responsive Layout Utilities --- */
+.header__nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header__center-desktop {
+  display: flex;
+  align-items: center;
+}
+
+.header__actions-desktop {
+  display: flex;
+  align-items: center;
+}
+
+.header__nav-mobile {
+  display: none;
+}
+
+.header__hamburger-btn {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.header__hamburger-btn span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: all var(--duration-fast) ease;
+  border-radius: 2px;
+}
+
+.header__hamburger-btn--open span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.header__hamburger-btn--open span:nth-child(2) { opacity: 0; }
+.header__hamburger-btn--open span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* Tablet Layout - Collapse Less Important Navigation Items */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .header__nav-desktop {
+    margin-left: 16px !important;
+    gap: 8px;
+  }
+  .header__nav-link {
+    padding: 6px 8px;
+  }
+  /* Collapse text for less important navigation links */
+  .header__nav-link--leaderboard span,
+  .header__nav-link--analytics span {
+    display: none;
+  }
+  /* Collapse text for generate path button */
+  .header__generate-text {
+    display: none;
+  }
+  .header__generate-btn {
+    padding: 6px 10px !important;
+    gap: 0 !important;
+  }
+  .header__streak {
+    margin-left: 12px;
+  }
+  .header__avatar-wrapper {
+    margin-left: 12px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .header__nav-desktop { display: none !important; }
+  .header__center-desktop { display: none !important; }
+  .header__actions-desktop { display: none !important; }
+  
+  .header__hamburger-btn { display: flex !important; }
+  
+  .header__nav-mobile {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: all var(--duration-normal) ease;
+    z-index: 990;
+  }
+
+  .header__nav-mobile--open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* ============================================
    OWNER BADGE STYLES
    ============================================ */

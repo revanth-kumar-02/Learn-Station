@@ -67,6 +67,7 @@ export default function Header() {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -77,6 +78,7 @@ export default function Header() {
   // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
+    setDropdownOpen(false);
   }, [location.pathname]);
 
   const isLanding = !user && location.pathname === '/';
@@ -86,42 +88,59 @@ export default function Header() {
     navigate('/');
   };
 
-  const navItems = [...NAV_LINKS];
-  if (user && user.role === 'owner') {
-    navItems.push({ path: '/admin/dashboard', label: 'Admin Panel', icon: 'admin' });
-  }
-
   return (
     <header className={`header ${scrolled ? 'header--scrolled' : ''} ${isLanding ? 'header--landing' : ''}`}>
       <div className="header__inner">
-        <Link to="/" className="header__logo">
-          {Icons.logo}
-          <span className="header__logo-text">Learn Station</span>
-        </Link>
-
-        {user ? (
-          <>
-            <nav className={`header__nav ${mobileOpen ? 'header__nav--open' : ''}`}>
-              {navItems.map((link) => (
+        {/* Left: Logo & Nav Links */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Link to="/" className="header__logo">
+            {Icons.logo}
+            <span className="header__logo-text">Learn Station</span>
+          </Link>
+          
+          {user && (
+            <nav className="header__nav-desktop" style={{ marginLeft: '32px' }}>
+              {NAV_LINKS.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`header__nav-link ${location.pathname === link.path ? 'header__nav-link--active' : ''}`}
+                  className={`header__nav-link header__nav-link--${link.icon} ${location.pathname === link.path ? 'header__nav-link--active' : ''}`}
                 >
                   {(Icons as any)[link.icon]}
                   <span>{link.label}</span>
                 </Link>
               ))}
-              <button
-                onClick={openOverlay}
-                className="header__nav-link header__nav-btn"
-              >
-                <span>Generate Path</span>
-                <span className="header__nav-btn-icon">✦</span>
-              </button>
             </nav>
+          )}
+        </div>
 
-            <div className="header__actions">
+        {/* Center: Generate Path */}
+        {user && (
+          <div className="header__center-desktop">
+            <button
+              onClick={openOverlay}
+              className="btn btn--primary btn--sm header__generate-btn"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-blue) 100%)',
+                color: 'white',
+                fontWeight: 600,
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span className="header__generate-text">Generate Path</span>
+              <span className="header__generate-icon">✦</span>
+            </button>
+          </div>
+        )}
+
+        {/* Right: Actions or Hamburger */}
+        {user ? (
+          <>
+            <div className="header__actions-desktop">
               <div className="header__xp-badge">
                 <span className="header__xp-icon">⚡</span>
                 <span>{user.xp?.toLocaleString() || 0} XP</span>
@@ -133,10 +152,25 @@ export default function Header() {
                 <span className="header__streak-fire">🔥</span>
                 <span>{user.streak || 0}</span>
               </div>
-              {user.avatarUrl && (
-                <Link to="/profile" style={{ display: 'flex', marginLeft: '20px' }}>
+              
+              {/* User Avatar Dropdown */}
+              <div className="header__avatar-wrapper" style={{ position: 'relative', marginLeft: '20px' }}>
+                <button 
+                  onClick={() => setDropdownOpen(!dropdownOpen)} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                  aria-label="User Menu"
+                >
                   <img 
-                    src={user.avatarUrl} 
+                    src={user.avatarUrl || 'https://via.placeholder.com/30'} 
                     alt={user.name || 'User Avatar'} 
                     style={{
                       width: '30px',
@@ -149,15 +183,211 @@ export default function Header() {
                     onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                   />
-                </Link>
-              )}
-              <button onClick={handleLogout} className="header__logout-btn">
-                Log out
-              </button>
+                  <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>▼</span>
+                </button>
+
+                {dropdownOpen && (
+                  <>
+                    <div 
+                      onClick={() => setDropdownOpen(false)} 
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 998,
+                        background: 'transparent'
+                      }}
+                    />
+                    
+                    <div 
+                      className="header__dropdown"
+                      style={{
+                        position: 'absolute',
+                        top: '40px',
+                        right: 0,
+                        width: '180px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-lg)',
+                        padding: '8px 0',
+                        boxShadow: 'var(--shadow-lg)',
+                        zIndex: 999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        backdropFilter: 'blur(16px)',
+                      }}
+                    >
+                      <Link 
+                        to="/profile" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="header__dropdown-item"
+                        style={{
+                          padding: '10px 16px',
+                          color: 'var(--text-primary)',
+                          textDecoration: 'none',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background var(--duration-fast) ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        👤 Profile
+                      </Link>
+                      
+                      <Link 
+                        to="/profile" 
+                        onClick={() => {
+                          setDropdownOpen(false);
+                        }}
+                        className="header__dropdown-item"
+                        style={{
+                          padding: '10px 16px',
+                          color: 'var(--text-primary)',
+                          textDecoration: 'none',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background var(--duration-fast) ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        ⚙️ Theme Settings
+                      </Link>
+
+                      {user.role === 'owner' && (
+                        <Link 
+                          to="/admin/dashboard" 
+                          onClick={() => setDropdownOpen(false)}
+                          className="header__dropdown-item"
+                          style={{
+                            padding: '10px 16px',
+                            color: 'var(--accent-violet)',
+                            textDecoration: 'none',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            textAlign: 'left',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            borderTop: '1px solid var(--border)',
+                            borderBottom: '1px solid var(--border)',
+                            margin: '4px 0',
+                            transition: 'background var(--duration-fast) ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          👑 ★ OWNER PANEL
+                        </Link>
+                      )}
+
+                      <button 
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="header__dropdown-item"
+                        style={{
+                          padding: '10px 16px',
+                          color: 'var(--accent-rose)',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          width: '100%',
+                          transition: 'background var(--duration-fast) ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        🚪 Logout
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
+            {/* Mobile Navigation Drawer */}
+            <nav className={`header__nav-mobile ${mobileOpen ? 'header__nav-mobile--open' : ''}`}>
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`header__nav-link ${location.pathname === link.path ? 'header__nav-link--active' : ''}`}
+                >
+                  {(Icons as any)[link.icon]}
+                  <span>{link.label}</span>
+                </Link>
+              ))}
+              
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  openOverlay();
+                }}
+                className="header__nav-link header__nav-btn"
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 12px' }}
+              >
+                <span>Generate Path</span>
+                <span className="header__nav-btn-icon">✦</span>
+              </button>
+
+              <div style={{ height: '1px', background: 'var(--border)', margin: '12px 0' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', marginBottom: '12px' }}>
+                <div className="header__xp-badge" style={{ margin: 0 }}>
+                  <span className="header__xp-icon">⚡</span>
+                  <span>{user.xp?.toLocaleString() || 0} XP</span>
+                  {user.level && (
+                    <span className="header__level-badge" style={{ marginLeft: '6px' }}>Lv.{user.level}</span>
+                  )}
+                </div>
+                <div className="header__streak" style={{ margin: 0 }}>
+                  <span className="header__streak-fire">🔥</span>
+                  <span>{user.streak || 0} Days</span>
+                </div>
+              </div>
+
+              {user.role === 'owner' && (
+                <Link
+                  to="/admin/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="header__nav-link"
+                  style={{ color: 'var(--accent-violet)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  👑 ★ OWNER PANEL
+                </Link>
+              )}
+
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  handleLogout();
+                }}
+                className="header__nav-link"
+                style={{ color: 'var(--accent-rose)', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                🚪 Log out
+              </button>
+            </nav>
+
+            {/* Hamburger Button (Mobile trigger) */}
             <button
-              className={`header__hamburger ${mobileOpen ? 'header__hamburger--open' : ''}`}
+              className={`header__hamburger-btn ${mobileOpen ? 'header__hamburger-btn--open' : ''}`}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
