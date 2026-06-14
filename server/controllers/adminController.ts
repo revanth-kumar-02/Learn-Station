@@ -6,68 +6,88 @@ import { supabase } from '../config/db';
 // ==========================================
 export const getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // A. User Counts
-    const { count: totalUsers, error: usersErr } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true });
-    if (usersErr) throw usersErr;
+    const today = new Date();
+    
+    // Six days ago at midnight local time (to cover exactly 7 days of charts: today + 6 past days)
+    const sixDaysAgo = new Date(today);
+    sixDaysAgo.setDate(today.getDate() - 6);
+    sixDaysAgo.setHours(0, 0, 0, 0);
 
-    // Active users: logged in within last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { count: activeUsers, error: activeErr } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .gte('last_active_date', sevenDaysAgo.toISOString());
-    if (activeErr) throw activeErr;
+    // Seven days ago for active users (last 7 days active)
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    // 24 hours ago for daily signups
+    const twentyFourHoursAgo = new Date(today);
+    twentyFourHoursAgo.setHours(today.getHours() - 24);
+
+    const toLocalDateStr = (dObj: Date) => {
+      const year = dObj.getFullYear();
+      const month = String(dObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const sixDaysAgoStr = toLocalDateStr(sixDaysAgo);
+
+    // Execute all queries in parallel to drastically improve load time
+    const [
+      totalUsersRes,
+      activeUsersRes,
+      xpDataRes,
+      progressDataRes,
+      aiPathsRes,
+      dailySignupsRes,
+      recentLogsRes,
+      recentSignupsRes,
+      recentActivitiesRes
+    ] = await Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_active_date', sevenDaysAgo.toISOString()),
+      supabase.from('profiles').select('xp'),
+      supabase.from('progress').select('completed_lessons, progress_percent'),
+      supabase.from('tracks').select('id', { count: 'exact', head: true }).eq('is_ai_generated', true),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', twentyFourHoursAgo.toISOString()),
+      supabase.from('activity').select('*, profiles(name, username)').order('date', { ascending: false }).limit(10),
+      supabase.from('profiles').select('created_at').gte('created_at', sixDaysAgo.toISOString()),
+      supabase.from('activity').select('date, xp_earned').gte('date', sixDaysAgoStr)
+    ]);
+
+    // Error handling
+    if (totalUsersRes.error) throw totalUsersRes.error;
+    if (activeUsersRes.error) throw activeUsersRes.error;
+    if (xpDataRes.error) throw xpDataRes.error;
+    if (progressDataRes.error) throw progressDataRes.error;
+    if (aiPathsRes.error) throw aiPathsRes.error;
+    if (dailySignupsRes.error) throw dailySignupsRes.error;
+    if (recentLogsRes.error) throw recentLogsRes.error;
+    if (recentSignupsRes.error) throw recentSignupsRes.error;
+    if (recentActivitiesRes.error) throw recentActivitiesRes.error;
+
+    // A. User Counts
+    const totalUsers = totalUsersRes.count || 0;
+    const activeUsers = activeUsersRes.count || 0;
 
     // B. Total XP Sum
-    const { data: xpData, error: xpErr } = await supabase
-      .from('profiles')
-      .select('xp');
-    if (xpErr) throw xpErr;
-    const totalXp = (xpData || []).reduce((sum, u) => sum + (u.xp || 0), 0);
+    const totalXp = (xpDataRes.data || []).reduce((sum, u) => sum + (u.xp || 0), 0);
 
     // C. Lessons & Track Completions
-    const { data: progressData, error: progErr } = await supabase
-      .from('progress')
-      .select('completed_lessons, progress_percent');
-    if (progErr) throw progErr;
-
-    const totalLessonsCompleted = (progressData || []).reduce(
+    const totalLessonsCompleted = (progressDataRes.data || []).reduce(
       (sum, p) => sum + (p.completed_lessons?.length || 0),
       0
     );
-
-    const trackCompletions = (progressData || []).filter(
+    const trackCompletions = (progressDataRes.data || []).filter(
       (p) => p.progress_percent >= 100
     ).length;
 
     // D. AI Generated paths count
-    const { count: aiPaths, error: aiErr } = await supabase
-      .from('tracks')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_ai_generated', true);
-    if (aiErr) throw aiErr;
+    const aiPaths = aiPathsRes.count || 0;
 
     // E. Daily Signups (Last 24 Hours)
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-    const { count: dailySignups, error: signupErr } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', twentyFourHoursAgo.toISOString());
-    if (signupErr) throw signupErr;
+    const dailySignups = dailySignupsRes.count || 0;
 
     // F. Recent Activity Logs
-    const { data: recentLogs, error: logErr } = await supabase
-      .from('activity')
-      .select('*, profiles(name, username)')
-      .order('date', { ascending: false })
-      .limit(10);
-    if (logErr) throw logErr;
-
-    const recentActivity = (recentLogs || []).map((log: any) => ({
+    const recentActivity = (recentLogsRes.data || []).map((log: any) => ({
       id: log.id,
       date: log.date,
       xp: log.xp_earned,
@@ -75,37 +95,27 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
       username: log.profiles?.username || 'user',
     }));
 
-    // G. Signups & Active Users charts data (last 7 days)
+    // G. Signups & Active Users charts data (last 7 days, processed in memory)
     const dailyStats = [];
-    const today = new Date();
+    const signupDates = (recentSignupsRes.data || []).map(u => toLocalDateStr(new Date(u.created_at)));
+    const activityList = recentActivitiesRes.data || [];
+
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(d);
 
       // Signups count on this day
-      const dayStart = new Date(d);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(d);
-      dayEnd.setHours(23, 59, 59, 999);
-
-      const { count: signupsOnDay } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', dayStart.toISOString())
-        .lte('created_at', dayEnd.toISOString());
+      const signupsOnDay = signupDates.filter(dStr => dStr === dateStr).length;
 
       // Active on this day: activity table entries
-      const { data: activityOnDay } = await supabase
-        .from('activity')
-        .select('xp_earned')
-        .eq('date', dateStr);
-
-      const xpEarnedOnDay = (activityOnDay || []).reduce((sum, act) => sum + act.xp_earned, 0);
+      const xpEarnedOnDay = activityList
+        .filter((act: any) => act.date === dateStr)
+        .reduce((sum: number, act: any) => sum + (act.xp_earned || 0), 0);
 
       dailyStats.push({
         date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
-        signups: signupsOnDay || 0,
+        signups: signupsOnDay,
         xpEarned: xpEarnedOnDay,
       });
     }
@@ -120,13 +130,13 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
 
     res.json({
       stats: {
-        totalUsers: totalUsers || 0,
-        activeUsers: activeUsers || 0,
+        totalUsers,
+        activeUsers,
         totalXp,
         totalLessonsCompleted,
         trackCompletions,
-        aiPathsGenerated: aiPaths || 0,
-        dailySignups: dailySignups || 0,
+        aiPathsGenerated: aiPaths,
+        dailySignups,
       },
       recentActivity,
       dailyStats,

@@ -3,6 +3,18 @@
    ========================================================================== */
 
 .admin-layout {
+  /* Override design tokens for forced dark mode inside admin panel */
+  --bg-primary: #0f172a;
+  --bg-secondary: #020617;
+  --bg-tertiary: rgba(255, 255, 255, 0.03);
+  --bg-elevated: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0f172a;
+
   display: flex;
   min-height: 100vh;
   background-color: #0f172a;
@@ -364,6 +376,45 @@
 .admin-card__subtitle {
   font-size: 0.85rem;
   color: #94a3b8;
+}
+
+/* Achievements List Styling & Overrides */
+.admin-viewport .admin-card h3 {
+  color: #f8fafc;
+  font-weight: 600;
+  font-size: 1.15rem;
+  background: linear-gradient(120deg, #f8fafc, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.admin-viewport .admin-card ul {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+}
+
+.admin-viewport .admin-card li {
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-viewport .admin-card li:hover {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.2);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.admin-viewport .admin-card li strong {
+  color: #3b82f6; /* Premium accent blue for titles */
+  font-weight: 600;
+  margin-right: 6px;
 }
 
 /* Quick Actions Panel */
