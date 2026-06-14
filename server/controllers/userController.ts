@@ -125,6 +125,7 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
         dailyMissions: dailyMissionsObj,
         learningTime: profile.learning_time || 0,
         createdAt: profile.created_at,
+        avatarUrl: profile.avatar_url || '',
       },
       stats: {
         totalXp: profile.xp,
@@ -156,11 +157,12 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
 // @route   PUT /api/users/me
 export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    const { name, dailyXpGoal, username, bio } = req.body;
+    const { name, dailyXpGoal, username, bio, avatarUrl } = req.body;
     const updates: Record<string, any> = {};
     if (name) updates.name = name;
     if (dailyXpGoal) updates.daily_xp_goal = dailyXpGoal;
     if (bio !== undefined) updates.bio = bio;
+    if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
 
     if (username) {
       // Validate unique username
@@ -201,6 +203,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         dailyXpGoal: updated.daily_xp_goal,
         xp: updated.xp,
         level: updated.level,
+        avatarUrl: updated.avatar_url || '',
       },
     });
   } catch (error) {

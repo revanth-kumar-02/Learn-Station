@@ -6,7 +6,7 @@ import AnimatedCounter from '../components/common/AnimatedCounter';
 import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Edit3, Camera, X, Save } from 'lucide-react';
 
 // Helper to calculate progress for achievements
 const getAchievementProgress = (id, stats) => {
@@ -94,11 +94,51 @@ const getAchievementProgress = (id, stats) => {
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<any>(null);
   const [achievements, setAchievements] = useState([]);
-  const [activity, setActivity] = useState([]);
+  const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredCell, setHoveredCell] = useState(null);
+
+  // Edit Profile States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', username: '', bio: '', avatarUrl: '' });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const openEditModal = () => {
+    setEditForm({
+      name: profile?.user?.name || user?.name || '',
+      username: profile?.user?.username || user?.username || '',
+      bio: profile?.user?.bio || user?.bio || '',
+      avatarUrl: profile?.user?.avatarUrl || user?.avatarUrl || '',
+    });
+    setErrorMessage('');
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveLoading(true);
+    setErrorMessage('');
+    try {
+      const updatedData = await userService.updateProfile(editForm);
+      setProfile((prev: any) => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          ...updatedData.user
+        }
+      }));
+      updateUser(updatedData.user);
+      setShowEditModal(false);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMessage(err.response?.data?.message || 'Failed to update profile details.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   // Dark mode toggle states
   const [darkMode, setDarkMode] = useState(() => {
@@ -230,34 +270,64 @@ export default function ProfilePage() {
         <div className="container container--narrow">
           {/* Profile Header */}
           <motion.div className="profile-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            {user?.avatarUrl ? (
-              <img 
-                src={user.avatarUrl} 
-                alt={user.name || 'User'} 
-                className="profile-avatar" 
-                style={{ 
-                  width: '80px', 
-                  height: '80px', 
-                  borderRadius: '50%', 
-                  objectFit: 'cover',
-                  border: '3px solid var(--accent-violet)',
-                  boxShadow: '0 0 15px rgba(124, 58, 237, 0.3)'
-                }} 
-              />
-            ) : (
-              <div className="profile-avatar">{initials}</div>
-            )}
-            <div className="profile-info">
-              <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                {user?.name}
-                {user?.role === 'owner' && (
-                  <span className="owner-badge">
-                    <span className="owner-badge__crown">👑</span>
-                    <span className="owner-badge__text">★ OWNER</span>
-                    <span className="owner-badge__shine" />
-                  </span>
-                )}
-              </h1>
+            <div 
+              className="profile-avatar-container" 
+              onClick={openEditModal}
+              title="Click to edit profile picture"
+            >
+              {profile?.user?.avatarUrl || user?.avatarUrl ? (
+                <img 
+                  src={profile?.user?.avatarUrl || user?.avatarUrl} 
+                  alt={profile?.user?.name || user?.name || 'User'} 
+                  className="profile-avatar-img" 
+                />
+              ) : (
+                <div className="profile-avatar-placeholder">{initials}</div>
+              )}
+              <div className="profile-avatar-overlay">
+                <Camera size={20} />
+              </div>
+            </div>
+            
+            <div className="profile-info" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', margin: 0 }}>
+                  {profile?.user?.name || user?.name}
+                  {user?.role === 'owner' && (
+                    <span className="owner-badge">
+                      <span className="owner-badge__crown">👑</span>
+                      <span className="owner-badge__text">★ OWNER</span>
+                      <span className="owner-badge__shine" />
+                    </span>
+                  )}
+                </h1>
+                
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  onClick={openEditModal}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Edit3 size={12} />
+                  Edit Profile
+                </button>
+              </div>
+
+              <div className="profile-username" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent-blue)', fontWeight: 500, marginTop: '2px' }}>
+                @{profile?.user?.username || user?.username || 'learner'}
+              </div>
+
+              <p className="profile-bio" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: '8px', marginBottom: '12px', fontStyle: profile?.user?.bio ? 'normal' : 'italic' }}>
+                {profile?.user?.bio || "No bio added yet. Add a short bio to describe your learning journey!"}
+              </p>
+
               <span className="profile-level">Level {stats.level || 1}</span>
               <div className="profile-level-bar">
                 <ProgressBar value={levelInfo.progress * 100} max={100} color="var(--accent-violet)" size="md" />
@@ -573,6 +643,119 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <div className="profile-edit-modal-backdrop" onClick={() => setShowEditModal(false)}>
+            <motion.div
+              className="profile-edit-modal"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            >
+              <div className="profile-edit-modal__header">
+                <span className="profile-edit-modal__title">Edit Learning Profile</span>
+                <button className="profile-edit-modal__close" onClick={() => setShowEditModal(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile}>
+                <div className="profile-edit-modal__body">
+                  {errorMessage && (
+                    <div style={{
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#ef4444',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '13px',
+                      marginBottom: '16px'
+                    }}>
+                      {errorMessage}
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      placeholder="e.g. Alex Mercer"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Username</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.username}
+                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                      placeholder="e.g. alex_mercer"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Bio</label>
+                    <textarea
+                      rows={3}
+                      value={editForm.bio}
+                      onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                      placeholder="Describe your learning goals, interests, or career path..."
+                      style={{ resize: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Avatar URL</label>
+                    <input
+                      type="url"
+                      value={editForm.avatarUrl}
+                      onChange={(e) => setEditForm({ ...editForm, avatarUrl: e.target.value })}
+                      placeholder="Paste a link to your avatar image..."
+                    />
+                  </div>
+                </div>
+
+                <div className="profile-edit-modal__footer">
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={() => setShowEditModal(false)}
+                    disabled={saveLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn--primary"
+                    disabled={saveLoading}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    {saveLoading ? (
+                      <>
+                        <span className="btn__spinner" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 }
