@@ -17,9 +17,38 @@ export default function HomePage() {
   const { user } = useAuth();
   const { openOverlay } = usePathSelection();
   const navigate = useNavigate();
-  const [tracks, setTracks] = useState([]);
+  const [tracks, setTracks] = useState<any[]>([]);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTrackDetails, setActiveTrackDetails] = useState<any>(null);
+
+  const getActiveTrack = (allTracks: any[]) => {
+    // Check if there is an activeTrackId in localStorage
+    const savedActiveId = localStorage.getItem('activeTrackId');
+    if (savedActiveId) {
+      const match = allTracks.find(t => t.id === savedActiveId || t._id === savedActiveId);
+      if (match && (match.progress?.progressPercent > 0 || match.progress?.completedLessons > 0)) {
+        return match;
+      }
+    }
+
+    // Filter tracks that have any progress
+    const studied = allTracks.filter(t => 
+      t.progress && (t.progress.progressPercent > 0 || t.progress.completedLessons > 0 || t.progress.lastAccessedAt)
+    );
+
+    if (studied.length === 0) return null;
+
+    // Sort by last accessed, then progress percent
+    studied.sort((a, b) => {
+      const dateA = a.progress?.lastAccessedAt ? new Date(a.progress.lastAccessedAt).getTime() : 0;
+      const dateB = b.progress?.lastAccessedAt ? new Date(b.progress.lastAccessedAt).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      return (b.progress?.progressPercent || 0) - (a.progress?.progressPercent || 0);
+    });
+
+    return studied[0];
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,8 +57,23 @@ export default function HomePage() {
           trackService.getAll(),
           userService.getAchievements()
         ]);
-        setTracks(tracksData.tracks || []);
+        const allTracks = tracksData.tracks || [];
+        setTracks(allTracks);
         setAchievements(achData.achievements || []);
+
+        const detectedActive = getActiveTrack(allTracks);
+        if (detectedActive) {
+          // Fetch full track details to get modules and lessons list
+          const detailData = await trackService.getBySlug(detectedActive.slug);
+          if (detailData && detailData.track) {
+            setActiveTrackDetails({
+              ...detailData.track,
+              progress: detailData.progress || detectedActive.progress
+            });
+            // Update localStorage
+            localStorage.setItem('activeTrackId', detailData.track.id);
+          }
+        }
       } catch (err) {
         console.error('Error loading dashboard data:', err);
       } finally {
@@ -39,8 +83,70 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  // Find current track
-  const currentTrack = tracks.find((t) => t._id === user?.currentTrack);
+  // Compute active track progress variables
+  let currentLessonName = '';
+  let nextLessonName = '';
+  let currentModuleName = '';
+  let currentLessonSlug = '';
+  let progressPercent = 0;
+  let completedLessonsCount = 0;
+  let totalLessonsCount = 0;
+
+  if (activeTrackDetails) {
+    const track = activeTrackDetails;
+    const progress = activeTrackDetails.progress;
+
+    // Flatten all lessons in order
+    const allLessons: any[] = [];
+    track.modules.forEach((mod: any) => {
+      mod.lessons.forEach((les: any) => {
+        allLessons.push({
+          ...les,
+          moduleName: mod.name,
+          moduleId: mod.id
+        });
+      });
+    });
+
+    totalLessonsCount = track.totalLessons || allLessons.length;
+    completedLessonsCount = Array.isArray(progress.completedLessons)
+      ? progress.completedLessons.length
+      : (typeof progress.completedLessons === 'number' ? progress.completedLessons : 0);
+    progressPercent = progress.progressPercent ?? Math.round((completedLessonsCount / (totalLessonsCount || 1)) * 100);
+
+    // Get current lesson ID (handle string vs object representation)
+    const currentLessonId = typeof progress.currentLesson === 'object' && progress.currentLesson !== null
+      ? progress.currentLesson.id || progress.currentLesson._id
+      : progress.currentLesson;
+
+    const currentIndex = allLessons.findIndex(l => l.id === currentLessonId || l._id === currentLessonId);
+    
+    // Find current lesson
+    const currentLesson = currentIndex !== -1 ? allLessons[currentIndex] : allLessons[0];
+    if (currentLesson) {
+      currentLessonName = currentLesson.title;
+      currentLessonSlug = currentLesson.slug;
+      currentModuleName = currentLesson.moduleName;
+    }
+
+    // Find next lesson
+    const nextLesson = currentIndex !== -1 && currentIndex < allLessons.length - 1
+      ? allLessons[currentIndex + 1]
+      : null;
+    
+    if (nextLesson) {
+      nextLessonName = nextLesson.title;
+    } else if (progressPercent >= 100) {
+      nextLessonName = '🎉 Track Completed!';
+    } else {
+      nextLessonName = 'Capstone Project';
+    }
+  }
+
+  const continueUrl = currentLessonSlug
+    ? `/lesson/${currentLessonSlug}`
+    : activeTrackDetails ? `/track/${activeTrackDetails.slug}` : '/tracks';
+
   const dailyPercent = user ? Math.min((user.dailyXpEarned / user.dailyXpGoal) * 100, 100) : 0;
 
   return (
@@ -55,45 +161,74 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="home-hero__left">
-                <span className="home-hero__label">Continue Learning</span>
-                <h1 className="home-hero__title">
-                  {currentTrack ? currentTrack.name : 'Start a track'}
-                </h1>
-                <p className="home-hero__subtitle">
-                  {currentTrack
-                    ? `${currentTrack.progress?.completedLessons || 0} of ${currentTrack.totalLessons} lessons completed`
-                    : 'Choose a learning track below to begin your journey'}
-                </p>
-                <div className="home-hero__meta">
-                  <span>🎯 +25 XP</span>
-                  <span>⏱ ~10 min</span>
-                </div>
-                {currentTrack ? (
+              {activeTrackDetails ? (
+                <div className="home-hero__left" style={{ width: '100%' }}>
+                  <span className="home-hero__label">Continue Learning</span>
+                  <div className="hero-track-header">
+                    <span className="hero-track-icon">
+                      {TRACK_ICONS[activeTrackDetails.slug as keyof typeof TRACK_ICONS] || activeTrackDetails.icon || '📚'}
+                    </span>
+                    <h1 className="home-hero__title" style={{ margin: 0 }}>
+                      {activeTrackDetails.name}
+                    </h1>
+                  </div>
+                  
+                  <p className="home-hero__subtitle" style={{ marginBottom: '12px' }}>
+                    Progress: {completedLessonsCount} / {totalLessonsCount} Lessons ({progressPercent}%)
+                  </p>
+
+                  <div className="hero-active-info">
+                    <div className="hero-info-item">
+                      <span className="hero-info-label">Current Module</span>
+                      <span className="hero-info-val">{currentModuleName || 'N/A'}</span>
+                    </div>
+                    <div className="hero-info-item">
+                      <span className="hero-info-label">Current Lesson</span>
+                      <span className="hero-info-val">{currentLessonName || 'N/A'}</span>
+                    </div>
+                    <div className="hero-info-item" style={{ gridColumn: 'span 2' }}>
+                      <span className="hero-info-label">Next Lesson</span>
+                      <span className="hero-info-val" style={{ color: 'var(--accent-blue)' }}>{nextLessonName}</span>
+                    </div>
+                  </div>
+
+                  <div className="home-hero__meta" style={{ marginBottom: '16px' }}>
+                    <span>🎯 +25 XP / lesson</span>
+                    <span>⏱ ~10 min</span>
+                  </div>
+
                   <Link
-                    to={
-                      currentTrack.isAiGenerated
-                        ? `/ai-workspace/${currentTrack.slug}`
-                        : currentTrack.progress?.currentLessonSlug
-                        ? `/lesson/${currentTrack.progress.currentLessonSlug}`
-                        : `/track/${currentTrack.slug}`
-                    }
+                    to={continueUrl}
                     className="btn btn--primary btn--lg home-hero__cta"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-indigo) 100%)',
+                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                      color: 'white'
+                    }}
                   >
                     Continue Learning →
                   </Link>
-                ) : (
+                </div>
+              ) : (
+                <div className="home-hero__left">
+                  <span className="home-hero__label">Continue Learning</span>
+                  <h1 className="home-hero__title">Start a track</h1>
+                  <p className="home-hero__subtitle">Choose a learning track below to begin your journey</p>
+                  <div className="home-hero__meta">
+                    <span>🎯 +25 XP</span>
+                    <span>⏱ ~10 min</span>
+                  </div>
                   <button onClick={openOverlay} className="btn btn--primary btn--lg home-hero__cta">
                     Browse Tracks →
                   </button>
-                )}
-              </div>
+                </div>
+              )}
               <div className="home-hero__right">
                 <ProgressRing
-                  percent={currentTrack?.progress?.progressPercent || 0}
+                  percent={activeTrackDetails ? progressPercent : 0}
                   size={120}
                   strokeWidth={8}
-                  color={currentTrack?.color || 'var(--accent-blue)'}
+                  color={activeTrackDetails?.color || 'var(--accent-blue)'}
                 />
               </div>
             </motion.div>

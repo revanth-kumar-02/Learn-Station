@@ -112,6 +112,50 @@
 
 .home-hero__cta { display: inline-flex; }
 
+.hero-track-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px 0;
+}
+
+.hero-track-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.hero-active-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 16px 0 24px 0;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+}
+
+.hero-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-info-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.05em;
+}
+
+.hero-info-val {
+  font-size: 14px;
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
 /* --- Daily Goal --- */
 .home-daily {
   background: var(--bg-secondary);
