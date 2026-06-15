@@ -133,22 +133,38 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     if (adminUser) {
+      // Fetch public profile details to get current stats (XP, level, streak, etc.)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      let dailyXpEarned = profile?.daily_xp_earned || 0;
+      if (profile?.last_active_date) {
+        const lastActiveStr = new Date(profile.last_active_date).toISOString().split('T')[0];
+        if (lastActiveStr !== todayStr) {
+          dailyXpEarned = 0;
+        }
+      }
+
       req.user = {
         _id: adminUser.id,
         id: adminUser.id,
-        name: adminUser.full_name || 'Admin',
+        name: adminUser.full_name || profile?.name || 'Admin',
         email: authUser.email || adminUser.email,
-        xp: 0,
-        level: 1,
-        streak: 0,
-        longestStreak: 0,
-        lastActiveDate: '',
-        dailyXpGoal: 50,
-        dailyXpEarned: 0,
+        xp: profile?.xp ?? 0,
+        level: profile?.level ?? 1,
+        streak: profile?.streak ?? 0,
+        longestStreak: profile?.longest_streak ?? 0,
+        lastActiveDate: profile?.last_active_date || '',
+        dailyXpGoal: profile?.daily_xp_goal || 50,
+        dailyXpEarned,
         role: (authUser.email === 'imposterz.rev02@gmail.com' && adminUser.role === 'owner') ? 'owner' : (adminUser.role === 'admin' ? 'admin' : 'student'),
         isSuspended: !adminUser.is_active,
-        avatarUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
-        provider: authUser.app_metadata?.provider || '',
+        avatarUrl: profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+        provider: profile?.provider || authUser.app_metadata?.provider || '',
       };
 
       if (req.user.isSuspended) {
