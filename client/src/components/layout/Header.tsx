@@ -108,7 +108,7 @@ export default function Header() {
           
           {user && (
             <nav className="header__nav-desktop" style={{ marginLeft: '32px' }}>
-              {NAV_LINKS.map((link) => (
+              {NAV_LINKS.filter(link => link.path !== '/practice').map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -244,6 +244,28 @@ export default function Header() {
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         👤 Profile
+                      </Link>
+                      
+                      <Link 
+                        to="/practice" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="header__dropdown-item"
+                        style={{
+                          padding: '10px 16px',
+                          color: 'var(--text-primary)',
+                          textDecoration: 'none',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background var(--duration-fast) ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        🎯 Practice Hub
                       </Link>
                       
                       <Link 
