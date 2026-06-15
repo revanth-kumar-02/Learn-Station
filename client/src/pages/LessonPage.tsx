@@ -89,6 +89,7 @@ export default function LessonPage() {
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [isDailyLimitReached, setIsDailyLimitReached] = useState(false);
   
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepReached, setMaxStepReached] = useState(0);
@@ -138,6 +139,16 @@ export default function LessonPage() {
         setProgress(data.progress);
         setIsLocked(false);
         
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dailyMissions = user?.daily_missions;
+        const completedToday = (dailyMissions && dailyMissions.date === todayStr) ? (dailyMissions.completedLessonsToday || []) : [];
+        
+        if (!data.isCompleted && completedToday.length >= 4) {
+          setIsDailyLimitReached(true);
+        } else {
+          setIsDailyLimitReached(false);
+        }
+        
         // Reset states for new lesson
         setChallengeIndex(0);
         setUserAnswer('');
@@ -159,10 +170,14 @@ export default function LessonPage() {
           setMaxStepReached(0);
           setCurrentStep(0);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         if (err.response?.status === 403) {
-          setIsLocked(true);
+          if (err.response.data?.limitReached) {
+            setIsDailyLimitReached(true);
+          } else {
+            setIsLocked(true);
+          }
         }
       } finally {
         setLoading(false);
@@ -173,6 +188,44 @@ export default function LessonPage() {
 
   if (loading) return <Loader fullPage />;
   
+  if (isDailyLimitReached) {
+    const dailyMissions = user?.daily_missions;
+    const completedToday = (dailyMissions && dailyMissions.date === new Date().toISOString().split('T')[0]) ? (dailyMissions.completedLessonsToday || []) : [];
+    return (
+      <PageTransition>
+        <div className="container" style={{ paddingTop: '120px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <div className="card" style={{ maxWidth: '520px', width: '100%', padding: 'var(--space-8)', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ fontSize: '64px', marginBottom: 'var(--space-4)' }}>🎯</div>
+            <h2 style={{ fontSize: 'var(--text-xl)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)', fontWeight: 800 }}>Daily Learning Goal Reached</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', lineHeight: 'var(--leading-relaxed)', marginBottom: 'var(--space-6)' }}>
+              You have completed today's roadmap lessons. Return tomorrow to unlock new lessons.
+            </p>
+            
+            {/* Progress Display */}
+            <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                <span>Progress</span>
+                <span>{completedToday.length} / 4 Lessons Completed</span>
+              </div>
+              <div style={{ height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (completedToday.length / 4) * 100)}%`, backgroundColor: 'var(--accent-violet)', borderRadius: '4px' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Button onClick={() => navigate('/practice')} variant="primary" size="lg" className="w-full" style={{ background: 'linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-blue) 100%)', border: 'none' }}>
+                🚀 Go to Practice Hub
+              </Button>
+              <Button onClick={() => navigate('/tracks')} variant="ghost" size="lg" className="w-full" style={{ border: '1px solid var(--border)' }}>
+                Browse Other Tracks
+              </Button>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   if (isLocked) {
     return (
       <PageTransition>

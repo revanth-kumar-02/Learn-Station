@@ -16,6 +16,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import PublicPortfolioPage from './pages/PublicPortfolioPage';
 import CertificatePage from './pages/CertificatePage';
+import PracticePage from './pages/PracticePage';
 import Loader from './components/common/Loader';
 import { AnimatePresence } from 'framer-motion';
 import AdminControlCenter from './pages/AdminControlCenter';
@@ -112,6 +113,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <TracksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice"
+            element={
+              <ProtectedRoute>
+                <PracticePage />
               </ProtectedRoute>
             }
           />

@@ -51,6 +51,8 @@ export interface DailyMissions {
     projectsSubmitted: number;
     aiRoadmaps: number;
   };
+  completedLessonsToday?: string[];
+  dailyPracticeXp?: number;
 }
 
 // Level thresholds: Level N requires increasing XP cumulative steps
@@ -675,7 +677,9 @@ export const generateDailyMissions = (dateStr: string): DailyMissions => {
       challengesSolved: 0,
       projectsSubmitted: 0,
       aiRoadmaps: 0
-    }
+    },
+    completedLessonsToday: [],
+    dailyPracticeXp: 0
   };
 };
 

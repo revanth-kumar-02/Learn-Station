@@ -18,6 +18,20 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
+const customFetch = async (url: string, options: any, retries = 7, delay = 3000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (err: any) {
+      if (i === retries - 1) throw err;
+      const currentDelay = delay * Math.pow(2, i);
+      console.warn(`⚠️ Fetch failed (${err.message || err}), retrying in ${currentDelay}ms... (${i + 1}/${retries})`);
+      await new Promise(resolve => setTimeout(resolve, currentDelay));
+    }
+  }
+};
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -26,6 +40,9 @@ const supabase = createClient(
       persistSession: false,
       autoRefreshToken: false,
     },
+    global: {
+      fetch: (url, options) => customFetch(url as string, options)
+    }
   }
 );
 
@@ -293,7 +310,7 @@ const compileAllTracks = () => {
       const trackIcon = trackSpec.icon;
       const trackColor = trackSpec.color;
 
-      // Define 3 Modules
+      // Define 6 Modules
       const modules = [
         {
           id: `${trackSlug}-m1`,
@@ -312,9 +329,24 @@ const compileAllTracks = () => {
         },
         {
           id: `${trackSlug}-m2`,
-          name: `${trackName} Intermediate Practices`,
+          name: `${trackName} Control Flow & Basics`,
           order: 2,
-          learning_objective: `Apply advanced structures, functions, and modules for ${trackName}.`,
+          learning_objective: `Master logic flow, conditional branching, and loop iterations in ${trackName}.`,
+          mini_project: {
+            title: `${trackName} Control Flow Script`,
+            description: `Design a script handling multi-step logic control and loop configurations in ${trackName}.`,
+            requirements: [
+              'Implement conditional check flows.',
+              'Configure nested loop structures.',
+              'Format results to the console.'
+            ]
+          }
+        },
+        {
+          id: `${trackSlug}-m3`,
+          name: `${trackName} Intermediate Practices`,
+          order: 3,
+          learning_objective: `Apply advanced functions, encapsulation, and standard modules in ${trackName}.`,
           mini_project: {
             title: `${trackName} Modular Manager`,
             description: `Design a multi-file script or component managing data structures and flow parameters in ${trackName}.`,
@@ -326,10 +358,40 @@ const compileAllTracks = () => {
           }
         },
         {
-          id: `${trackSlug}-m3`,
-          name: `${trackName} Architecture & Projects`,
-          order: 3,
-          learning_objective: `Design and deploy highly scalable components for ${trackName}.`,
+          id: `${trackSlug}-m4`,
+          name: `${trackName} Object Oriented & Data Modeling`,
+          order: 4,
+          learning_objective: `Master class architectures, object interfaces, and data validation structures in ${trackName}.`,
+          mini_project: {
+            title: `${trackName} Model Builder`,
+            description: `Build a class-based data model or object configuration mapping for ${trackName}.`,
+            requirements: [
+              'Implement constructor class properties.',
+              'Validate properties using getters or conditionals.',
+              'Format output summaries cleanly.'
+            ]
+          }
+        },
+        {
+          id: `${trackSlug}-m5`,
+          name: `${trackName} Advanced Architecture`,
+          order: 5,
+          learning_objective: `Design and analyze design patterns, callbacks, or promise loops in ${trackName}.`,
+          mini_project: {
+            title: `${trackName} Architecture Component`,
+            description: `Develop a modular software component following enterprise patterns in ${trackName}.`,
+            requirements: [
+              'Configure asynchronous flow loops.',
+              'Create reusable events or action interfaces.',
+              'Implement modular data checks.'
+            ]
+          }
+        },
+        {
+          id: `${trackSlug}-m6`,
+          name: `${trackName} Performance, Testing & Deployment`,
+          order: 6,
+          learning_objective: `Design, optimize, test, and deploy highly scalable production code for ${trackName}.`,
           mini_project: {
             title: `${trackName} Enterprise Integrator`,
             description: `Create an enterprise component simulating network links, file structures, or caching for ${trackName}.`,
@@ -343,11 +405,16 @@ const compileAllTracks = () => {
       ];
 
       const lessons = [];
-      trackSpec.lessons.forEach((lessonTitle, index) => {
-        const modIdx = Math.floor(index / 4); // 4 lessons per module
+      const numLessons = 60;
+      for (let index = 0; index < numLessons; index++) {
+        const modIdx = Math.floor(index / 10); // 10 lessons per module
         const mod = modules[modIdx] || modules[0];
         const lessonSlug = `${trackSlug}-l${index + 1}`;
-        const displayOrder = (index % 4) + 1;
+        const displayOrder = (index % 10) + 1;
+
+        const lessonTitle = index < trackSpec.lessons.length
+          ? trackSpec.lessons[index]
+          : `${trackSpec.name} Practice & Application Part ${index - trackSpec.lessons.length + 1}`;
 
         // Generate programmatic lesson content
         const lessonMeta = getProgrammaticLessonData(trackSlug, index, lessonTitle);
@@ -377,7 +444,7 @@ const compileAllTracks = () => {
           summary: `You completed learning ${lessonTitle}. Explore more lessons in this module to build complete technical mastery.`,
           challenges: lessonMeta.challenges
         });
-      });
+      }
 
       generatedTracks.push({
         slug: trackSlug,
@@ -401,8 +468,71 @@ const compileAllTracks = () => {
     }
   }
 
-  return [...handcraftedTracks, ...generatedTracks];
+  // Pad handcrafted tracks to 6 modules, 10 lessons each (60 total)
+  const finalHandcrafted = handcraftedTracks.map((trackData: any) => {
+    const trackSlug = trackData.slug;
+    const trackName = trackData.name;
+    const modules = trackData.modules; // Keep all 6 modules
+
+    const lessons = [...trackData.lessons];
+    const targetCount = 60;
+    const currentCount = lessons.length; // 24
+
+    for (let i = currentCount; i < targetCount; i++) {
+      const moduleIndex = Math.floor(i / 10);
+      const mod = modules[moduleIndex];
+      const displayOrder = (i % 10) + 1;
+      const lessonTitle = `${trackName} Advanced Applications Part ${i - currentCount + 1}`;
+      const lessonSlug = `${trackSlug}-l${i + 1}`;
+
+      const lessonMeta = getProgrammaticLessonData(trackSlug, i, lessonTitle);
+
+      const objectiveText = `### 1. Learning Objective\nIn this lesson, you will master the fundamentals of **${lessonTitle}** and learn how to apply it in ${trackName} environments.`;
+      const realWorldText = `### 2. Where is this used in real life?\nThis concept is a core element in production. For example, it is used directly in software components like:\n- **API Systems**: To structure data parameters.\n- **Database Transactions**: To audit logs and profiles.\n- **Frontend Webpages**: To style layouts and align items.\n\nStudying this ensures your code remains efficient, readable, and highly maintainable under load.`;
+      const explanationText = `### 3. Concept Explanation\n${lessonMeta.exampleExplanation}\n\nUnderstanding the syntax and structure prevents common errors and optimizes execution paths. Review the code example carefully to see how these declarations work in practice.`;
+      const fullConceptContent = `${objectiveText}\n\n${realWorldText}\n\n${explanationText}`;
+
+      lessons.push({
+        slug: lessonSlug,
+        title: lessonTitle,
+        moduleId: mod.id,
+        order: displayOrder,
+        estimatedMinutes: 8,
+        xpReward: 25,
+        conceptTitle: `Mastering ${lessonTitle}`,
+        conceptContent: fullConceptContent,
+        conceptHighlights: [trackName, lessonTitle],
+        exampleLanguage: lessonMeta.language,
+        exampleCode: lessonMeta.exampleCode,
+        exampleExplanation: lessonMeta.exampleExplanation,
+        practiceType: 'fill-blank',
+        practiceInstruction: lessonMeta.practiceInstruction,
+        practiceTemplate: lessonMeta.practiceTemplate,
+        practiceAnswer: lessonMeta.practiceAnswer,
+        summary: `You completed learning ${lessonTitle}. Explore more lessons in this module to build complete technical mastery.`,
+        challenges: lessonMeta.challenges
+      });
+    }
+
+    // Rewrite all display orders and module IDs to ensure alignment to 6 modules, 10 lessons per module:
+    lessons.forEach((lesson, index) => {
+      const moduleIndex = Math.floor(index / 10);
+      const mod = modules[moduleIndex];
+      lesson.moduleId = mod.id;
+      lesson.order = (index % 10) + 1;
+    });
+
+    return {
+      ...trackData,
+      modules,
+      lessons
+    };
+  });
+
+  return [...finalHandcrafted, ...generatedTracks];
 };
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const seed = async () => {
   try {
@@ -411,6 +541,8 @@ const seed = async () => {
     await supabase.from('lessons').delete().gt('created_at', '1970-01-01');
     await supabase.from('modules').delete().neq('id', '');
     await supabase.from('tracks').delete().gt('created_at', '1970-01-01');
+    console.log('⏳ Waiting 3 seconds for database to settle...');
+    await sleep(3000);
 
     console.log('🌱 Generating and compiling full curriculum (78 tracks)...');
     const allTracks = compileAllTracks();
@@ -466,7 +598,7 @@ const seed = async () => {
       }
       totalModules += modulesToInsert.length;
 
-      // 3. Insert Lessons (in bulk per track)
+      // 3. Insert Lessons (in chunks of 15 per track to prevent timeouts)
       const lessonsToInsert = trackData.lessons.map((lessonData: any) => ({
         slug: lessonData.slug,
         track_id: track.id,
@@ -488,14 +620,23 @@ const seed = async () => {
         summary: lessonData.summary || ''
       }));
 
-      const { data: insertedLessons, error: lessonsError } = await supabase
-        .from('lessons')
-        .insert(lessonsToInsert)
-        .select('id, slug');
+      const insertedLessons = [];
+      const lessonChunkSize = 15;
+      for (let i = 0; i < lessonsToInsert.length; i += lessonChunkSize) {
+        const chunk = lessonsToInsert.slice(i, i + lessonChunkSize);
+        const { data: chunkInserted, error: lessonsError } = await supabase
+          .from('lessons')
+          .insert(chunk)
+          .select('id, slug');
 
-      if (lessonsError) {
-        console.error(`Error seeding lessons for track ${trackData.name}:`, lessonsError);
-        throw lessonsError;
+        if (lessonsError) {
+          console.error(`Error seeding lessons chunk for track ${trackData.name}:`, lessonsError);
+          throw lessonsError;
+        }
+        if (chunkInserted) {
+          insertedLessons.push(...chunkInserted);
+        }
+        await sleep(100); // Pause to prevent rate limiting
       }
       totalLessons += lessonsToInsert.length;
 
@@ -505,7 +646,7 @@ const seed = async () => {
         lessonIdMap[l.slug] = l.id;
       });
 
-      // 4. Insert Challenges in bulk per track
+      // 4. Insert Challenges (in chunks of 50 to prevent timeouts)
       const challengesToInsert = [];
       trackData.lessons.forEach((lessonData: any) => {
         const lessonId = lessonIdMap[lessonData.slug];
@@ -527,16 +668,23 @@ const seed = async () => {
       });
 
       if (challengesToInsert.length > 0) {
-        const { error: challengesError } = await supabase
-          .from('challenges')
-          .insert(challengesToInsert);
+        const challengeChunkSize = 50;
+        for (let i = 0; i < challengesToInsert.length; i += challengeChunkSize) {
+          const chunk = challengesToInsert.slice(i, i + challengeChunkSize);
+          const { error: challengesError } = await supabase
+            .from('challenges')
+            .insert(chunk);
 
-        if (challengesError) {
-          console.error(`Error seeding challenges for track ${trackData.name}:`, challengesError);
-          throw challengesError;
+          if (challengesError) {
+            console.error(`Error seeding challenges chunk for track ${trackData.name}:`, challengesError);
+            throw challengesError;
+          }
+          await sleep(100); // Pause to prevent rate limiting
         }
         totalChallenges += challengesToInsert.length;
       }
+
+      await sleep(400); // Pause between tracks to prevent rate limiting
 
       totalTracks++;
     }

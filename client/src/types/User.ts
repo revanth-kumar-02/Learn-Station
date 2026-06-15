@@ -18,6 +18,7 @@ export interface User {
   isSuspended?: boolean;
   avatarUrl?: string;
   provider?: string;
+  daily_missions?: any;
 }
 
 export interface UserResponse {

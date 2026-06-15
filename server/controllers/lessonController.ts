@@ -450,8 +450,29 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
       });
     }
 
+    // Enforce daily roadmap lesson limit (maximum 4 new roadmap lessons per day)
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dailyMissionsObj = profile.daily_missions;
+    if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
+      dailyMissionsObj = generateDailyMissions(todayStr);
+    }
+    if (!dailyMissionsObj.completedLessonsToday) {
+      dailyMissionsObj.completedLessonsToday = [];
+    }
+
+    if (dailyMissionsObj.completedLessonsToday.length >= 4) {
+      return res.status(403).json({
+        message: "🎯 Daily Learning Goal Reached. You have completed today's roadmap lessons. Return tomorrow to unlock new lessons.",
+        limitReached: true,
+        progress: `${dailyMissionsObj.completedLessonsToday.length} / 4 Lessons Completed`
+      });
+    }
+
     // 5. Add completion & calculate XP progress
     completedLessons.push(lesson.id);
+    if (!dailyMissionsObj.completedLessonsToday.includes(lesson.id)) {
+      dailyMissionsObj.completedLessonsToday.push(lesson.id);
+    }
 
     let bonusXp = 0;
     if (quizScore === 5) {
@@ -538,7 +559,6 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
 
     // 6. Update user XP & Streak
     // Streak logic
-    const todayStr = new Date().toISOString().split('T')[0];
     let streak = profile.streak || 0;
     let longestStreak = profile.longest_streak || 0;
 
@@ -592,10 +612,6 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
     }
 
     // Daily Missions Logic
-    let dailyMissionsObj = profile.daily_missions;
-    if (!dailyMissionsObj || dailyMissionsObj.date !== todayStr) {
-      dailyMissionsObj = generateDailyMissions(todayStr);
-    }
 
     const checkMissionsCompletions = (before: any[], after: any[]) => {
       let count = 0;
