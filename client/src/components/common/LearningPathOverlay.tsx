@@ -131,15 +131,15 @@ export default function LearningPathOverlay() {
             {/* Header */}
             <div className="path-overlay-header">
               <h2 className="path-overlay-title">Choose Your Learning Journey</h2>
-              <p className="path-overlay-subtitle">How would you like to learn today?</p>
+              <p className="path-overlay-subtitle">Select how you'd like to start learning today.</p>
             </div>
 
             {/* Core Options Grid */}
             <div className="path-overlay-grid">
               {/* Option 1: Structured Learning */}
-              <div className="path-overlay-card" onClick={() => handleNavigate('/tracks')}>
-                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(59, 130, 246, 0.15)' } as React.CSSProperties} />
-                <div className="card-icon-container" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+              <div className="path-overlay-card card-structured" onClick={() => handleNavigate('/tracks')}>
+                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(59, 130, 246, 0.12)' } as React.CSSProperties} />
+                <div className="card-icon-container" style={{ background: '#EFF6FF', color: '#3B82F6' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 20l-5-3V3l5 3 6-3 5 3v14l-5-3-6 3z" />
                     <path d="M9 6v14" />
@@ -169,9 +169,9 @@ export default function LearningPathOverlay() {
               </div>
 
               {/* Option 2: AI Generated roadmap */}
-              <div className="path-overlay-card" onClick={() => handleNavigate('/generate')}>
-                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(168, 85, 247, 0.15)' } as React.CSSProperties} />
-                <div className="card-icon-container" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' }}>
+              <div className="path-overlay-card card-ai" onClick={() => handleNavigate('/generate')}>
+                <div className="card-glowing-effect" style={{ '--glow-color': 'rgba(168, 85, 247, 0.12)' } as React.CSSProperties} />
+                <div className="card-icon-container" style={{ background: '#F5F3FF', color: '#8B5CF6' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9.93 10.93L12 4l2.07 6.93L21 13l-6.93 2.07L12 20l-2.07-6.93L3 13l6.93-2.07z" />
                     <path d="M19 4l.8 2.2L22 7l-2.2.8L19 10l-.8-2.2L16 7l2.2-.8L19 4z" />

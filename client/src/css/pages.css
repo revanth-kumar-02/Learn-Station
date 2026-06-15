@@ -3737,110 +3737,119 @@ html.dark-theme .tooltip-xp {
 
 
 /* --- Learning Path Selection Overlay --- */
+/* --- Learning Path Selection Overlay --- */
 .path-overlay-backdrop {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(3, 7, 18, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: var(--space-4);
+  padding: 40px var(--space-4);
+  overflow-y: auto;
 }
 
 .path-overlay-modal {
   position: relative;
   width: 100%;
-  max-width: 800px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-xl), 0 0 40px rgba(59, 130, 246, 0.05);
-  border-radius: 20px;
-  padding: var(--space-8) var(--space-8) var(--space-10);
-  overflow-y: auto;
-  max-height: 90vh;
+  max-width: 900px;
+  background: #FFFFFF !important;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.18);
+  border-radius: 28px;
+  padding: 40px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
 }
 
 .path-overlay-close {
   position: absolute;
-  top: var(--space-6);
-  right: var(--space-6);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
+  top: 24px;
+  right: 24px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: all 0.2s ease;
+  z-index: 10;
 }
 
 .path-overlay-close:hover {
-  background: var(--bg-glass-hover);
-  border-color: var(--border-focus);
-  color: var(--text-primary);
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #0F172A;
   transform: rotate(90deg);
 }
 
 .path-overlay-header {
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: 36px;
 }
 
 .path-overlay-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: var(--space-2);
+  font-size: 32px;
+  font-weight: 800;
+  color: #0F172A !important;
+  -webkit-text-fill-color: initial !important;
+  background: none !important;
+  letter-spacing: -0.025em;
+  margin-bottom: 8px;
 }
 
 html.dark-theme .path-overlay-title {
-  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+  color: #0F172A !important;
 }
 
 .path-overlay-subtitle {
-  color: var(--text-secondary);
-  font-size: var(--text-base);
+  color: #475569 !important;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .path-overlay-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-6);
-  margin-bottom: var(--space-8);
+  gap: 28px;
+  margin-bottom: 36px;
 }
 
 .path-overlay-card {
   position: relative;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: var(--space-6) var(--space-6) var(--space-8);
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 20px !important;
+  padding: 28px !important;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+  height: 100%;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   overflow: hidden;
 }
 
-.path-overlay-card:hover {
-  background: var(--bg-glass-hover);
-  border-color: var(--border-focus);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+.path-overlay-card.card-structured:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: #3B82F6 !important;
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.12);
+}
+
+.path-overlay-card.card-ai:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: #8B5CF6 !important;
+  box-shadow: 0 20px 40px rgba(139, 92, 246, 0.12);
 }
 
 .card-glowing-effect {
@@ -3861,57 +3870,82 @@ html.dark-theme .path-overlay-title {
 }
 
 .card-icon-container {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--space-5);
+  margin-bottom: 24px;
   z-index: 1;
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.path-overlay-card:hover .card-icon-container {
+  transform: scale(1.1);
 }
 
 .card-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  margin-bottom: var(--space-2);
-  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #0F172A !important;
   z-index: 1;
 }
 
 .card-description {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
+  color: #475569 !important;
+  font-size: 14px;
   line-height: 1.6;
-  margin-bottom: var(--space-5);
+  margin-bottom: 24px;
   z-index: 1;
   flex-grow: 1;
 }
 
 .card-examples-title {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+  font-size: 11px;
+  color: #64748B !important;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: var(--space-2);
+  margin-bottom: 12px;
   z-index: 1;
 }
 
 .card-examples-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: var(--space-6);
+  gap: 8px;
+  margin-bottom: 28px;
   z-index: 1;
 }
 
 .example-tag {
-  font-size: 11px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.card-structured .example-tag {
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  color: #1E40AF;
+}
+
+.card-structured:hover .example-tag {
+  background: #DBEAFE;
+}
+
+.card-ai .example-tag {
+  background: #F5F3FF;
+  border: 1px solid #EDE9FE;
+  color: #5B21B6;
+}
+
+.card-ai:hover .example-tag {
+  background: #EDE9FE;
 }
 
 .card-action-btn {
@@ -3919,45 +3953,50 @@ html.dark-theme .path-overlay-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
-  border-radius: 10px;
-  font-weight: var(--font-semibold);
-  font-size: var(--text-sm);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
   border: none;
   z-index: 1;
-  gap: var(--space-1);
+  gap: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .btn-explore {
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
 }
 
-.path-overlay-card:hover .btn-explore {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+.btn-explore:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3), 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.path-overlay-card.card-structured:hover .btn-explore {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
 }
 
 .btn-ai {
-  background: rgba(168, 85, 247, 0.1);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%) !important;
+  color: #FFFFFF !important;
 }
 
-.path-overlay-card:hover .btn-ai {
-  background: #a855f7;
-  color: white;
-  border-color: #a855f7;
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
+.btn-ai:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3), 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.path-overlay-card.card-ai:hover .btn-ai {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
 }
 
 .card-action-btn svg {
-  transition: transform var(--duration-fast) ease;
+  transition: transform 0.2s ease;
 }
 
 .card-action-btn:hover svg {
@@ -3966,23 +4005,87 @@ html.dark-theme .path-overlay-title {
 
 /* Recommended/Recently Studied */
 .path-overlay-recommended {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: var(--space-6);
+  border-top: 1px solid #E2E8F0;
+  padding-top: 24px;
+  margin-top: 8px;
 }
 
 .recommended-title {
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B !important;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: var(--space-4);
+  margin-bottom: 16px;
 }
 
 .recommended-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 10px;
+}
+
+.recommended-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recommended-item:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  transform: translateX(4px);
+}
+
+.recommended-item__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.recommended-item__icon {
+  font-size: 20px;
+}
+
+.recommended-item__name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A !important;
+  margin-bottom: 4px;
+}
+
+.recommended-item__progress {
+  font-size: 12px;
+  color: #64748B !important;
+  font-weight: 500;
+}
+
+.recommended-item__arrow {
+  color: #64748B;
+  transition: all 0.2s ease;
+}
+
+.recommended-item:hover .recommended-item__arrow {
+  color: #0F172A;
+  transform: translateX(4px);
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .path-overlay-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  .path-overlay-modal {
+    padding: var(--space-6) var(--space-6) var(--space-8);
+  }
 }
 
 .recommended-item {
