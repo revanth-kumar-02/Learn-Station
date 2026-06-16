@@ -6,6 +6,7 @@ import api from '../services/api';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
 import InteractivePlayground from '../components/common/InteractivePlayground';
+import { parseMarkdown } from '../utils/lessonHelper';
 
 export default function AiWorkspacePage() {
   const { slug } = useParams();
@@ -481,7 +482,7 @@ export default function AiWorkspacePage() {
                   {activeTab === 'practice' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="workspace-tab-panel">
                       <h2>Interactive Practice</h2>
-                      <p className="mb-2">{activeLesson.practice?.instruction}</p>
+                      <div className="mb-2" style={{ fontSize: '14px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: parseMarkdown(activeLesson.practice?.instruction) }} />
                       
                       <InteractivePlayground
                         language={activeLesson.example?.language || 'javascript'}
@@ -489,6 +490,7 @@ export default function AiWorkspacePage() {
                         instruction={activeLesson.practice?.instruction}
                         answer={activeLesson.practice?.answer}
                         onCorrect={() => setPracticeCorrect(true)}
+                        slug={activeLesson.slug}
                       />
                       
                       {practiceCorrect === true && (

@@ -404,7 +404,607 @@ const runJavaCode = (code) => {
   }
 };
 
-export default function InteractivePlayground({ language, template, instruction, answer, onCorrect }) {
+// --- MOCK REDIS RUNNER ---
+const runRedisCode = (code) => {
+  try {
+    const logs = [];
+    const db = {};
+    const lines = code.split('\n');
+    
+    for (let line of lines) {
+      line = line.trim();
+      if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+      
+      const parts = line.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      if (parts.length === 0) continue;
+      
+      const cmd = parts[0].toUpperCase();
+      const args = parts.slice(1).map(arg => {
+        if (arg.startsWith('"') || arg.startsWith("'")) {
+          return arg.slice(1, -1);
+        }
+        return arg;
+      });
+      
+      if (cmd === 'PING') {
+        logs.push('PONG');
+      } else if (cmd === 'SET') {
+        if (args.length < 2) throw new Error("ERR wrong number of arguments for 'set' command");
+        db[args[0]] = args[1];
+        logs.push('OK');
+      } else if (cmd === 'GET') {
+        if (args.length < 1) throw new Error("ERR wrong number of arguments for 'get' command");
+        logs.push(db[args[0]] !== undefined ? `"${db[args[0]]}"` : '(nil)');
+      } else if (cmd === 'LPUSH') {
+        if (args.length < 2) throw new Error("ERR wrong number of arguments for 'lpush' command");
+        const listName = args[0];
+        if (!db[listName]) db[listName] = [];
+        db[listName].unshift(...args.slice(1));
+        logs.push(`(integer) ${db[listName].length}`);
+      } else if (cmd === 'HSET') {
+        if (args.length < 3) throw new Error("ERR wrong number of arguments for 'hset' command");
+        const hashName = args[0];
+        if (!db[hashName]) db[hashName] = {};
+        db[hashName][args[1]] = args[2];
+        logs.push('(integer) 1');
+      } else if (cmd === 'PUBLISH') {
+        if (args.length < 2) throw new Error("ERR wrong number of arguments for 'publish' command");
+        logs.push(`(integer) 1`);
+      } else if (cmd === 'EXPIRE') {
+        if (args.length < 2) throw new Error("ERR wrong number of arguments for 'expire' command");
+        logs.push('(integer) 1');
+      } else {
+        logs.push(`(error) ERR unknown command '${cmd}'`);
+      }
+    }
+    
+    return { success: true, logs, variables: db };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// --- TS STRIPPER & RUNNER ---
+const runTypeScriptCode = (code) => {
+  try {
+    const cleanCode = code
+      .replace(/\s+as\s+[a-zA-Z_<>\d[\]]+/g, '')
+      .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
+      .replace(/type\s+\w+\s*=\s*[^;]+/g, '')
+      .replace(/:\s*(readonly\s+)?([a-zA-Z_<>\d[\]]+(\[\])?)/g, '')
+      .replace(/<[a-zA-Z_,\s\d]+>/g, '');
+
+    return runJSCode(cleanCode);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// --- MULTI-LANGUAGE GENERAL LOG & VARIABLE EXTRACTORS ---
+const extractLogsForLanguage = (code, language) => {
+  const logs = [];
+  const lang = language.toLowerCase();
+  
+  if (lang === 'rust') {
+    const matches = code.matchAll(/println!\s*\(\s*"(.*?)"\s*(?:,\s*(.*?))?\s*\)\s*;/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+  } else if (lang === 'go') {
+    const matches = code.matchAll(/fmt\.Println\s*\(\s*"(.*?)"\s*\)/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+    const matches2 = code.matchAll(/println\s*\(\s*"(.*?)"\s*\)/g);
+    for (const match of matches2) {
+      logs.push(match[1]);
+    }
+  } else if (lang === 'csharp') {
+    const matches = code.matchAll(/Console\.WriteLine\s*\(\s*"(.*?)"\s*\)\s*;/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+  } else if (lang === 'swift') {
+    const matches = code.matchAll(/print\s*\(\s*"(.*?)"\s*\)/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+  } else if (lang === 'kotlin') {
+    const matches = code.matchAll(/println\s*\(\s*"(.*?)"\s*\)/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+  } else if (lang === 'php') {
+    const matches = code.matchAll(/echo\s*"(.*?)"\s*;/g);
+    for (const match of matches) {
+      logs.push(match[1]);
+    }
+    const matches2 = code.matchAll(/print\s*"(.*?)"\s*;/g);
+    for (const match of matches2) {
+      logs.push(match[1]);
+    }
+  }
+  
+  return logs;
+};
+
+const extractVariablesForLanguage = (code, language) => {
+  const variables = {};
+  const lang = language.toLowerCase();
+  
+  const cleanExpr = (expr) => {
+    expr = expr.trim();
+    if (expr.endsWith(';')) expr = expr.slice(0, -1).trim();
+    if (expr.startsWith('"') || expr.startsWith("'")) {
+      return expr.slice(1, -1);
+    }
+    if (!isNaN(expr)) return Number(expr);
+    if (expr === 'true' || expr === 'True') return true;
+    if (expr === 'false' || expr === 'False') return false;
+    return expr;
+  };
+
+  const lines = code.split('\n');
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+
+    if (lang === 'rust') {
+      const match = line.match(/^let\s+(?:mut\s+)?([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      if (match) {
+        variables[match[1]] = cleanExpr(match[2]);
+      }
+    } else if (lang === 'go') {
+      const match1 = line.match(/^([a-zA-Z_]\w*)\s*:=\s*(.+)$/);
+      if (match1) {
+        variables[match1[1]] = cleanExpr(match1[2]);
+      }
+      const match2 = line.match(/^var\s+([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      if (match2) {
+        variables[match2[1]] = cleanExpr(match2[2]);
+      }
+    } else if (lang === 'csharp' || lang === 'cpp' || lang === 'java') {
+      const match = line.match(/^(?:[a-zA-Z_<>[\]]+\s+)+([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      if (match) {
+        variables[match[1]] = cleanExpr(match[2]);
+      }
+    } else if (lang === 'swift' || lang === 'kotlin') {
+      const match = line.match(/^(?:let|var|val|const)\s+([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      if (match) {
+        variables[match[1]] = cleanExpr(match[2]);
+      }
+    } else if (lang === 'php') {
+      const match = line.match(/^\$([a-zA-Z_]\w*)\s*=\s*(.+)$/);
+      if (match) {
+        variables[match[1]] = cleanExpr(match[2]);
+      }
+    }
+  }
+  return variables;
+};
+
+const runSimulatedLanguage = (code, language) => {
+  try {
+    const logs = extractLogsForLanguage(code, language);
+    const variables = extractVariablesForLanguage(code, language);
+    if (logs.length === 0) {
+      return { success: true, logs: ["(Compilation successful. No console logs generated.)"], variables };
+    }
+    return { success: true, logs, variables };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
+
+// --- CUSTOM VALIDATORS FOR CURRICULUM REDESIGN ---
+const customValidators = {
+  // Python 1-1 to 6-4
+  'python-1-1': (code, logs, variables) => {
+    if (!logs.includes("Welcome to LearnStation, user!")) {
+      return { success: false, error: 'Expected console output to contain exactly "Welcome to LearnStation, user!"' };
+    }
+    return { success: true };
+  },
+  'python-1-2': (code, logs, variables) => {
+    if (variables.max_requests !== 150) {
+      return { success: false, error: 'max_requests should be defined as 150' };
+    }
+    if (variables.is_active !== true) {
+      return { success: false, error: 'is_active should be defined as True' };
+    }
+    return { success: true };
+  },
+  'python-1-3': (code, logs, variables) => {
+    if (variables.remaining_items !== 3) {
+      return { success: false, error: 'remaining_items should be 3 (103 % 10)' };
+    }
+    if (!code.includes('%')) {
+      return { success: false, error: 'Must use the modulus operator (%) to calculate remaining items' };
+    }
+    return { success: true };
+  },
+  'python-1-4': (code, logs, variables) => {
+    if (Math.abs((variables.total_cost || 0) - 149.97) > 0.01) {
+      return { success: false, error: 'total_cost should be 149.97' };
+    }
+    if (!code.includes('float') || !code.includes('int')) {
+      return { success: false, error: 'Must cast price_str using float() and qty_str using int()' };
+    }
+    return { success: true };
+  },
+  'python-2-1': (code, logs, variables) => {
+    if (!code.includes('if') || !code.includes('cart_total')) {
+      return { success: false, error: 'Must write an if statement checking cart_total' };
+    }
+    if (!/free_shipping\s*=\s*True/.test(code)) {
+      return { success: false, error: 'Must set free_shipping = True inside the conditional' };
+    }
+    return { success: true };
+  },
+  'python-2-2': (code, logs, variables) => {
+    if (!code.includes('if') || !code.includes('elif') || !code.includes('else')) {
+      return { success: false, error: 'Must use an if-elif-else logical structure' };
+    }
+    if (!/discount\s*=\s*0\.2/.test(code) || !/discount\s*=\s*0\.1/.test(code) || !/discount\s*=\s*0/.test(code)) {
+      return { success: false, error: 'Must set the correct discount values (0.2, 0.1, and 0) for each months tier' };
+    }
+    return { success: true };
+  },
+  'python-2-3': (code, logs, variables) => {
+    if (!code.includes('while')) {
+      return { success: false, error: 'Must implement a while loop' };
+    }
+    if (!code.includes('attempts') || !code.includes('max_attempts')) {
+      return { success: false, error: 'Loop condition must check attempts against max_attempts' };
+    }
+    if (!/attempts\s*(\+=\s*1|=\s*attempts\s*\+\s*1)/.test(code)) {
+      return { success: false, error: 'Must increment attempts inside the loop to avoid an infinite loop' };
+    }
+    return { success: true };
+  },
+  'python-2-4': (code, logs, variables) => {
+    if (!code.includes('for') || !code.includes('range(5)')) {
+      return { success: false, error: 'Must loop exactly 5 times using range(5)' };
+    }
+    if (!code.includes('.append(')) {
+      return { success: false, error: 'Must append server alerts to the servers list' };
+    }
+    return { success: true };
+  },
+  'python-3-1': (code, logs, variables) => {
+    if (!code.includes('lobby.append') || !code.includes('Dave')) {
+      return { success: false, error: 'Must append "Dave" to the lobby list' };
+    }
+    if (!code.includes('lobby.remove') || !code.includes('Alice')) {
+      return { success: false, error: 'Must remove "Alice" from the lobby list' };
+    }
+    return { success: true };
+  },
+  'python-3-2': (code, logs, variables) => {
+    if (!/top_three\s*=\s*transactions\[\s*\d*\s*:\s*\d*\s*\]/.test(code)) {
+      return { success: false, error: 'Must assign top_three using a slice of the transactions list' };
+    }
+    if (!code.includes('[:3]') && !code.includes('[0:3]')) {
+      return { success: false, error: 'Slice must extract the first 3 items (e.g. transactions[0:3] or transactions[:3])' };
+    }
+    return { success: true };
+  },
+  'python-3-3': (code, logs, variables) => {
+    if (!/profile\[\s*["']status["']\s*\]\s*=\s*["']active["']/.test(code)) {
+      return { success: false, error: 'Must update the "status" key to "active"' };
+    }
+    if (!/profile\[\s*["']role["']\s*\]\s*=\s*["']developer["']/.test(code)) {
+      return { success: false, error: 'Must insert the "role" key with value "developer"' };
+    }
+    return { success: true };
+  },
+  'python-3-4': (code, logs, variables) => {
+    if (!/unique_ips\s*=\s*set\(raw_ips\)/.test(code)) {
+      return { success: false, error: 'Must convert raw_ips to set and assign to unique_ips' };
+    }
+    return { success: true };
+  },
+  'python-4-1': (code, logs, variables) => {
+    if (!/def\s+calculate_discount\(\s*price\s*,\s*pct\s*\)/.test(code)) {
+      return { success: false, error: 'Must define function calculate_discount with price and pct parameters' };
+    }
+    if (!code.includes('return')) {
+      return { success: false, error: 'Function must return the calculated subtotal price' };
+    }
+    return { success: true };
+  },
+  'python-4-2': (code, logs, variables) => {
+    if (!/def\s+create_response\(\s*status\s*,\s*code\s*\)/.test(code)) {
+      return { success: false, error: 'Must define function create_response with status and code parameters' };
+    }
+    if (!code.includes('return') || !code.includes('status') || !code.includes('code')) {
+      return { success: false, error: 'Function must return a dictionary containing status and code keys' };
+    }
+    return { success: true };
+  },
+  'python-4-3': (code, logs, variables) => {
+    if (!/def\s+notify\(\s*message\s*,\s*channel\s*=\s*["']email["']\s*\)/.test(code)) {
+      return { success: false, error: 'Must define channel parameter with a default value of "email"' };
+    }
+    return { success: true };
+  },
+  'python-4-4': (code, logs, variables) => {
+    if (!code.includes('global') || !code.includes('event_count')) {
+      return { success: false, error: 'Must declare event_count as global to modify it inside the function scope' };
+    }
+    return { success: true };
+  },
+  'python-5-1': (code, logs, variables) => {
+    if (!/with\s+open\(\s*["']config\.json["']\s*,\s*["']r["']\s*\)\s+as/.test(code)) {
+      return { success: false, error: 'Must open config.json in read ("r") mode using a with statement context manager' };
+    }
+    return { success: true };
+  },
+  'python-5-2': (code, logs, variables) => {
+    if (!/with\s+open\(\s*["']server\.log["']\s*,\s*["']w["']\s*\)\s+as/.test(code)) {
+      return { success: false, error: 'Must open server.log in write ("w") mode using a with statement context manager' };
+    }
+    return { success: true };
+  },
+  'python-5-3': (code, logs, variables) => {
+    if (!code.includes('try') || !code.includes('except ValueError:')) {
+      return { success: false, error: 'Must wrap the integer conversion in a try-except block handling ValueError' };
+    }
+    return { success: true };
+  },
+  'python-5-4': (code, logs, variables) => {
+    if (!code.includes('try') || !code.includes('finally')) {
+      return { success: false, error: 'Must implement a try-finally structure' };
+    }
+    if (!code.includes('.close()')) {
+      return { success: false, error: 'Must call stream.close() inside the finally block to release memory' };
+    }
+    return { success: true };
+  },
+  'python-6-1': (code, logs, variables) => {
+    if (!/class\s+Product\s*:/.test(code)) {
+      return { success: false, error: 'Must define a Product class using class Product:' };
+    }
+    return { success: true };
+  },
+  'python-6-2': (code, logs, variables) => {
+    if (!/def\s+__init__\(\s*self\s*,\s*username\s*,\s*email\s*\)/.test(code)) {
+      return { success: false, error: 'Must define constructor method __init__ with self, username, and email parameters' };
+    }
+    if (!code.includes('self.username') || !code.includes('self.email')) {
+      return { success: false, error: 'Constructor must initialize self.username and self.email attributes' };
+    }
+    return { success: true };
+  },
+  'python-6-3': (code, logs, variables) => {
+    if (!/class\s+Manager\(\s*Employee\s*\)\s*:/.test(code)) {
+      return { success: false, error: 'Manager must inherit from Employee using subclassing syntax' };
+    }
+    return { success: true };
+  },
+  'python-6-4': (code, logs, variables) => {
+    if (!/def\s+calculate_interest\(\s*self\s*\)/.test(code)) {
+      return { success: false, error: 'Must override calculate_interest method with correct parameters' };
+    }
+    return { success: true };
+  },
+
+  // Java 1-1 to 6-4
+  'java-1-1': (code, logs, variables) => {
+    if (!code.includes('System.out.println("SaaS Online");') && !code.includes("System.out.println('SaaS Online');")) {
+      return { success: false, error: 'Must print exactly "SaaS Online" to the console' };
+    }
+    return { success: true };
+  },
+  'java-1-2': (code, logs, variables) => {
+    if (!/double\s+subscriptionPrice\s*=\s*49\.99/.test(code)) {
+      return { success: false, error: 'Must declare double subscriptionPrice set to 49.99' };
+    }
+    if (!/int\s+userCount\s*=\s*25/.test(code)) {
+      return { success: false, error: 'Must declare int userCount set to 25' };
+    }
+    return { success: true };
+  },
+  'java-1-3': (code, logs, variables) => {
+    if (!/int\s+remainingItems\s*=\s*items\s*%\s*users/.test(code)) {
+      return { success: false, error: 'Must calculate remainingItems using the modulus operator (%)' };
+    }
+    return { success: true };
+  },
+  'java-1-4': (code, logs, variables) => {
+    if (!code.includes('email.toLowerCase()')) {
+      return { success: false, error: 'Must call email.toLowerCase() to convert the string' };
+    }
+    return { success: true };
+  },
+  'java-2-1': (code, logs, variables) => {
+    if (!code.includes('if') || !code.includes('cartTotal >= 50')) {
+      return { success: false, error: 'Must write an if statement checking if cartTotal is greater than or equal to 50' };
+    }
+    if (!code.includes('freeShipping = true')) {
+      return { success: false, error: 'Must assign freeShipping to true inside the condition block' };
+    }
+    return { success: true };
+  },
+  'java-2-2': (code, logs, variables) => {
+    if (!code.includes('switch') || !code.includes('case 1') || !code.includes('case 2')) {
+      return { success: false, error: 'Must implement switch-case conditions for tier selections' };
+    }
+    return { success: true };
+  },
+  'java-2-3': (code, logs, variables) => {
+    if (!/for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*5\s*;\s*i\s*\+\+\s*\)/.test(code)) {
+      return { success: false, error: 'Must write a for loop iterating from index 0 to 4' };
+    }
+    return { success: true };
+  },
+  'java-2-4': (code, logs, variables) => {
+    if (!code.includes('while') || !code.includes('attempts < maxAttempts')) {
+      return { success: false, error: 'Must write a while loop checking attempts against maxAttempts' };
+    }
+    if (!code.includes('attempts++') && !code.includes('attempts = attempts + 1')) {
+      return { success: false, error: 'Must increment attempts inside the loop body' };
+    }
+    return { success: true };
+  },
+  'java-3-1': (code, logs, variables) => {
+    if (!/int\s*\[\s*\]\s*ports\s*=\s*\{\s*80\s*,\s*443\s*,\s*8080\s*\}/.test(code) && !/int\s+ports\s*\[\s*\]\s*=\s*\{\s*80\s*,\s*443\s*,\s*8080\s*\}/.test(code)) {
+      return { success: false, error: 'Must define an int array named ports initialized with 80, 443, and 8080' };
+    }
+    return { success: true };
+  },
+  'java-3-2': (code, logs, variables) => {
+    if (!/public\s+static\s+double\s+calculateDiscount\(\s*double\s+price\s*,\s*double\s+pct\s*\)/.test(code)) {
+      return { success: false, error: 'Must declare public static double calculateDiscount method with double parameters' };
+    }
+    return { success: true };
+  },
+  'java-3-3': (code, logs, variables) => {
+    if (!code.includes('return')) {
+      return { success: false, error: 'Method must contain a return statement outputting the status string' };
+    }
+    return { success: true };
+  },
+  'java-3-4': (code, logs, variables) => {
+    if (!/public\s+static\s+void\s+logMessage\(\s*String\s+message\s*,\s*int\s+level\s*\)/.test(code)) {
+      return { success: false, error: 'Must define public static void logMessage with String message and int level parameters' };
+    }
+    return { success: true };
+  },
+  'java-4-1': (code, logs, variables) => {
+    if (!code.includes('class Product') || !code.includes('new Product(')) {
+      return { success: false, error: 'Must declare Product class and instantiate it using new Product()' };
+    }
+    return { success: true };
+  },
+  'java-4-2': (code, logs, variables) => {
+    if (!code.includes('private String email') || !code.includes('getEmail()') || !code.includes('setEmail(')) {
+      return { success: false, error: 'Must encapsulate the email field using a private modifier and supply getters/setters' };
+    }
+    return { success: true };
+  },
+  'java-4-3': (code, logs, variables) => {
+    if (!/public\s+Customer\(\s*String\s+name\s*,\s*String\s+email\s*\)/.test(code)) {
+      return { success: false, error: 'Must define a Customer constructor accepting String name and String email' };
+    }
+    if (!code.includes('this.name = name') || !code.includes('this.email = email')) {
+      return { success: false, error: 'Constructor must assign parameters to instance fields using this' };
+    }
+    return { success: true };
+  },
+  'java-4-4': (code, logs, variables) => {
+    if (!/public\s+static\s+int\s+activeConnections/.test(code)) {
+      return { success: false, error: 'Must define public static int activeConnections variable' };
+    }
+    return { success: true };
+  },
+  'java-5-1': (code, logs, variables) => {
+    if (!code.includes('class Manager extends Employee')) {
+      return { success: false, error: 'Manager class must extend Employee' };
+    }
+    return { success: true };
+  },
+  'java-5-2': (code, logs, variables) => {
+    if (!code.includes('super(name, salary);')) {
+      return { success: false, error: 'Must call super(name, salary) as the first statement in the Manager constructor' };
+    }
+    return { success: true };
+  },
+  'java-5-3': (code, logs, variables) => {
+    if (!code.includes('@Override') || !/public\s+void\s+speak\(\s*\)/.test(code)) {
+      return { success: false, error: 'Must annotate the overridden speak() method with @Override' };
+    }
+    return { success: true };
+  },
+  'java-5-4': (code, logs, variables) => {
+    if (!code.includes('interface Loggable') || !code.includes('implements Loggable')) {
+      return { success: false, error: 'Must define the Loggable interface and implement it on the ConsoleLogger class' };
+    }
+    return { success: true };
+  },
+  'java-6-1': (code, logs, variables) => {
+    if (!code.includes('ArrayList<String>') || !code.includes('.add(')) {
+      return { success: false, error: 'Must initialize ArrayList and add elements using .add()' };
+    }
+    return { success: true };
+  },
+  'java-6-2': (code, logs, variables) => {
+    if (!code.includes('HashMap<String, String>') || !code.includes('.put(')) {
+      return { success: false, error: 'Must initialize HashMap and insert key-value mappings using .put()' };
+    }
+    return { success: true };
+  },
+  'java-6-3': (code, logs, variables) => {
+    if (!code.includes('try') || !code.includes('catch')) {
+      return { success: false, error: 'Must wrap division code in a try-catch block handling ArithmeticException' };
+    }
+    return { success: true };
+  },
+  'java-6-4': (code, logs, variables) => {
+    if (!code.includes('extends Exception')) {
+      return { success: false, error: 'Custom exception InsufficientFundsException must extend the Exception class' };
+    }
+    return { success: true };
+  },
+
+  // Web Dev JavaScript lessons (webdev-5-1 to 6-4)
+  'webdev-5-1': (code, logs, variables) => {
+    if (!/const\s+maxRequests\s*=\s*100/.test(code)) {
+      return { success: false, error: 'Must declare const maxRequests initialized to 100' };
+    }
+    if (!/let\s+currentRequests\s*=\s*0/.test(code)) {
+      return { success: false, error: 'Must declare let currentRequests initialized to 0' };
+    }
+    return { success: true };
+  },
+  'webdev-5-2': (code, logs, variables) => {
+    if (!code.includes('addEventListener') || !/['"]click['"]/.test(code)) {
+      return { success: false, error: 'Must register a click event listener on the btn element' };
+    }
+    return { success: true };
+  },
+  'webdev-5-3': (code, logs, variables) => {
+    if (!code.includes('document.querySelector') || !/['"]\.card['"]/.test(code)) {
+      return { success: false, error: 'Must select the card element using document.querySelector(".card")' };
+    }
+    return { success: true };
+  },
+  'webdev-5-4': (code, logs, variables) => {
+    if (!code.includes('.textContent') || !code.includes('Success')) {
+      return { success: false, error: 'Must assign the textContent property of el to "Success"' };
+    }
+    return { success: true };
+  },
+  'webdev-6-1': (code, logs, variables) => {
+    if (!code.includes('document.createElement') || !/['"]div['"]/.test(code)) {
+      return { success: false, error: 'Must create a div element using document.createElement("div")' };
+    }
+    if (!code.includes('appendChild')) {
+      return { success: false, error: 'Must append the new div element to the document.body' };
+    }
+    return { success: true };
+  },
+  'webdev-6-2': (code, logs, variables) => {
+    if (!code.includes('classList.add') || !/['"]active['"]/.test(code)) {
+      return { success: false, error: 'Must add the class "active" using classList.add("active")' };
+    }
+    return { success: true };
+  },
+  'webdev-6-3': (code, logs, variables) => {
+    if (!code.includes('new Promise') || !code.includes('resolve')) {
+      return { success: false, error: 'Must instantiate a Promise resolving with the value "Completed"' };
+    }
+    return { success: true };
+  },
+  'webdev-6-4': (code, logs, variables) => {
+    if (!code.includes('fetch') || !/['"]https:\/\/api\.example\.com\/data['"]/.test(code)) {
+      return { success: false, error: 'Must fetch from endpoint "https://api.example.com/data"' };
+    }
+    return { success: true };
+  }
+};
+
+export default function InteractivePlayground({ language, template, instruction, answer, onCorrect, slug }) {
   const [code, setCode] = useState('');
   const [sqlResult, setSqlResult] = useState(null);
   const [consoleLogs, setConsoleLogs] = useState([]);
@@ -459,8 +1059,22 @@ export default function InteractivePlayground({ language, template, instruction,
         } else {
           setErrors(res.error);
         }
-      } else if (isJs) {
-        const res = runJSCode(code);
+      } else if (isJs || lang === 'typescript' || lang === 'ts') {
+        const res = (lang === 'typescript' || lang === 'ts') ? runTypeScriptCode(code) : runJSCode(code);
+        if (res.success) {
+          setConsoleLogs(res.logs);
+        } else {
+          setErrors(res.error);
+        }
+      } else if (lang === 'redis') {
+        const res = runRedisCode(code);
+        if (res.success) {
+          setConsoleLogs(res.logs);
+        } else {
+          setErrors(res.error);
+        }
+      } else if (['rust', 'go', 'csharp', 'swift', 'kotlin', 'php', 'cpp'].includes(lang)) {
+        const res = runSimulatedLanguage(code, lang);
         if (res.success) {
           setConsoleLogs(res.logs);
         } else {
@@ -496,6 +1110,33 @@ export default function InteractivePlayground({ language, template, instruction,
     setSuccessMsg('');
     const userCode = code.trim();
     const cleanAnswer = answer?.trim();
+
+    // Custom Validation Interceptor
+    if (slug && customValidators[slug]) {
+      let runRes = { success: true, logs: [], variables: {} };
+      if (isPython) {
+        runRes = runPythonCode(userCode);
+      } else if (isJs || lang === 'typescript' || lang === 'ts') {
+        runRes = (lang === 'typescript' || lang === 'ts') ? runTypeScriptCode(userCode) : runJSCode(userCode);
+      } else if (isJava) {
+        runRes = runJavaCode(userCode);
+      } else if (lang === 'redis') {
+        runRes = runRedisCode(userCode);
+      } else if (['rust', 'go', 'csharp', 'swift', 'kotlin', 'php', 'cpp'].includes(lang)) {
+        runRes = runSimulatedLanguage(userCode, lang);
+      }
+
+      const valRes = customValidators[slug](userCode, runRes.logs || [], runRes.variables || {});
+      if (valRes.success) {
+        if (!isWeb) {
+          setConsoleLogs(runRes.logs || []);
+        }
+        triggerSuccess();
+      } else {
+        setErrors(valRes.error || 'Validation failed. Double check your implementation.');
+      }
+      return;
+    }
 
     if (!cleanAnswer) return;
 
@@ -578,13 +1219,29 @@ export default function InteractivePlayground({ language, template, instruction,
         } else {
           setErrors(`Python execution error: ${res.error}`);
         }
-      } else if (isJs) {
-        const res = runJSCode(code);
+      } else if (isJs || lang === 'typescript' || lang === 'ts') {
+        const res = (lang === 'typescript' || lang === 'ts') ? runTypeScriptCode(code) : runJSCode(code);
         if (res.success) {
           setConsoleLogs(res.logs);
           triggerSuccess();
         } else {
-          setErrors(`JavaScript execution error: ${res.error}`);
+          setErrors(`Execution error: ${res.error}`);
+        }
+      } else if (lang === 'redis') {
+        const res = runRedisCode(code);
+        if (res.success) {
+          setConsoleLogs(res.logs);
+          triggerSuccess();
+        } else {
+          setErrors(`Redis execution error: ${res.error}`);
+        }
+      } else if (['rust', 'go', 'csharp', 'swift', 'kotlin', 'php', 'cpp'].includes(lang)) {
+        const res = runSimulatedLanguage(code, lang);
+        if (res.success) {
+          setConsoleLogs(res.logs);
+          triggerSuccess();
+        } else {
+          setErrors(`Execution error: ${res.error}`);
         }
       } else if (isBash) {
         const res = runBashCommand(code);

@@ -727,7 +727,7 @@ export default function LessonPage() {
                         <h3>Active Practice</h3>
                       </div>
                       <div className="lesson-practice">
-                        <p style={{ marginBottom: 'var(--space-4)' }}>{lesson.practice?.instruction}</p>
+                        <div style={{ marginBottom: 'var(--space-4)', fontSize: '14px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: parseMarkdown(lesson.practice?.instruction) }} />
                         
                         <InteractivePlayground
                           language={lesson.example?.language || 'javascript'}
@@ -735,6 +735,7 @@ export default function LessonPage() {
                           instruction={lesson.practice?.instruction}
                           answer={lesson.practice?.answer}
                           onCorrect={handlePracticeSubmit}
+                          slug={lesson.slug}
                         />
                       </div>
                     </div>

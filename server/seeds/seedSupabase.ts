@@ -183,50 +183,591 @@ const categoriesConfig = {
   }
 };
 
-// Programmatic Lesson content generator
 const getProgrammaticLessonData = (trackSlug, lessonIdx, lessonTitle) => {
+  const titleLower = lessonTitle.toLowerCase();
+  let topic = 'general';
+  if (titleLower.includes('var') || titleLower.includes('scope') || titleLower.includes('const') || titleLower.includes('type') || titleLower.includes('primitive') || titleLower.includes('binding') || titleLower.includes('declaration')) {
+    topic = 'variables';
+  } else if (titleLower.includes('func') || titleLower.includes('method') || titleLower.includes('callback') || titleLower.includes('lambda') || titleLower.includes('decorator') || titleLower.includes('arrow') || titleLower.includes('closure') || titleLower.includes('parameter')) {
+    topic = 'functions';
+  } else if (titleLower.includes('array') || titleLower.includes('list') || titleLower.includes('slice') || titleLower.includes('collection') || titleLower.includes('vector') || titleLower.includes('map') || titleLower.includes('set') || titleLower.includes('hash') || titleLower.includes('stack') || titleLower.includes('queue') || titleLower.includes('heap') || titleLower.includes('dictionary') || titleLower.includes('tree') || titleLower.includes('graph')) {
+    topic = 'collections';
+  } else if (titleLower.includes('class') || titleLower.includes('object') || titleLower.includes('struct') || titleLower.includes('oop') || titleLower.includes('interface') || titleLower.includes('constructor') || titleLower.includes('inherit') || titleLower.includes('property') || titleLower.includes('accessor') || titleLower.includes('solid') || titleLower.includes('design pattern') || titleLower.includes('encapsulation') || titleLower.includes('polymorphism') || titleLower.includes('abstraction') || titleLower.includes('protocol')) {
+    topic = 'oop';
+  } else if (titleLower.includes('promise') || titleLower.includes('async') || titleLower.includes('await') || titleLower.includes('fetch') || titleLower.includes('api') || titleLower.includes('http') || titleLower.includes('server') || titleLower.includes('client') || titleLower.includes('network') || titleLower.includes('route') || titleLower.includes('web') || titleLower.includes('connection') || titleLower.includes('publish') || titleLower.includes('subscribe')) {
+    topic = 'async';
+  } else if (titleLower.includes('error') || titleLower.includes('exception') || titleLower.includes('try') || titleLower.includes('catch') || titleLower.includes('validation') || titleLower.includes('handle') || titleLower.includes('safe') || titleLower.includes('null') || titleLower.includes('assert') || titleLower.includes('expire')) {
+    topic = 'errors';
+  }
+
   let language = 'javascript';
-  let exampleCode = '// Sample code';
-  let exampleExplanation = 'Sample explanation';
+  if (['sql-fundamentals', 'advanced-sql', 'postgresql', 'mysql', 'db-design'].includes(trackSlug)) {
+    language = 'sql';
+  } else if (['c-lang', 'cpp'].includes(trackSlug)) {
+    language = 'cpp';
+  } else if (['docker', 'kubernetes', 'aws', 'azure', 'google-cloud', 'cicd', 'terraform', 'linux', 'git-github', 'devops-engineer', 'cloud-engineer', 'cyber-analyst', 'security-fundamentals', 'network-security', 'ethical-hacking', 'pentesting', 'web-security', 'digital-forensics'].includes(trackSlug)) {
+    language = 'bash';
+  } else if (['java'].includes(trackSlug)) {
+    language = 'java';
+  } else if (['python', 'data-analysis', 'numpy', 'pandas', 'data-viz', 'statistics', 'nlp', 'computer-vision', 'generative-ai', 'llm-engineering', 'ai-agents', 'rag-systems', 'deep-learning', 'ml-engineer', 'data-analyst'].includes(trackSlug)) {
+    language = 'python';
+  } else if (['typescript', 'frontend-career'].includes(trackSlug)) {
+    language = 'typescript';
+  } else if (['rust'].includes(trackSlug)) {
+    language = 'rust';
+  } else if (['go-lang'].includes(trackSlug)) {
+    language = 'go';
+  } else if (['csharp'].includes(trackSlug)) {
+    language = 'csharp';
+  } else if (['swift', 'swiftui', 'ios-dev', 'mobile-career'].includes(trackSlug)) {
+    language = 'swift';
+  } else if (['kotlin', 'android-dev'].includes(trackSlug)) {
+    language = 'kotlin';
+  } else if (['php'].includes(trackSlug)) {
+    language = 'php';
+  } else if (['html'].includes(trackSlug)) {
+    language = 'html';
+  } else if (['css', 'tailwindcss'].includes(trackSlug)) {
+    language = 'css';
+  } else if (['redis'].includes(trackSlug)) {
+    language = 'redis';
+  }
+
+  let exampleCode = `// Core implementation for ${lessonTitle}`;
+  let exampleExplanation = `Understanding ${lessonTitle} is essential for building scalable code structures.`;
   let practiceTemplate = '// Template ___';
   let practiceAnswer = 'answer';
   let practiceInstruction = 'Fill in the blank';
-  
-  if (['javascript', 'typescript', 'frontend-career', 'fullstack-career', 'react', 'nextjs', 'angular', 'vuejs', 'nodejs', 'expressjs'].includes(trackSlug)) {
-    language = 'javascript';
-    exampleCode = `// Core implementation for ${lessonTitle}\nconst config = {\n  active: true,\n  timeout: 5000\n};\n\nfunction processAction(item) {\n  if (!item) return null;\n  console.log("Processing:", item);\n  return item;\n}`;
-    exampleExplanation = `In JavaScript/TypeScript applications, modular functions help isolate scopes and control asynchronous flow execution for ${lessonTitle}.`;
-    practiceTemplate = 'const isCompleted = ___ ;';
-    practiceAnswer = 'true';
-    practiceInstruction = 'Set the boolean constant isCompleted to true:';
-  } else if (['c-lang', 'cpp'].includes(trackSlug)) {
-    language = 'cpp';
-    exampleCode = `#include <iostream>\nusing namespace std;\n\n// Core logic for ${lessonTitle}\nvoid checkState() {\n  int status = 1;\n  cout << "Status: " << status << endl;\n}`;
-    exampleExplanation = `In C/C++, variables are statically typed, and pointers store the memory address of the structures for ${lessonTitle}.`;
-    practiceTemplate = 'int main() {\n  ___ 0;\n}';
-    practiceAnswer = 'return';
-    practiceInstruction = 'Return a 0 exit status code from the main execution loop:';
-  } else if (['docker', 'kubernetes', 'aws', 'azure', 'google-cloud', 'cicd', 'terraform', 'linux', 'git-github'].includes(trackSlug)) {
-    language = 'bash';
-    exampleCode = `# Configuration script for ${lessonTitle}\nexport NODE_ENV="production"\necho "Initialising environment..."\n\n# Command pipeline\nls -la | grep "config"`;
-    exampleExplanation = `DevOps pipelines and shell files configure parameters, expose container ports, and script infrastructure deployment for ${lessonTitle}.`;
-    practiceTemplate = 'export ENV_VAR="___"';
-    practiceAnswer = 'production';
-    practiceInstruction = 'Set the environment variable ENV_VAR to "production":';
-  } else if (['sql-fundamentals', 'advanced-sql', 'postgresql', 'mysql', 'db-design'].includes(trackSlug)) {
-    language = 'sql';
-    exampleCode = `-- Database query for ${lessonTitle}\nSELECT id, name, created_at\nFROM data_records\nWHERE status = 'active'\nORDER BY created_at DESC\nLIMIT 10;`;
-    exampleExplanation = `SQL queries select columns, filter rows using WHERE conditions, and sort records by index definitions for ${lessonTitle}.`;
-    practiceTemplate = 'SELECT * FROM users ___ id = 1;';
-    practiceAnswer = 'WHERE';
-    practiceInstruction = 'Add a filtering condition keyword:';
+
+  if (language === 'sql') {
+    exampleCode = `-- Query demonstrating ${lessonTitle}\nSELECT id, name, created_at\nFROM data_records\nWHERE status = 'active'\nORDER BY created_at DESC\nLIMIT 10;`;
+    exampleExplanation = `In relational database design, ${lessonTitle} is utilized to retrieve specific columns, join tables, or perform calculations efficiently.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Select name fields under a unified alias.\n**Objective:** Select the `first_name` column aliased as `username` from the `users` table.\n**Hint:** Use the `AS` keyword to alias a column.';
+      practiceTemplate = 'SELECT first_name ___ username FROM users;';
+      practiceAnswer = 'AS';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Calculate overall catalog pricing statistics.\n**Objective:** Use the `AVG` function to calculate the average price of products.\n**Hint:** Wrap the column name in `AVG()`.';
+      practiceTemplate = 'SELECT ___(price) FROM products;';
+      practiceAnswer = 'AVG';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Group products to count items per category.\n**Objective:** Add the correct keyword to group products by their category.\n**Hint:** Use `GROUP BY`.';
+      practiceTemplate = 'SELECT category, COUNT(*) FROM products ___ BY category;';
+      practiceAnswer = 'GROUP';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Define unique identifiers in catalog tables.\n**Objective:** Specify a `PRIMARY KEY` constraint on the `id` column.\n**Hint:** Primary keys uniquely identify rows in a table.';
+      practiceTemplate = 'CREATE TABLE items (\n  id INT ___ KEY,\n  name VARCHAR(50)\n);';
+      practiceAnswer = 'PRIMARY';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Match transactions with customer contact records.\n**Objective:** Complete the `INNER JOIN` statement to link orders to users based on matching ids.\n**Hint:** Use the `ON` keyword to define the join key relation.';
+      practiceTemplate = 'SELECT * FROM orders INNER JOIN users ___ orders.user_id = users.id;';
+      practiceAnswer = 'ON';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Filter aggregated categories to find high-value departments.\n**Objective:** Add the correct keyword to filter grouped categories with average price above 100.\n**Hint:** Use `HAVING` to filter aggregated results.';
+      practiceTemplate = 'SELECT category, AVG(price) FROM products GROUP BY category ___ AVG(price) > 100;';
+      practiceAnswer = 'HAVING';
+    } else {
+      practiceInstruction = '**Scenario:** Retrieve all product data for a sales directory.\n**Objective:** Select all columns from the `products` table.\n**Hint:** Use the asterisk `*` wildcard.';
+      practiceTemplate = 'SELECT ___ FROM products;';
+      practiceAnswer = '*';
+    }
+  } else if (language === 'cpp') {
+    exampleCode = `#include <iostream>\n\n// Demonstrating ${lessonTitle}\nvoid checkState() {\n  int status = 1;\n  std::cout << "Status: " << status << std::endl;\n}`;
+    exampleExplanation = `In C and C++ programming, ${lessonTitle} forms the basis of performance optimization, resource allocation, and direct system calls.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Reference local memory addresses directly.\n**Objective:** Declare a pointer named `ptr` pointing to the integer variable `val`.\n**Hint:** Use `&` to get the address of a variable and `*` to declare a pointer.';
+      practiceTemplate = 'int val = 42;\nint* ptr = ___val;';
+      practiceAnswer = '&';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare function execution entry points.\n**Objective:** Return a 0 exit status code from the main function.\n**Hint:** Use the `return` keyword.';
+      practiceTemplate = 'int main() {\n  ___ 0;\n}';
+      practiceAnswer = 'return';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Initialize static buffer indexes.\n**Objective:** Initialize an integer array named `arr` containing values `10` and `20`.\n**Hint:** Use curly braces `{}` to initialize array elements.';
+      practiceTemplate = 'int arr[] = ___ ;';
+      practiceAnswer = '{10, 20}';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Define product data capsules.\n**Objective:** Declare a class named `Product` with a public access modifier.\n**Hint:** Access modifiers are followed by a colon.';
+      practiceTemplate = 'class Product {\n___:\n  int id;\n};';
+      practiceAnswer = 'public';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Create generic container types.\n**Objective:** Write the template prefix to enable generic type parameters.\n**Hint:** Use `template <typename T>`.';
+      practiceTemplate = '___ <typename T>\nT getMax(T a, T b) { return a > b ? a : b; }';
+      practiceAnswer = 'template';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Intercept unexpected division by zero outcomes.\n**Objective:** Complete the try-catch structure by catching any runtime exceptions.\n**Hint:** Use the `catch` keyword.';
+      practiceTemplate = 'try {\n  // division\n} ___ (...) {\n  // handle\n}';
+      practiceAnswer = 'catch';
+    } else {
+      practiceInstruction = '**Scenario:** Output diagnostic logs to console buffers.\n**Objective:** Output `"Ready"` to the standard console stream using C++.\n**Hint:** Use `std::cout` and the stream insertion operator `<<`.';
+      practiceTemplate = '#include <iostream>\nint main() {\n  std::cout ___ "Ready";\n  return 0;\n}';
+      practiceAnswer = '<<';
+    }
+  } else if (language === 'bash') {
+    exampleCode = `# Shell script for ${lessonTitle}\nexport NODE_ENV="production"\necho "Bootstrapping application..."\n\nls -la | grep "config"`;
+    exampleExplanation = `DevOps pipelines and automation shell files utilize ${lessonTitle} to configure systems, initialize instances, and build workflows.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Configure production environments on cloud instances.\n**Objective:** Export a variable named `ENV_VAR` set to `"production"`.\n**Hint:** Use the `export` command.';
+      practiceTemplate = '___ ENV_VAR="production"';
+      practiceAnswer = 'export';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Script automated server deployment workflows.\n**Objective:** Complete the bash function named `deploy`.\n**Hint:** Define bash functions using parentheses `()` followed by a body block.';
+      practiceTemplate = 'deploy___ {\n  echo "Deploying..."\n}';
+      practiceAnswer = '()';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Iterate over active configuration parameters.\n**Objective:** Complete the `for` loop condition to iterate over list items.\n**Hint:** Use `in` to specify items inside a range or list.';
+      practiceTemplate = 'for item ___ 1 2 3; do\n  echo $item\ndone';
+      practiceAnswer = 'in';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Declare schema specifications in configuration manifests.\n**Objective:** Complete the YAML manifest structure specifying the configuration version.\n**Hint:** Use `apiVersion` to declare API endpoints.';
+      practiceTemplate = '___: v1\nkind: Pod';
+      practiceAnswer = 'apiVersion';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Verify gateway connectivity by downloading resources.\n**Objective:** Call the curl command to download data from a test endpoint.\n**Hint:** Use `curl` to fetch URL data.';
+      practiceTemplate = '___ https://api.example.com/data';
+      practiceAnswer = 'curl';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Validate command execution exit statuses.\n**Objective:** Check the exit status of the last executed command.\n**Hint:** The special parameter `$?` stores the exit status code.';
+      practiceTemplate = 'if [ $___ -eq 0 ]; then\n  echo "Success"\nfi';
+      practiceAnswer = '?';
+    } else {
+      practiceInstruction = '**Scenario:** Verify status updates in local workspaces.\n**Objective:** Write the git command to check the status of your working repository.\n**Hint:** Use `git status`.';
+      practiceTemplate = 'git ___';
+      practiceAnswer = 'status';
+    }
+  } else if (language === 'python') {
+    exampleCode = `# Python demonstration of ${lessonTitle}\nmax_requests = 100\nprint(f"Max limit: {max_requests}")`;
+    exampleExplanation = `In Python development, ${lessonTitle} helps establish clear logic boundaries, memory limits, and structured functions.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Store active API limiter configurations.\n**Objective:** Define a variable named `max_requests` set to `150` and `is_active` set to `True`.\n**Hint:** Python variables do not require explicit type keywords.';
+      practiceTemplate = 'max_requests = 150\nis_active = ___';
+      practiceAnswer = 'True';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Calculate item subtotals with discounts.\n**Objective:** Define a function named `calculate_discount` accepting `price` and `pct`.\n**Hint:** Use the `def` keyword followed by the function name.';
+      practiceTemplate = '___ calculate_discount(price, pct):\n  return price * (1 - pct)';
+      practiceAnswer = 'def';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Manage active server configurations in lists.\n**Objective:** Append `"Dave"` to the `lobby` list.\n**Hint:** Lists support append methods.';
+      practiceTemplate = 'lobby = ["Alice", "Bob"]\nlobby.___("Dave")';
+      practiceAnswer = 'append';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Build catalog item models.\n**Objective:** Declare a class named `Product` in Python.\n**Hint:** Class definitions use the `class` keyword.';
+      practiceTemplate = '___ Product:\n  def __init__(self, name):\n    self.name = name';
+      practiceAnswer = 'class';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Make asynchronous API requests to catalog databases.\n**Objective:** Use the `await` keyword to resolve a network response.\n**Hint:** Coroutines are awaited in Python.';
+      practiceTemplate = 'async def load_data():\n  response = ___ fetch_api()';
+      practiceAnswer = 'await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Validate inputs gracefully.\n**Objective:** Implement a try-except structure catching ValueError.\n**Hint:** Python uses the `except` keyword for handling errors.';
+      practiceTemplate = 'try:\n  val = int("invalid")\n___ ValueError:\n  val = 0';
+      practiceAnswer = 'except';
+    } else {
+      practiceInstruction = '**Scenario:** Print status logs to standard out.\n**Objective:** Output the message `"Ready"` to console output.\n**Hint:** Use print statements.';
+      practiceTemplate = 'print("___")';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'java') {
+    exampleCode = `// Java demonstration of ${lessonTitle}\npublic class App {\n  public static void main(String[] args) {\n    System.out.println("Online");\n  }\n}`;
+    exampleExplanation = `In Java OOP structure, ${lessonTitle} specifies class interactions, variables types, and exceptions control.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Declare explicit variable configurations.\n**Objective:** Declare a double variable named `subscriptionPrice` set to `49.99`.\n**Hint:** Double primitives require double type prefixes.';
+      practiceTemplate = '___ subscriptionPrice = 49.99;';
+      practiceAnswer = 'double';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare static methods for data calculation.\n**Objective:** Define a static method `calculateDiscount` returning a double.\n**Hint:** Specify visibility, static, and return type double.';
+      practiceTemplate = 'public static ___ calculateDiscount(double price) {\n  return price * 0.9;\n}';
+      practiceAnswer = 'double';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Create dynamically sizing arrays.\n**Objective:** Instantiate a new ArrayList of Strings.\n**Hint:** Use standard generic type syntax.';
+      practiceTemplate = 'ArrayList<String> lobby = ___ ArrayList<String>();';
+      practiceAnswer = 'new';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Implement inheritance in OOP architectures.\n**Objective:** Inherit from the parent class `Employee`.\n**Hint:** Use the extends keyword in class declarations.';
+      practiceTemplate = 'public class Manager ___ Employee {\n}';
+      practiceAnswer = 'extends';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Run background worker actions.\n**Objective:** Implement standard thread task loops.\n**Hint:** Create Runnable interface objects.';
+      practiceTemplate = 'Thread thread = new Thread(___);';
+      practiceAnswer = 'runnable';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Control unexpected exceptions.\n**Objective:** Complete try-catch block intercepting exceptions.\n**Hint:** Use catch statement blocks.';
+      practiceTemplate = 'try {\n  // division\n} ___ (Exception e) {\n  // error\n}';
+      practiceAnswer = 'catch';
+    } else {
+      practiceInstruction = '**Scenario:** Greet active user status.\n**Objective:** Print `"Ready"` to standard output console.\n**Hint:** Call System out println.';
+      practiceTemplate = 'System.out.println("___");';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'typescript') {
+    exampleCode = `// TypeScript demonstration of ${lessonTitle}\nconst maxRequests: number = 100;\nconsole.log(\`Max: \${maxRequests}\`);`;
+    exampleExplanation = `In TypeScript programming, ${lessonTitle} ensures static type safety and explicit data model declarations.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Declare type-safe limiting parameters.\n**Objective:** Declare a constant named `maxRequests` of type `number` set to `100`.\n**Hint:** Use the colon format `: number` for variable types.';
+      practiceTemplate = 'const maxRequests: ___ = 100;';
+      practiceAnswer = 'number';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Define strict handler return parameters.\n**Objective:** Complete the type signature of function `greet` returning a string.\n**Hint:** Declare return types following parameters with a colon.';
+      practiceTemplate = 'function greet(name: string): ___ {\n  return "Hello " + name;\n}';
+      practiceAnswer = 'string';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Structure list arrays with read-only scopes.\n**Objective:** Declare a readonly array of strings.\n**Hint:** Use the `readonly` keyword modifier.';
+      practiceTemplate = 'const roles: ___ string[] = ["admin", "user"];';
+      practiceAnswer = 'readonly';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Specify user interface schemas.\n**Objective:** Complete the User interface block definition.\n**Hint:** Use the `interface` keyword.';
+      practiceTemplate = '___ User {\n  id: number;\n  name: string;\n}';
+      practiceAnswer = 'interface';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Wait for type-safe database queries.\n**Objective:** Call the async fetch API using wait parameters.\n**Hint:** Functions invoking await must declare `async`.';
+      practiceTemplate = 'async function loadData() {\n  const res = ___ fetch("/api");\n}';
+      practiceAnswer = 'await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Capture unverified exception signatures.\n**Objective:** Catch errors as unknown type wrappers.\n**Hint:** Exceptions in catch blocks default to or support unknown declarations.';
+      practiceTemplate = 'try {\n  process();\n} catch (error: ___) {\n  console.error(error);\n}';
+      practiceAnswer = 'unknown';
+    } else {
+      practiceInstruction = '**Scenario:** Log platform initialization events.\n**Objective:** Call log functions to output `"Ready"`.\n**Hint:** Use console.log.';
+      practiceTemplate = 'console.log("___");';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'rust') {
+    exampleCode = `// Rust demonstration of ${lessonTitle}\nfn main() {\n  let max_requests = 100;\n  println!("Max: {}", max_requests);\n}`;
+    exampleExplanation = `In Rust memory-safe structures, ${lessonTitle} defines ownership, lifetime states, and variable mutations.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Define mutable counter limits.\n**Objective:** Declare a mutable variable named `attempts` initialized to `0`.\n**Hint:** Rust variables require mut modifiers for mutation.';
+      practiceTemplate = 'let ___ attempts = 0;';
+      practiceAnswer = 'mut';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare explicit function returns.\n**Objective:** Write the arrow keyword defining a 64-bit integer return.\n**Hint:** Return arrows are defined using hyphens and greater-than operators.';
+      practiceTemplate = 'fn get_sum(a: i64, b: i64) ___ i64 {\n  a + b\n}';
+      practiceAnswer = '->';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Instantiate new heap allocation listings.\n**Objective:** Call the new vector method to construct an empty vec.\n**Hint:** Use standard namespace new calls.';
+      practiceTemplate = 'let mut lobby: Vec<String> = ___::new();';
+      practiceAnswer = 'Vec';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Bind method definitions to data structures.\n**Objective:** Implement structural block bindings for Product.\n**Hint:** Use the implementation keyword block `impl`.';
+      practiceTemplate = 'struct Product {\n  id: u32\n}\n___ Product {\n  fn get_id(&self) -> u32 { self.id }\n}';
+      practiceAnswer = 'impl';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Await futures outputs.\n**Objective:** Resolve asynchronous worker futures.\n**Hint:** Add `.await` to trigger resolution.';
+      practiceTemplate = 'async fn load_logs() {\n  let res = fetch_logs()___;\n}';
+      practiceAnswer = '.await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Extract safe fallbacks from Result enums.\n**Objective:** Call unwrap or fallback defaults for division values.\n**Hint:** Use unwrap_or to supply a default.';
+      practiceTemplate = 'let val = divide(10, 0).___(0);';
+      practiceAnswer = 'unwrap_or';
+    } else {
+      practiceInstruction = '**Scenario:** Output diagnostic trace details.\n**Objective:** Output `"Ready"` to standard output console using macro functions.\n**Hint:** Use macro print methods with exclamation marks.';
+      practiceTemplate = 'println!("___");';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'go') {
+    exampleCode = `// Go demonstration of ${lessonTitle}\npackage main\nimport "fmt"\nfunc main() {\n  fmt.Println("Online")\n}`;
+    exampleExplanation = `In Go structural programming, ${lessonTitle} manages slices, maps, channels, and static type declarations.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Declare package constants.\n**Objective:** Declare a constant named `MaxRequests` set to `100`.\n**Hint:** Constants use the `const` keyword.';
+      practiceTemplate = '___ MaxRequests = 100';
+      practiceAnswer = 'const';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Return multiple outcomes from helper methods.\n**Objective:** Declare multiple returns supporting an error output.\n**Hint:** Declare function signatures using explicit return list parameters.';
+      practiceTemplate = 'func loadConfig() (string, ___) {\n  return "ok", nil\n}';
+      practiceAnswer = 'error';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Initialize slice data records.\n**Objective:** Initialize a string slice containing `"admin"` and `"user"`.\n**Hint:** Define types preceding initialization braces.';
+      practiceTemplate = 'roles := []___{"admin", "user"}';
+      practiceAnswer = 'string';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Structure data models.\n**Objective:** Define a custom Product structure.\n**Hint:** Declare structures using the `struct` keyword.';
+      practiceTemplate = 'type Product ___ {\n  ID int\n}';
+      practiceAnswer = 'struct';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Spawn concurrently executing goroutines.\n**Objective:** Spawn a goroutine executing the worker method.\n**Hint:** Use the goroutine initiator keyword `go`.';
+      practiceTemplate = '___ worker()';
+      practiceAnswer = 'go';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Validate successful service outcomes.\n**Objective:** Check if returned errors are not nil.\n**Hint:** Go errors represent comparison references.';
+      practiceTemplate = 'val, err := fetchData()\nif err ___ nil {\n  return err\n}';
+      practiceAnswer = '!=';
+    } else {
+      practiceInstruction = '**Scenario:** Print status outputs to console stdout.\n**Objective:** Output `"Ready"` using fmt print packages.\n**Hint:** Call fmt.Println.';
+      practiceTemplate = 'fmt.Println("___")';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'csharp') {
+    exampleCode = `// C# demonstration of ${lessonTitle}\nusing System;\nclass Program {\n  static void Main() {\n    Console.WriteLine("Online");\n  }\n}`;
+    exampleExplanation = `In C# .NET frameworks, ${lessonTitle} controls enterprise objects, async tasks, and LINQ selections.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Configure static class constants.\n**Objective:** Declare a constant integer named `MaxRequests` set to `100`.\n**Hint:** Constants use C# const modifier structures.';
+      practiceTemplate = '___ int MaxRequests = 100;';
+      practiceAnswer = 'const';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare string properties in class methods.\n**Objective:** Define a public method `GetName` returning a string.\n**Hint:** Return types precede method signatures.';
+      practiceTemplate = 'public ___ GetName() {\n  return "user";\n}';
+      practiceAnswer = 'string';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Instantiate dynamic collection objects.\n**Objective:** Instantiate a new List of strings.\n**Hint:** Invoke the `new` allocation command.';
+      practiceTemplate = 'List<string> lobby = ___ List<string>();';
+      practiceAnswer = 'new';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Declare class interfaces extension.\n**Objective:** Inherit from the parent class `Employee`.\n**Hint:** Class extensions in C# utilize colons `:`.';
+      practiceTemplate = 'class Manager ___ Employee {\n}';
+      practiceAnswer = ':';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Await asynchronous Task runs.\n**Objective:** Await completion of Task runs.\n**Hint:** Use the async await modifier.';
+      practiceTemplate = 'public async Task Run() {\n  ___ Task.Delay(100);\n}';
+      practiceAnswer = 'await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Capture exception traces.\n**Objective:** Handle errors safely using catch clauses.\n**Hint:** Use the catch keyword block.';
+      practiceTemplate = 'try {\n  run();\n} ___ (Exception ex) {\n  log(ex);\n}';
+      practiceAnswer = 'catch';
+    } else {
+      practiceInstruction = '**Scenario:** Log application notifications.\n**Objective:** Output `"Ready"` to standard output streams.\n**Hint:** Use Console.WriteLine.';
+      practiceTemplate = 'Console.WriteLine("___");';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'swift') {
+    exampleCode = `// Swift demonstration of ${lessonTitle}\nimport Foundation\nprint("Online")`;
+    exampleExplanation = `In Swift structures, ${lessonTitle} controls constants, optionals, and delegation protocols.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Store constant configuration parameters.\n**Objective:** Declare a constant named `maxRequests` set to `100`.\n**Hint:** Swift constants use the `let` keyword.';
+      practiceTemplate = '___ maxRequests = 100';
+      practiceAnswer = 'let';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Return values from methods.\n**Objective:** Specify a string return signature.\n**Hint:** Specify returns using standard arrow operators `->`.';
+      practiceTemplate = 'func greet(name: String) ___ String {\n  return "Hello " + name\n}';
+      practiceAnswer = '->';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Setup array collections.\n**Objective:** Declare a type-safe array of Strings.\n**Hint:** Specify array type declarations inside brackets.';
+      practiceTemplate = 'var lobby: [___] = ["Alice", "Bob"]';
+      practiceAnswer = 'String';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Define behavior contracts.\n**Objective:** Declare a protocol named `Loggable`.\n**Hint:** Use the `protocol` keyword.';
+      practiceTemplate = '___ Loggable {\n  func log(msg: String)\n}';
+      practiceAnswer = 'protocol';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Await async functions output.\n**Objective:** Resolve asynchronous worker processes.\n**Hint:** Use the `await` keyword.';
+      practiceTemplate = 'func load() async {\n  let res = ___ fetchData()\n}';
+      practiceAnswer = 'await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Trigger error propagation.\n**Objective:** Complete the signature declaring function throws.\n**Hint:** Use the `throws` keyword.';
+      practiceTemplate = 'func checkLimit() ___ {\n  throw Error.failed\n}';
+      practiceAnswer = 'throws';
+    } else {
+      practiceInstruction = '**Scenario:** Greet active user status.\n**Objective:** Print `"Ready"` to standard output console.\n**Hint:** Use print statements.';
+      practiceTemplate = 'print("___")';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'kotlin') {
+    exampleCode = `// Kotlin demonstration of ${lessonTitle}\nfun main() {\n  println("Online")\n}`;
+    exampleExplanation = `In Kotlin frameworks, ${lessonTitle} controls null safety, read-only variables, and coroutine workers.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Store read-only platform configuration inputs.\n**Objective:** Declare a read-only variable `maxRequests` set to `100`.\n**Hint:** Read-only variables use the `val` keyword.';
+      practiceTemplate = '___ maxRequests = 100';
+      practiceAnswer = 'val';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare function entry points.\n**Objective:** Complete function declarations using Kotlin keys.\n**Hint:** Use the `fun` keyword.';
+      practiceTemplate = '___ greet(name: String): String {\n  return "Hello $name"\n}';
+      practiceAnswer = 'fun';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Initialize immutable collections.\n**Objective:** Call list initializations declaring static lists.\n**Hint:** Use the helper function listOf.';
+      practiceTemplate = 'val lobby = ___("Alice", "Bob")';
+      practiceAnswer = 'listOf';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Declare interface properties.\n**Objective:** Declare an interface named `Loggable`.\n**Hint:** Interface definitions use the `interface` keyword.';
+      practiceTemplate = '___ Loggable {\n  fun log(msg: String)\n}';
+      practiceAnswer = 'interface';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Declare suspendable coroutines functions.\n**Objective:** Add the correct suspend keyword to the function.\n**Hint:** Use `suspend` keyword.';
+      practiceTemplate = '___ fun fetch(): String {\n  return "ok"\n}';
+      practiceAnswer = 'suspend';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Capture null references errors.\n**Objective:** Catch generic exceptions in try-catch statement structures.\n**Hint:** Use standard catch declarations.';
+      practiceTemplate = 'try {\n  process();\n} ___ (e: Exception) {\n  log(e);\n}';
+      practiceAnswer = 'catch';
+    } else {
+      practiceInstruction = '**Scenario:** Greet active user status.\n**Objective:** Print `"Ready"` to standard output console.\n**Hint:** Call println.';
+      practiceTemplate = 'println("___")';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'php') {
+    exampleCode = `<?php\n// PHP demonstration of ${lessonTitle}\necho "Online";\n?>`;
+    exampleExplanation = `In PHP web scripts, ${lessonTitle} controls superglobals, session stores, and database PDO interfaces.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Declare local request counters.\n**Objective:** Complete declaration of variable `maxRequests` set to `100`.\n**Hint:** PHP variables are preceded by dollar signs `$`.';
+      practiceTemplate = '___maxRequests = 100;';
+      practiceAnswer = '$';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Declare custom utility handlers.\n**Objective:** Complete helper function greet declarations.\n**Hint:** Use the `function` keyword.';
+      practiceTemplate = '___ greet($name) {\n  return "Hello " . $name;\n}';
+      practiceAnswer = 'function';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Declare list directories array configs.\n**Objective:** Initialize a PHP array with status options.\n**Hint:** Use standard array keyword.';
+      practiceTemplate = '$profile = ___("status" => "active");';
+      practiceAnswer = 'array';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Configure class constructors.\n**Objective:** Define double underscore markers for constructor methods.\n**Hint:** Use double underscores `__`.';
+      practiceTemplate = 'class Product {\n  public function ___construct($name) {\n    $this->name = $name;\n  }\n}';
+      practiceAnswer = '__';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Initialize external HTTP curl targets.\n**Objective:** Initialize request curl resource buffers.\n**Hint:** Use curl_init function.';
+      practiceTemplate = '$ch = ___("http://api.example.com");';
+      practiceAnswer = 'curl_init';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Catch unexpected backend failures.\n**Objective:** Catch generic Throwable errors.\n**Hint:** Use Throwable type declarations.';
+      practiceTemplate = 'try {\n  process();\n} catch (___ $e) {\n  echo $e->getMessage();\n}';
+      practiceAnswer = 'Throwable';
+    } else {
+      practiceInstruction = '**Scenario:** Output status logs directly to output buffers.\n**Objective:** Output `"Ready"` to outputs.\n**Hint:** Use echo keyword.';
+      practiceTemplate = 'echo "___";';
+      practiceAnswer = 'Ready';
+    }
+  } else if (language === 'html') {
+    exampleCode = `<!-- HTML demonstration of ${lessonTitle} -->\n<div class="container">\n  <h1>${lessonTitle}</h1>\n</div>`;
+    exampleExplanation = `In front-end layouts, ${lessonTitle} specifies semantic containers, form controls, and SEO accessibility tags.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Structure navigation sections.\n**Objective:** Complete navigation container tag elements.\n**Hint:** Use semantic nav tags.';
+      practiceTemplate = '<___>Navigation Links</nav>';
+      practiceAnswer = 'nav';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Design form action inputs.\n**Objective:** Complete the button tag submit type parameter.\n**Hint:** Use type submit.';
+      practiceTemplate = '<button type="___">Submit</button>';
+      practiceAnswer = 'submit';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Create list groupings.\n**Objective:** Complete list container elements.\n**Hint:** Use unordered list tag `ul`.';
+      practiceTemplate = '<___>\n  <li>Item 1</li>\n</ul>';
+      practiceAnswer = 'ul';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Set document metadata declarations.\n**Objective:** Declare document root elements.\n**Hint:** Root elements declare html type tags.';
+      practiceTemplate = '<!DOCTYPE ___>';
+      practiceAnswer = 'html';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Load external script files asynchronously.\n**Objective:** Load script files without blocking rendering processes.\n**Hint:** Use async attributes.';
+      practiceTemplate = '<script ___ src="app.js"></script>';
+      practiceAnswer = 'async';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Limit inputs configurations.\n**Objective:** Complete input fields minimum length limits.\n**Hint:** Use minlength attribute.';
+      practiceTemplate = '<input type="text" ___="5">';
+      practiceAnswer = 'minlength';
+    } else {
+      practiceInstruction = '**Scenario:** Insert image assets.\n**Objective:** Complete image source declarations.\n**Hint:** Use src attribute tags.';
+      practiceTemplate = '<img ___="logo.png" alt="logo">';
+      practiceAnswer = 'src';
+    }
+  } else if (language === 'css') {
+    exampleCode = `/* CSS demonstration of ${lessonTitle} */\n.container {\n  display: flex;\n  justify-content: center;\n}`;
+    exampleExplanation = `In web layouts styling, ${lessonTitle} configures layout properties, transitions, and hover attributes.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Setup global variable theme configurations.\n**Objective:** Define custom CSS variable theme-color prefix.\n**Hint:** Prefix CSS variables using double dashes `--`.';
+      practiceTemplate = ':root {\n  ___theme-color: #3b82f6;\n}';
+      practiceAnswer = '--';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Retrieve style properties dynamically.\n**Objective:** Call CSS variables getter methods.\n**Hint:** Retrieve values using var functions.';
+      practiceTemplate = '.card {\n  background: ___(--theme-color, #fff);\n}';
+      practiceAnswer = 'var';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Target list selectors.\n**Objective:** Style immediate children elements.\n**Hint:** Use immediate child target operators `>`.';
+      practiceTemplate = '.container ___ div {\n  margin: 5px;\n}';
+      practiceAnswer = '>';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Configure dynamic hover states.\n**Objective:** Complete hover selectors syntax.\n**Hint:** Separate hover selectors using colons `:`.';
+      practiceTemplate = 'a___hover {\n  text-decoration: underline;\n}';
+      practiceAnswer = ':';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Configure visual transitions.\n**Objective:** Animate opacity changes smoothly.\n**Hint:** Use transition style rules.';
+      practiceTemplate = '.fade {\n  ___: opacity 0.3s ease;\n}';
+      practiceAnswer = 'transition';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Create flexible row cards.\n**Objective:** Configure container displays as flex layouts.\n**Hint:** Use flex display options.';
+      practiceTemplate = '.container {\n  display: ___;\n}';
+      practiceAnswer = 'flex';
+    } else {
+      practiceInstruction = '**Scenario:** Set white typography.\n**Objective:** Apply white text values.\n**Hint:** Use hex white colors `#fff`.';
+      practiceTemplate = '.text {\n  color: ___;\n}';
+      practiceAnswer = '#fff';
+    }
+  } else if (language === 'redis') {
+    exampleCode = `# Redis command for ${lessonTitle}\nSET user:100:status "active"\nGET user:100:status`;
+    exampleExplanation = `In Redis memory cache stores, ${lessonTitle} controls key expirations, lists, hashes, and channels.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Store session states.\n**Objective:** Set a status value for customer profiles key `user:100:status` as `"active"`.\n**Hint:** Use the standard SET command.';
+      practiceTemplate = '___ user:100:status "active"';
+      practiceAnswer = 'SET';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Retrieve session values.\n**Objective:** Query user:100:status key entries.\n**Hint:** Use the standard GET command.';
+      practiceTemplate = '___ user:100:status';
+      practiceAnswer = 'GET';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Push items to queue arrays.\n**Objective:** Add order items to list queues.\n**Hint:** Use the LPUSH key command.';
+      practiceTemplate = '___ pending_orders "order_99"';
+      practiceAnswer = 'LPUSH';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Set object fields in hashes.\n**Objective:** Set a profile role inside a user hash.\n**Hint:** Use the HSET hash command.';
+      practiceTemplate = '___ user:100 role "developer"';
+      practiceAnswer = 'HSET';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Publish sync channel messages.\n**Objective:** Broadcast messages to channels.\n**Hint:** Use the PUBLISH event command.';
+      practiceTemplate = '___ db_updates "sync"';
+      practiceAnswer = 'PUBLISH';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Configure cache limits.\n**Objective:** Expire session keys after 60 seconds.\n**Hint:** Use the EXPIRE command.';
+      practiceTemplate = '___ session:token 60';
+      practiceAnswer = 'EXPIRE';
+    } else {
+      practiceInstruction = '**Scenario:** Verify server availability.\n**Objective:** Ping the redis database.\n**Hint:** Use the PING utility command.';
+      practiceTemplate = '___';
+      practiceAnswer = 'PING';
+    }
   } else {
-    language = 'javascript';
-    exampleCode = `// Structural representation for ${lessonTitle}\nclass DataModel {\n  constructor(name) {\n    this.name = name;\n    this.timestamp = Date.now();\n  }\n}`;
-    exampleExplanation = `In standard software development patterns, class models and objects represent domain entities and encapsulate state attributes for ${lessonTitle}.`;
-    practiceTemplate = 'class Item {\n  ___(id) {}\n}';
-    practiceAnswer = 'constructor';
-    practiceInstruction = 'Declare a class constructor for initialization:';
+    // JavaScript / TypeScript and other languages defaults
+    exampleCode = `// Core implementation for ${lessonTitle}\nconst config = {\n  active: true,\n  timeout: 5000\n};\n\nfunction processAction(item) {\n  if (!item) return null;\n  console.log("Processing:", item);\n  return item;\n}`;
+    exampleExplanation = `In modern software applications, understanding ${lessonTitle} allows developers to clean, format, structure, and secure functional operations.`;
+    
+    if (topic === 'variables') {
+      practiceInstruction = '**Scenario:** Initialize API limiting parameters on backend gateways.\n**Objective:** Declare a constant named `maxRequests` set to `100`.\n**Hint:** Use the read-only `const` keyword.';
+      practiceTemplate = '___ maxRequests = 100;';
+      practiceAnswer = 'const';
+    } else if (topic === 'functions') {
+      practiceInstruction = '**Scenario:** Streamline item handlers using functional callbacks.\n**Objective:** Define a simple arrow function `greet` that returns a welcome string.\n**Hint:** The arrow operator is `=>`.';
+      practiceTemplate = 'const greet = () ___ "Welcome";';
+      practiceAnswer = '=>';
+    } else if (topic === 'collections') {
+      practiceInstruction = '**Scenario:** Parse payload properties from user session contexts.\n**Objective:** Destructure the `email` field from the `user` object.\n**Hint:** Use curly brace syntax `const { field } = object;`.';
+      practiceTemplate = 'const { ___ } = user;';
+      practiceAnswer = 'email';
+    } else if (topic === 'oop') {
+      practiceInstruction = '**Scenario:** Initialize catalog item blueprints.\n**Objective:** Define a constructor method inside the `Product` class to receive parameters.\n**Hint:** Use the `constructor` keyword.';
+      practiceTemplate = 'class Product {\n  ___(name) {\n    this.name = name;\n  }\n}';
+      practiceAnswer = 'constructor';
+    } else if (topic === 'async') {
+      practiceInstruction = '**Scenario:** Wait for asynchronous server actions to complete.\n**Objective:** Call `await` on the async function to resolve its promise.\n**Hint:** Functions using `await` must be declared as `async`.';
+      practiceTemplate = 'async function run() {\n  const res = ___ fetch("/api");\n}';
+      practiceAnswer = 'await';
+    } else if (topic === 'errors') {
+      practiceInstruction = '**Scenario:** Handle network request failures gracefully.\n**Objective:** Complete the try-catch block structure to catch potential errors.\n**Hint:** The `catch` block captures exceptions thrown in the `try` block.';
+      practiceTemplate = 'try {\n  run();\n} ___ (err) {\n  console.error(err);\n}';
+      practiceAnswer = 'catch';
+    } else {
+      practiceInstruction = '**Scenario:** Verify execution metrics in console outputs.\n**Objective:** Print a success log message containing `"OK"` to the console.\n**Hint:** Use `console.log("...");`.';
+      practiceTemplate = 'console.log("___");';
+      practiceAnswer = 'OK';
+    }
   }
 
   // Generate 5 quiz challenges
@@ -547,109 +1088,133 @@ const seed = async () => {
     console.log('🌱 Generating and compiling full curriculum (78 tracks)...');
     const allTracks = compileAllTracks();
 
-    let totalTracks = 0;
-    let totalModules = 0;
-    let totalLessons = 0;
-    let totalChallenges = 0;
+    console.log(`🚀 Seeding ${allTracks.length} tracks in bulk into Supabase...`);
 
-    console.log(`🚀 Seeding ${allTracks.length} tracks into Supabase...`);
+    // 1. Bulk Insert Tracks
+    const tracksToInsert = allTracks.map(trackData => ({
+      slug: trackData.slug,
+      name: trackData.name,
+      description: trackData.description,
+      icon: trackData.icon,
+      color: trackData.color,
+      display_order: trackData.order,
+      total_lessons: trackData.lessons.length,
+      is_ai_generated: false,
+      capstone_project: trackData.capstone_project || {}
+    }));
 
-    // Bulk Seed in parallel groups or sequentially with loops to prevent memory bloat
-    for (const trackData of allTracks) {
-      // 1. Insert Track
-      const { data: track, error: trackError } = await supabase
-        .from('tracks')
-        .insert({
-          slug: trackData.slug,
-          name: trackData.name,
-          description: trackData.description,
-          icon: trackData.icon,
-          color: trackData.color,
-          display_order: trackData.order,
-          total_lessons: trackData.lessons.length,
-          is_ai_generated: false,
-          capstone_project: trackData.capstone_project || {}
-        })
-        .select()
-        .single();
+    const { data: insertedTracks, error: tracksError } = await supabase
+      .from('tracks')
+      .insert(tracksToInsert)
+      .select('id, slug');
 
-      if (trackError) {
-        console.error(`Error seeding track ${trackData.name}:`, trackError);
-        throw trackError;
-      }
+    if (tracksError) {
+      console.error('Error seeding tracks:', tracksError);
+      throw tracksError;
+    }
 
-      // 2. Insert Modules
-      const modulesToInsert = trackData.modules.map((mod: any) => ({
-        id: mod.id,
-        track_id: track.id,
-        name: mod.name,
-        display_order: mod.order,
-        learning_objective: mod.learning_objective || '',
-        mini_project: mod.mini_project || {}
-      }));
+    console.log(`✓ Inserted ${insertedTracks.length} tracks.`);
 
-      const { error: modulesError } = await supabase
-        .from('modules')
-        .insert(modulesToInsert);
+    // Map trackSlug -> trackId
+    const trackIdMap: Record<string, string> = {};
+    insertedTracks.forEach((t: any) => {
+      trackIdMap[t.slug] = t.id;
+    });
 
-      if (modulesError) {
-        console.error(`Error seeding modules for track ${trackData.name}:`, modulesError);
-        throw modulesError;
-      }
-      totalModules += modulesToInsert.length;
+    // 2. Compile and Bulk Insert Modules
+    const modulesToInsert: any[] = [];
+    allTracks.forEach(trackData => {
+      const trackId = trackIdMap[trackData.slug];
+      if (!trackId) return;
 
-      // 3. Insert Lessons (in chunks of 15 per track to prevent timeouts)
-      const lessonsToInsert = trackData.lessons.map((lessonData: any) => ({
-        slug: lessonData.slug,
-        track_id: track.id,
-        module_id: lessonData.moduleId,
-        title: lessonData.title,
-        display_order: lessonData.order,
-        estimated_minutes: lessonData.estimatedMinutes,
-        xp_reward: lessonData.xpReward,
-        concept_title: lessonData.conceptTitle,
-        concept_content: lessonData.conceptContent,
-        concept_highlights: lessonData.conceptHighlights,
-        example_language: lessonData.exampleLanguage,
-        example_code: lessonData.exampleCode,
-        example_explanation: lessonData.exampleExplanation,
-        practice_type: lessonData.practiceType,
-        practice_instruction: lessonData.practiceInstruction,
-        practice_template: lessonData.practiceTemplate,
-        practice_answer: lessonData.practiceAnswer,
-        summary: lessonData.summary || ''
-      }));
-
-      const insertedLessons = [];
-      const lessonChunkSize = 15;
-      for (let i = 0; i < lessonsToInsert.length; i += lessonChunkSize) {
-        const chunk = lessonsToInsert.slice(i, i + lessonChunkSize);
-        const { data: chunkInserted, error: lessonsError } = await supabase
-          .from('lessons')
-          .insert(chunk)
-          .select('id, slug');
-
-        if (lessonsError) {
-          console.error(`Error seeding lessons chunk for track ${trackData.name}:`, lessonsError);
-          throw lessonsError;
-        }
-        if (chunkInserted) {
-          insertedLessons.push(...chunkInserted);
-        }
-        await sleep(100); // Pause to prevent rate limiting
-      }
-      totalLessons += lessonsToInsert.length;
-
-      // Create a map of lessonSlug -> lessonId
-      const lessonIdMap = {};
-      insertedLessons.forEach((l: any) => {
-        lessonIdMap[l.slug] = l.id;
+      trackData.modules.forEach((mod: any) => {
+        modulesToInsert.push({
+          id: mod.id,
+          track_id: trackId,
+          name: mod.name,
+          display_order: mod.order,
+          learning_objective: mod.learning_objective || '',
+          mini_project: mod.mini_project || {}
+        });
       });
+    });
 
-      // 4. Insert Challenges (in chunks of 50 to prevent timeouts)
-      const challengesToInsert = [];
+    const { error: modulesError } = await supabase
+      .from('modules')
+      .insert(modulesToInsert);
+
+    if (modulesError) {
+      console.error('Error seeding modules:', modulesError);
+      throw modulesError;
+    }
+
+    console.log(`✓ Inserted ${modulesToInsert.length} modules.`);
+
+    // 3. Compile Lessons
+    const lessonsToInsert: any[] = [];
+    allTracks.forEach(trackData => {
+      const trackId = trackIdMap[trackData.slug];
+      if (!trackId) return;
+
+      trackData.lessons.forEach((lessonData: any) => {
+        lessonsToInsert.push({
+          slug: lessonData.slug,
+          track_id: trackId,
+          module_id: lessonData.moduleId,
+          title: lessonData.title,
+          display_order: lessonData.order,
+          estimated_minutes: lessonData.estimatedMinutes,
+          xp_reward: lessonData.xpReward,
+          concept_title: lessonData.conceptTitle,
+          concept_content: lessonData.conceptContent,
+          concept_highlights: lessonData.conceptHighlights,
+          example_language: lessonData.exampleLanguage,
+          example_code: lessonData.exampleCode,
+          example_explanation: lessonData.exampleExplanation,
+          practice_type: lessonData.practiceType,
+          practice_instruction: lessonData.practiceInstruction,
+          practice_template: lessonData.practiceTemplate,
+          practice_answer: lessonData.practiceAnswer,
+          summary: lessonData.summary || ''
+        });
+      });
+    });
+
+    console.log(`🚀 Inserting ${lessonsToInsert.length} lessons in chunks...`);
+    const insertedLessons: any[] = [];
+    const lessonChunkSize = 200;
+    for (let i = 0; i < lessonsToInsert.length; i += lessonChunkSize) {
+      const chunk = lessonsToInsert.slice(i, i + lessonChunkSize);
+      const { data: chunkInserted, error: lessonsError } = await supabase
+        .from('lessons')
+        .insert(chunk)
+        .select('id, slug');
+
+      if (lessonsError) {
+        console.error(`Error seeding lessons chunk starting at ${i}:`, lessonsError);
+        throw lessonsError;
+      }
+      if (chunkInserted) {
+        insertedLessons.push(...chunkInserted);
+      }
+      await sleep(150); // Small pause to prevent hitting server rate limits
+    }
+
+    console.log(`✓ Inserted ${insertedLessons.length} lessons.`);
+
+    // Map lessonSlug -> lessonId
+    const lessonIdMap: Record<string, string> = {};
+    insertedLessons.forEach((l: any) => {
+      lessonIdMap[l.slug] = l.id;
+    });
+
+    // 4. Compile and Bulk Insert Challenges
+    const challengesToInsert: any[] = [];
+    allTracks.forEach(trackData => {
       trackData.lessons.forEach((lessonData: any) => {
         const lessonId = lessonIdMap[lessonData.slug];
+        if (!lessonId) return;
+
         if (lessonData.challenges && lessonData.challenges.length > 0) {
           lessonData.challenges.forEach((challengeData: any) => {
             challengesToInsert.push({
@@ -666,31 +1231,27 @@ const seed = async () => {
           });
         }
       });
+    });
 
-      if (challengesToInsert.length > 0) {
-        const challengeChunkSize = 50;
-        for (let i = 0; i < challengesToInsert.length; i += challengeChunkSize) {
-          const chunk = challengesToInsert.slice(i, i + challengeChunkSize);
-          const { error: challengesError } = await supabase
-            .from('challenges')
-            .insert(chunk);
+    console.log(`🚀 Inserting ${challengesToInsert.length} challenges in chunks...`);
+    const challengeChunkSize = 300;
+    for (let i = 0; i < challengesToInsert.length; i += challengeChunkSize) {
+      const chunk = challengesToInsert.slice(i, i + challengeChunkSize);
+      const { error: challengesError } = await supabase
+        .from('challenges')
+        .insert(chunk);
 
-          if (challengesError) {
-            console.error(`Error seeding challenges chunk for track ${trackData.name}:`, challengesError);
-            throw challengesError;
-          }
-          await sleep(100); // Pause to prevent rate limiting
-        }
-        totalChallenges += challengesToInsert.length;
+      if (challengesError) {
+        console.error(`Error seeding challenges chunk starting at ${i}:`, challengesError);
+        throw challengesError;
       }
-
-      await sleep(400); // Pause between tracks to prevent rate limiting
-
-      totalTracks++;
+      await sleep(150);
     }
 
-    console.log(`\n🎉 Supabase Database Seeded Successfully!`);
-    console.log(`📊 Total Seeded: ${totalTracks} tracks, ${totalModules} modules, ${totalLessons} lessons, ${totalChallenges} challenges.`);
+    console.log(`✓ Inserted ${challengesToInsert.length} challenges.`);
+
+    console.log(`\n🎉 Supabase Database Seeded Successfully in Bulk!`);
+    console.log(`📊 Total Seeded: ${insertedTracks.length} tracks, ${modulesToInsert.length} modules, ${insertedLessons.length} lessons, ${challengesToInsert.length} challenges.`);
     process.exit(0);
   } catch (error: any) {
     console.error('❌ Seeding failed:', error.message);
