@@ -6,12 +6,14 @@ import { progressService } from '../services/userService';
 import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
+import { useAuth } from '../context/AuthContext';
 
 const TRACK_ICONS = { sql: '🗄️', python: '🐍', webdev: '🌐', ai: '🤖', datascience: '📈', java: '☕' };
 
 export default function TrackDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [track, setTrack] = useState(null);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,7 @@ export default function TrackDetailPage() {
   const [capstoneForm, setCapstoneForm] = useState({ repoUrl: '', demoUrl: '' });
   const [capstoneSubmitting, setCapstoneSubmitting] = useState(false);
   const [capstoneResult, setCapstoneResult] = useState(null);
+  const [showCertModal, setShowCertModal] = useState(false);
 
   const showToast = (message) => {
     setToast(message);
@@ -372,12 +375,13 @@ export default function TrackDetailPage() {
                   <h3>Capstone Submitted!</h3>
                   <p>You earned <strong>+500 XP</strong> and a certificate has been generated.</p>
                   {capstoneResult.certificate && (
-                    <Link
-                      to={`/certificate/${capstoneResult.certificate.certificate_id}`}
+                    <button
+                      onClick={() => setShowCertModal(true)}
                       className="btn btn--primary btn--md"
+                      id="view-cert-modal-btn"
                     >
                       View Certificate →
-                    </Link>
+                    </button>
                   )}
                 </motion.div>
               ) : (
@@ -460,6 +464,145 @@ export default function TrackDetailPage() {
             </motion.section>
           )}
         </div>
+
+        {/* Certificate Modal Overlay */}
+        {showCertModal && capstoneResult?.certificate && (
+          <div className="cert-modal-backdrop" style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(9, 11, 18, 0.8)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflowY: 'auto'
+          }} onClick={() => setShowCertModal(false)}>
+            <div className="cert-modal-content" style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '840px',
+              padding: '30px',
+              position: 'relative',
+              boxShadow: 'var(--shadow-xl)',
+              color: 'var(--text-primary)',
+              animation: 'scaleIn 0.3s var(--ease-spring)'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              {/* Close Button */}
+              <button 
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setShowCertModal(false)}
+                id="close-cert-modal"
+              >
+                ✕
+              </button>
+
+              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Your Completed Certificate! 🎓</h3>
+
+              {/* Modal Actions */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                marginBottom: '24px'
+              }}>
+                <button 
+                  onClick={() => window.print()} 
+                  className="btn btn--secondary btn--sm"
+                  id="modal-cert-download"
+                >
+                  📥 Download PDF
+                </button>
+                <button 
+                  onClick={async () => {
+                    const url = `${window.location.origin}/certificate/${capstoneResult.certificate.certificate_id}`;
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: `Learn Station Certificate — ${track.name}`,
+                          text: `I completed the ${track.name} track on Learn Station! 🎓`,
+                          url
+                        });
+                      } catch {}
+                    } else {
+                      await navigator.clipboard.writeText(url);
+                      alert('Certificate link copied to clipboard!');
+                    }
+                  }} 
+                  className="btn btn--primary btn--sm"
+                  id="modal-cert-share"
+                >
+                  ✨ Share Achievement
+                </button>
+                <Link to="/tracks" className="btn btn--secondary btn--sm" onClick={() => setShowCertModal(false)} id="modal-cert-explore">
+                  🚀 Explore More Tracks
+                </Link>
+                <button className="btn btn--secondary btn--sm" onClick={() => setShowCertModal(false)} id="modal-cert-close">
+                  ✕ Close
+                </button>
+              </div>
+
+              {/* Certificate Document Render (copying style from CertificatePage) */}
+              <div className="certificate-document" style={{
+                border: '2px solid #f59e0b40',
+                boxShadow: 'none',
+                margin: '0 auto'
+              }}>
+                {/* Header */}
+                <div className="cert-doc__header">
+                  <div className="cert-doc__logo">⚡ Learn Station</div>
+                  <div className="cert-doc__divider" />
+                  <h1 className="cert-doc__title">Certificate of Completion</h1>
+                </div>
+
+                {/* Body */}
+                <div className="cert-doc__body">
+                  <p className="cert-doc__awarded-text">This certifies that</p>
+                  <h2 className="cert-doc__recipient">{user?.name || 'Learner'}</h2>
+                  <p className="cert-doc__completion-text">has successfully completed the</p>
+                  <div className="cert-doc__track-badge" style={{ color: track.color || 'var(--accent-blue)' }}>
+                    <span>{track.icon || '📚'}</span>
+                    <h3 className="cert-doc__track-name">{track.name}</h3>
+                  </div>
+                  <p className="cert-doc__desc">
+                    demonstrating dedication, persistence, and mastery of core concepts through lessons, quizzes, challenges, and a capstone project.
+                  </p>
+                </div>
+
+                {/* Footer */}
+                <div className="cert-doc__footer">
+                  <div className="cert-doc__footer-left">
+                    <div className="cert-doc__signature">Learn Station</div>
+                    <div className="cert-doc__sig-label">Platform Authority</div>
+                  </div>
+                  <div className="cert-doc__footer-center">
+                    <div className="cert-doc__seal">🎖️</div>
+                    <div className="cert-doc__xp">+{capstoneResult.certificate.xp_earned || 500} XP Earned</div>
+                  </div>
+                  <div className="cert-doc__footer-right">
+                    <div className="cert-doc__date">{new Date(capstoneResult.certificate.completion_date || capstoneResult.certificate.created_at).toLocaleDateString()}</div>
+                    <div className="cert-doc__id">ID: {capstoneResult.certificate.certificate_id}</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
     </PageTransition>
   );

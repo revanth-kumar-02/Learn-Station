@@ -78,19 +78,71 @@ export default function CertificatePage() {
   return (
     <PageTransition>
       <div className="certificate-page">
+        <style>{`
+          .cert-header-nav {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: flex-start;
+            padding: 0 20px;
+          }
+          .cert-back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+          }
+          .cert-back-link:hover {
+            color: var(--text-primary) !important;
+            text-decoration: underline !important;
+          }
+          @media print {
+            .cert-header-nav,
+            .cert-actions,
+            .cert-verification,
+            .navbar,
+            .layout-sidebar {
+              display: none !important;
+            }
+          }
+        `}</style>
         <div className="container">
+          {/* Top navigation */}
+          <div className="cert-header-nav">
+            <Link to="/" className="cert-back-link" id="cert-back-dashboard-btn">
+              ← Back to Dashboard
+            </Link>
+          </div>
+
           {/* Action buttons */}
           <motion.div
             className="cert-actions"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              marginBottom: '32px'
+            }}
           >
-            <button onClick={handlePrint} className="btn btn--secondary btn--md" id="cert-print-btn">
-              🖨️ Print Certificate
+            <button onClick={handlePrint} className="btn btn--secondary btn--md" id="cert-download-btn">
+              📥 Download PDF
             </button>
             <button onClick={handleShare} className="btn btn--primary btn--md" id="cert-share-btn">
-              🔗 Share Certificate
+              ✨ Share Achievement
             </button>
+            <Link to="/" className="btn btn--secondary btn--md" id="cert-home-btn">
+              🏠 Return Home
+            </Link>
+            <Link to="/tracks" className="btn btn--secondary btn--md" id="cert-explore-btn">
+              🚀 Explore More Tracks
+            </Link>
           </motion.div>
 
           {/* Certificate Document */}

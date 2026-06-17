@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 
 // --- MOCK SQL DATASET ---
 const MOCK_DB = {
@@ -1004,6 +1004,612 @@ const customValidators = {
   }
 };
 
+const escapeHtml = (text: string) => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+};
+
+const highlightCode = (code: string, language: string) => {
+  if (!code) return '';
+  const lang = (language || '').toLowerCase();
+  
+  let rules: { type: string; regex: RegExp; format?: (m: string) => string }[] = [];
+  if (lang === 'python') {
+    rules = [
+      { type: 'comment', regex: /#[^\n]*/y },
+      { type: 'string', regex: /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|f"(?:\\.|[^"\\])*"|f'(?:\\.|[^'\\])*'/y },
+      { type: 'keyword', regex: /\b(?:def|class|if|elif|else|while|for|in|return|import|from|as|global|try|except|finally|with|and|or|not|is|None|True|False|pass|lambda|assert|break|continue|yield)\b/y },
+      { type: 'class', regex: /\b[A-Z]\w*\b/y },
+      { type: 'function', regex: /\b\w+(?=\s*\()/y },
+      { type: 'number', regex: /\b\d+(?:\.\d+)?\b/y },
+      { type: 'variable', regex: /\b[a-z_]\w*\b/y }
+    ];
+  } else if (lang === 'html') {
+    rules = [
+      { type: 'comment', regex: /<!--[\s\S]*?-->/y },
+      { type: 'tag', regex: /<\/?[a-zA-Z0-9:-]+/y },
+      { type: 'tag', regex: />/y },
+      { type: 'value', regex: /=\s*"(?:\\.|[^"\\])*"|=\s*'(?:\\.|[^'\\])*'/y },
+      { type: 'attribute', regex: /\b[a-zA-Z0-9:-]+(?=\s*=)/y }
+    ];
+  } else if (lang === 'css') {
+    rules = [
+      { type: 'comment', regex: /\/\*[\s\S]*?\*\//y },
+      { type: 'selector', regex: /\.[a-zA-Z0-9_-]+|#[a-zA-Z0-9_-]+|\b(?:body|html|div|span|p|a|h1|h2|h3|h4|h5|h6|ul|li|ol|table|tr|td|th|input|button|textarea|section|main|header|footer)\b/y },
+      { type: 'property', regex: /\b[a-zA-Z-]+\s*(?=:)/y },
+      {
+        type: 'css-value-clause',
+        regex: /:\s*([^;}\n]+)/y,
+        format: (match) => {
+          return `:<span class="hl-value">${escapeHtml(match.substring(1))}</span>`;
+        }
+      },
+      { type: 'bracket', regex: /[{}]/y }
+    ];
+  } else if (lang === 'sql') {
+    rules = [
+      { type: 'comment', regex: /--[^\n]*|\/\*[\s\S]*?\*\//y },
+      { type: 'string', regex: /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/y },
+      { type: 'keyword', regex: /\b(?:select|from|where|order\s+by|group\s+by|limit|insert\s+into|values|update|set|delete|join|left|right|inner|outer|on|and|or|not|null|true|false|create\s+table|database|primary\s+key|foreign\s+key|references|alter|drop|index|like|in|as|is|having|count|sum|avg|min|max)\b/iy },
+      {
+        type: 'table-clause',
+        regex: /(?:from|join|update|into|table)\s+([a-zA-Z_]\w*)\b/iy,
+        format: (match) => {
+          const parts = match.split(/(\s+)/);
+          const keyword = parts[0];
+          const space = parts[1] || '';
+          const table = parts[2] || '';
+          return `<span class="hl-keyword">${escapeHtml(keyword)}</span>${escapeHtml(space)}<span class="hl-table">${escapeHtml(table)}</span>`;
+        }
+      },
+      { type: 'table', regex: /\b(?:users|products|orders)\b/iy },
+      { type: 'number', regex: /\b\d+(?:\.\d+)?\b/y }
+    ];
+  } else if (lang === 'javascript' || lang === 'js' || lang === 'typescript' || lang === 'ts') {
+    rules = [
+      { type: 'comment', regex: /\/\/[^\n]*|\/\*[\s\S]*?\*\//y },
+      { type: 'string', regex: /`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/y },
+      { type: 'keyword', regex: /\b(?:const|let|var|function|class|if|else|switch|case|default|for|while|do|break|continue|return|try|catch|finally|throw|new|this|typeof|instanceof|import|export|from|extends|super|async|await|yield|null|undefined|true|false|of|in)\b/y },
+      { type: 'function', regex: /\b\w+(?=\s*\()/y },
+      { type: 'number', regex: /\b\d+(?:\.\d+)?\b/y },
+      { type: 'variable', regex: /\b[a-zA-Z_]\w*\b/y }
+    ];
+  } else if (lang === 'java') {
+    rules = [
+      { type: 'comment', regex: /\/\/[^\n]*|\/\*[\s\S]*?\*\//y },
+      { type: 'string', regex: /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/y },
+      { type: 'keyword', regex: /\b(?:public|private|protected|class|interface|extends|implements|static|void|int|double|float|boolean|char|long|short|byte|new|this|super|return|if|else|switch|case|break|continue|for|while|do|try|catch|finally|throw|throws|import|package|null|true|false)\b/y },
+      { type: 'class', regex: /\b[A-Z]\w*\b/y },
+      { type: 'function', regex: /\b\w+(?=\s*\()/y },
+      { type: 'number', regex: /\b\d+(?:\.\d+)?\b/y }
+    ];
+  } else {
+    rules = [
+      { type: 'comment', regex: /<!--[\s\S]*?-->|\/\/[^\n]*|\/\*[\s\S]*?\*\/|#[^\n]*/y },
+      { type: 'string', regex: /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/y },
+      { type: 'keyword', regex: /\b(?:class|id|style|href|src|div|span|p|a|h1|h2|h3|h4|h5|h6|body|html|head|meta|link|script|const|let|var|function|return|if|else|docker|git|npm|run|exec|ps|images)\b/iy },
+      { type: 'number', regex: /\b\d+(?:\.\d+)?\b/y }
+    ];
+  }
+
+  let html = '';
+  let i = 0;
+  const len = code.length;
+
+  while (i < len) {
+    let matched = false;
+    for (const rule of rules) {
+      rule.regex.lastIndex = i;
+      const match = rule.regex.exec(code);
+      if (match && match.index === i) {
+        const text = match[0];
+        if (rule.format) {
+          html += rule.format(text);
+        } else {
+          html += `<span class="hl-${rule.type}">${escapeHtml(text)}</span>`;
+        }
+        i += text.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      html += escapeHtml(code[i]);
+      i++;
+    }
+  }
+  return html;
+};
+
+const isFoldableLine = (lineText: string, lang: string) => {
+  const trimmed = lineText.trim();
+  if (!trimmed) return false;
+  const l = (lang || '').toLowerCase();
+  
+  if (trimmed.endsWith('{') || trimmed.endsWith(':')) return true;
+  
+  if (l === 'python') {
+    return trimmed.startsWith('def ') || trimmed.startsWith('class ');
+  }
+  if (l === 'javascript' || l === 'js' || l === 'typescript' || l === 'ts') {
+    return trimmed.startsWith('function ') || trimmed.startsWith('class ') || (trimmed.startsWith('const ') && trimmed.includes('=>'));
+  }
+  if (l === 'java') {
+    return trimmed.includes('class ') || trimmed.includes('interface ') || ((trimmed.includes('public ') || trimmed.includes('private ')) && trimmed.includes('('));
+  }
+  return false;
+};
+
+interface IDECodeEditorProps {
+  value: string;
+  onChange: (val: string) => void;
+  language: string;
+  placeholder?: string;
+}
+
+function IDECodeEditor({ value, onChange, language, placeholder }: IDECodeEditorProps) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const [activeLine, setActiveLine] = useState(1);
+  const [theme, setTheme] = useState(() => {
+    return document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains('dark-theme');
+      setTheme(isDark ? 'dark' : 'light');
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScroll = () => {
+    if (!textareaRef.current) return;
+    const { scrollTop, scrollLeft } = textareaRef.current;
+    if (preRef.current) {
+      preRef.current.scrollTop = scrollTop;
+      preRef.current.scrollLeft = scrollLeft;
+    }
+    if (gutterRef.current) {
+      gutterRef.current.scrollTop = scrollTop;
+    }
+  };
+
+  const updateActiveLine = () => {
+    if (!textareaRef.current) return;
+    const pos = textareaRef.current.selectionStart;
+    const lines = value.substring(0, pos).split('\n');
+    setActiveLine(lines.length);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    // 1. Tab Key -> 2 spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const newVal = val.substring(0, start) + '  ' + val.substring(end);
+      onChange(newVal);
+      
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+        updateActiveLine();
+      }, 0);
+      return;
+    }
+
+    // 2. Enter Key -> Auto indentation
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const beforeCursor = val.substring(0, start);
+      const afterCursor = val.substring(end);
+      const linesBefore = beforeCursor.split('\n');
+      const currentLine = linesBefore[linesBefore.length - 1];
+      
+      const indentMatch = currentLine.match(/^(\s*)/);
+      let indent = indentMatch ? indentMatch[1] : '';
+      
+      const trimmedLine = currentLine.trim();
+      if (trimmedLine.endsWith(':') || trimmedLine.endsWith('{') || trimmedLine.endsWith('[')) {
+        indent += '  ';
+      }
+
+      const insertText = '\n' + indent;
+      const newVal = beforeCursor + insertText + afterCursor;
+      onChange(newVal);
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+        updateActiveLine();
+      }, 0);
+      return;
+    }
+
+    // 3. Bracket / Quote completion
+    const pairs: Record<string, string> = {
+      '{': '}',
+      '[': ']',
+      '(': ')',
+      '"': '"',
+      "'": "'",
+      '`': '`'
+    };
+
+    if (pairs[e.key] !== undefined) {
+      e.preventDefault();
+      const closingChar = pairs[e.key];
+      const newVal = val.substring(0, start) + e.key + closingChar + val.substring(end);
+      onChange(newVal);
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+        updateActiveLine();
+      }, 0);
+      return;
+    }
+
+    // 4. Overtype bypass
+    const closers = ['}', ']', ')', '"', "'", '`'];
+    if (closers.includes(e.key)) {
+      if (val[start] === e.key) {
+        e.preventDefault();
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+          updateActiveLine();
+        }, 0);
+        return;
+      }
+    }
+
+    // 5. Backspace handler
+    if (e.key === 'Backspace') {
+      if (start === end && start > 0) {
+        const prevChar = val[start - 1];
+        const nextChar = val[start];
+        if (pairs[prevChar] === nextChar) {
+          e.preventDefault();
+          const newVal = val.substring(0, start - 1) + val.substring(start + 1);
+          onChange(newVal);
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start - 1;
+            updateActiveLine();
+          }, 0);
+          return;
+        }
+      }
+    }
+  };
+
+  const lines = value.split('\n');
+  const lineCount = Math.max(lines.length, 1);
+
+  return (
+    <div className={`ide-editor-container lang-${(language || '').toLowerCase()} theme-${theme}`} style={{
+      display: 'flex',
+      position: 'relative',
+      width: '100%',
+      flex: 1,
+      minHeight: '320px',
+      background: 'var(--editor-bg)',
+      border: '1px solid var(--gutter-border)',
+      borderRadius: '6px',
+      overflow: 'hidden',
+      color: 'var(--editor-fg)',
+      fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+      fontSize: '13px',
+      lineHeight: '20px',
+      transition: 'background 0.3s, color 0.3s, border-color 0.3s'
+    }}>
+      <style>{`
+        .ide-editor-container * {
+          box-sizing: border-box;
+        }
+        
+        .ide-textarea-overlay, .ide-code-highlight code {
+          font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+        .hl-comment { color: var(--hl-comment); font-style: italic; }
+        .hl-string { color: var(--hl-string); }
+        .hl-number { color: var(--hl-number); }
+        .hl-keyword { color: var(--hl-keyword); }
+        .hl-class { color: var(--hl-class); }
+        .hl-function { color: var(--hl-function); }
+        .hl-variable { color: var(--hl-variable); }
+        .hl-table { color: var(--hl-table); }
+        .hl-tag { color: var(--hl-tag); }
+        .hl-attribute { color: var(--hl-attribute); }
+        .hl-value { color: var(--hl-value); }
+        .hl-property { color: var(--hl-property); }
+        .hl-selector { color: var(--hl-selector); }
+
+        /* --- VS Dark Theme Styles --- */
+        .ide-editor-container.theme-dark {
+          --editor-bg: #1e1e1e;
+          --editor-fg: #d4d4d4;
+          --gutter-bg: #1e1e1e;
+          --gutter-border: #3c3c3c;
+          --gutter-num: #858585;
+          --gutter-num-active: #fff;
+          --active-line-bg: rgba(255, 255, 255, 0.04);
+          --active-line-border: #007acc;
+          --caret-color: #ffffff;
+          
+          --hl-keyword: #c586c0;
+          --hl-function: #dcdcaa;
+          --hl-variable: #9cdcfe;
+          --hl-string: #ce9178;
+          --hl-number: #b5cea8;
+          --hl-comment: #6a9955;
+          --hl-class: #4ec9b0;
+          --hl-table: #4fc1ff;
+          --hl-tag: #569cd6;
+          --hl-attribute: #9cdcfe;
+          --hl-value: #ce9178;
+          --hl-property: #9cdcfe;
+          --hl-selector: #dcdcaa;
+        }
+
+        /* --- VS Light Theme Styles --- */
+        .ide-editor-container.theme-light {
+          --editor-bg: #ffffff;
+          --editor-fg: #000000;
+          --gutter-bg: #f3f3f3;
+          --gutter-border: #e2e8f0;
+          --gutter-num: #a0a0a0;
+          --gutter-num-active: #098658;
+          --active-line-bg: rgba(0, 90, 255, 0.04);
+          --active-line-border: #007acc;
+          --caret-color: #000000;
+
+          --hl-keyword: #af00db;
+          --hl-function: #795e26;
+          --hl-variable: #001080;
+          --hl-string: #a31515;
+          --hl-number: #098658;
+          --hl-comment: #008000;
+          --hl-class: #267f99;
+          --hl-table: #08427b;
+          --hl-tag: #800000;
+          --hl-attribute: #e50000;
+          --hl-value: #a31515;
+          --hl-property: #001080;
+          --hl-selector: #795e26;
+        }
+
+        /* Language specific overrides */
+        .ide-editor-container.lang-python.theme-dark {
+          --hl-keyword: #c586c0;
+          --hl-variable: #9cdcfe;
+          --hl-string: #ce9178;
+          --hl-number: #b5cea8;
+          --hl-function: #dcdcaa;
+        }
+        .ide-editor-container.lang-python.theme-light {
+          --hl-keyword: #af00db;
+          --hl-variable: #001080;
+          --hl-string: #a31515;
+          --hl-number: #098658;
+          --hl-function: #795e26;
+        }
+
+        .ide-editor-container.lang-html.theme-dark {
+          --hl-tag: #ff79c6;
+          --hl-attribute: #f1fa8c;
+          --hl-value: #ffb86c;
+        }
+        .ide-editor-container.lang-html.theme-light {
+          --hl-tag: #af00db;
+          --hl-attribute: #795e26;
+          --hl-value: #cb4b16;
+        }
+
+        .ide-editor-container.lang-css.theme-dark {
+          --hl-selector: #f1fa8c;
+          --hl-property: #9cdcfe;
+          --hl-value: #ffb86c;
+        }
+        .ide-editor-container.lang-css.theme-light {
+          --hl-selector: #795e26;
+          --hl-property: #001080;
+          --hl-value: #cb4b16;
+        }
+
+        .ide-editor-container.lang-javascript.theme-dark,
+        .ide-editor-container.lang-js.theme-dark,
+        .ide-editor-container.lang-typescript.theme-dark,
+        .ide-editor-container.lang-ts.theme-dark {
+          --hl-keyword: #c586c0;
+          --hl-function: #dcdcaa;
+          --hl-string: #ce9178;
+        }
+        .ide-editor-container.lang-javascript.theme-light,
+        .ide-editor-container.lang-js.theme-light,
+        .ide-editor-container.lang-typescript.theme-light,
+        .ide-editor-container.lang-ts.theme-light {
+          --hl-keyword: #af00db;
+          --hl-function: #795e26;
+          --hl-string: #a31515;
+        }
+
+        .ide-editor-container.lang-sql.theme-dark {
+          --hl-keyword: #569cd6;
+          --hl-table: #4fc1ff;
+          --hl-string: #ce9178;
+        }
+        .ide-editor-container.lang-sql.theme-light {
+          --hl-keyword: #0000ff;
+          --hl-table: #008080;
+          --hl-string: #a31515;
+        }
+        
+        .ide-gutter {
+          background: var(--gutter-bg);
+          border-right: 1px solid var(--gutter-border);
+          padding: 10px 0;
+          user-select: none;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          width: 48px;
+          flex-shrink: 0;
+          text-align: right;
+          transition: background 0.3s, border-color 0.3s;
+        }
+        .ide-gutter-line {
+          height: 20px;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          padding-right: 8px;
+          gap: 4px;
+        }
+        .ide-gutter-line.active {
+          background: var(--active-line-bg);
+          color: var(--gutter-num-active) !important;
+        }
+        .ide-gutter-num {
+          color: var(--gutter-num);
+          font-size: 11px;
+          width: 20px;
+          text-align: right;
+        }
+        .ide-gutter-caret {
+          color: var(--gutter-num);
+          font-size: 9px;
+          cursor: default;
+          width: 10px;
+          text-align: center;
+          opacity: 0.7;
+        }
+        
+        .ide-textarea-overlay, .ide-code-highlight {
+          margin: 0;
+          padding: 10px;
+          font-family: inherit;
+          font-size: inherit;
+          line-height: inherit;
+          white-space: pre;
+          word-wrap: normal;
+          overflow: auto;
+          position: absolute;
+          top: 0;
+          left: 48px;
+          right: 0;
+          bottom: 0;
+          height: 100%;
+        }
+        .ide-textarea-overlay {
+          background: transparent;
+          color: transparent;
+          caret-color: var(--caret-color);
+          border: none;
+          resize: none;
+          outline: none;
+          z-index: 2;
+        }
+        .ide-code-highlight {
+          color: var(--editor-fg);
+          z-index: 1;
+          pointer-events: none;
+          transition: color 0.3s;
+        }
+        .ide-code-highlight::-webkit-scrollbar {
+          display: none;
+        }
+        .ide-code-highlight {
+          scrollbar-width: none;
+        }
+        
+        .ide-active-line-bg {
+          position: absolute;
+          left: 48px;
+          right: 0;
+          height: 20px;
+          background: var(--active-line-bg);
+          border-left: 2px solid var(--active-line-border);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .ide-textarea-overlay::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        .ide-textarea-overlay::-webkit-scrollbar-track {
+          background: var(--editor-bg);
+        }
+        .ide-textarea-overlay::-webkit-scrollbar-thumb {
+          background: var(--gutter-border);
+          border-radius: 5px;
+        }
+        .ide-textarea-overlay::-webkit-scrollbar-thumb:hover {
+          background: var(--gutter-num);
+        }
+      `}</style>
+
+      <div className="ide-gutter" ref={gutterRef}>
+        {Array.from({ length: lineCount }).map((_, idx) => {
+          const lineNum = idx + 1;
+          const lineText = lines[idx] || '';
+          const isFoldable = isFoldableLine(lineText, language);
+          const isActive = lineNum === activeLine;
+          return (
+            <div key={idx} className={`ide-gutter-line ${isActive ? 'active' : ''}`}>
+              <span className="ide-gutter-caret">{isFoldable ? '▼' : ' '}</span>
+              <span className="ide-gutter-num">{lineNum}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="ide-active-line-bg" style={{
+        top: `${(activeLine - 1) * 20 + 10}px`
+      }} />
+
+      <pre className="ide-code-highlight" ref={preRef}>
+        <code dangerouslySetInnerHTML={{ __html: highlightCode(value, language) + '\n' }} />
+      </pre>
+
+      <textarea
+        ref={textareaRef}
+        className="ide-textarea-overlay"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          updateActiveLine();
+        }}
+        onScroll={handleScroll}
+        onKeyDown={handleKeyDown}
+        onKeyUp={updateActiveLine}
+        onMouseUp={updateActiveLine}
+        onFocus={updateActiveLine}
+        onClick={updateActiveLine}
+        placeholder={placeholder}
+        spellCheck="false"
+        autoCapitalize="none"
+        autoComplete="off"
+        autoCorrect="off"
+      />
+    </div>
+  );
+}
+
 export default function InteractivePlayground({ language, template, instruction, answer, onCorrect, slug }) {
   const [code, setCode] = useState('');
   const [sqlResult, setSqlResult] = useState(null);
@@ -1378,26 +1984,13 @@ export default function InteractivePlayground({ language, template, instruction,
               </button>
             )}
           </div>
-          <textarea
+          <IDECodeEditor
             value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
+            onChange={(val) => {
+              setCode(val);
               if (verified) setVerified(false);
             }}
-            style={{
-              width: '100%',
-              flex: 1,
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
-              padding: 'var(--space-3)',
-              outline: 'none',
-              resize: 'none',
-              lineHeight: '1.6'
-            }}
+            language={language}
             placeholder={`Write your ${language || 'code'} here...`}
           />
         </div>
