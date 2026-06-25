@@ -7046,6 +7046,7 @@ html.dark-theme .category-chip--active {
   line-height: var(--leading-relaxed);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   height: 42px; /* Ensure consistent layout height for two lines of text */
