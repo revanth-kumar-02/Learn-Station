@@ -792,10 +792,20 @@
   border-radius: 24px;
   width: 100%;
   max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 1px rgba(15, 23, 42, 0.1);
   overflow: hidden;
   animation: profileModalScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: #0F172A !important;
+}
+
+.profile-edit-modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 @keyframes profileModalScale {
@@ -810,6 +820,7 @@
   align-items: center;
   justify-content: space-between;
   background: #FFFFFF;
+  flex-shrink: 0;
 }
 
 .profile-edit-modal__title {
@@ -843,6 +854,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* Modal Inputs Style Overrides for high contrast white modal */
@@ -887,6 +900,7 @@
   justify-content: flex-end;
   gap: 12px;
   background: #F8FAFC;
+  flex-shrink: 0;
 }
 
 /* Custom button styles inside the white modal */

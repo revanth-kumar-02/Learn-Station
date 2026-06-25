@@ -106,6 +106,15 @@ export default function ProfilePage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -154,6 +163,7 @@ export default function ProfilePage() {
       }));
       updateUser(updatedData.user);
       setShowEditModal(false);
+      setToast('🎉 Profile updated successfully!');
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err.response?.data?.message || 'Failed to update profile details.');
@@ -285,6 +295,17 @@ export default function ProfilePage() {
     projects: 'Project Achievements',
     special: 'Special Rare Badges',
   };
+
+  const originalName = profile?.user?.name || user?.name || '';
+  const originalUsername = profile?.user?.username || user?.username || '';
+  const originalBio = profile?.user?.bio || user?.bio || '';
+  const originalAvatarUrl = profile?.user?.avatarUrl || user?.avatarUrl || '';
+
+  const isFormUnchanged =
+    editForm.name === originalName &&
+    editForm.username === originalUsername &&
+    editForm.bio === originalBio &&
+    editForm.avatarUrl === originalAvatarUrl;
 
   return (
     <PageTransition>
@@ -678,14 +699,14 @@ export default function ProfilePage() {
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             >
-              <div className="profile-edit-modal__header">
-                <span className="profile-edit-modal__title">Edit Learning Profile</span>
-                <button className="profile-edit-modal__close" onClick={() => setShowEditModal(false)}>
-                  <X size={18} />
-                </button>
-              </div>
+              <form onSubmit={handleSaveProfile} className="profile-edit-modal-form">
+                <div className="profile-edit-modal__header">
+                  <span className="profile-edit-modal__title">Edit Learning Profile</span>
+                  <button type="button" className="profile-edit-modal__close" onClick={() => setShowEditModal(false)}>
+                    <X size={18} />
+                  </button>
+                </div>
 
-              <form onSubmit={handleSaveProfile}>
                 <div className="profile-edit-modal__body">
                   {errorMessage && (
                     <div style={{
@@ -794,7 +815,7 @@ export default function ProfilePage() {
                   <button
                     type="submit"
                     className="btn btn--primary btn--md"
-                    disabled={saveLoading}
+                    disabled={saveLoading || isFormUnchanged}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                   >
                     {saveLoading ? (
@@ -815,6 +836,12 @@ export default function ProfilePage() {
           </div>
         )}
       </AnimatePresence>
+
+      {toast && (
+        <div className="toast-notification">
+          {toast}
+        </div>
+      )}
     </PageTransition>
   );
 }

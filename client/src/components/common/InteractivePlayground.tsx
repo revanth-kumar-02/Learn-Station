@@ -1719,7 +1719,7 @@ export default function InteractivePlayground({ language, template, instruction,
 
     // Custom Validation Interceptor
     if (slug && customValidators[slug]) {
-      let runRes = { success: true, logs: [], variables: {} };
+      let runRes: { success: boolean; logs?: any[]; variables?: any; error?: string } = { success: true, logs: [], variables: {} };
       if (isPython) {
         runRes = runPythonCode(userCode);
       } else if (isJs || lang === 'typescript' || lang === 'ts') {
