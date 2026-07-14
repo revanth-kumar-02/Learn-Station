@@ -846,3 +846,101 @@ export const deleteAnnouncement = async (req: Request, res: Response, next: Next
     next(error);
   }
 };
+
+// ==========================================
+// 9. Admin Notifications
+// ==========================================
+
+// @desc    Send broadcast or targeted notification as admin
+// @route   POST /api/admin/notifications
+export const sendAdminNotification = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { targetType, userIds, trackId, title, message, type, icon, actionUrl, scheduledAt } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({ message: 'Title and message are required.' });
+    }
+
+    const scheduledDate = scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString();
+
+    let targetUserIds: string[] = [];
+
+    if (targetType === 'everyone') {
+      // Fetch all users
+      const { data: users, error } = await supabase.from('profiles').select('id');
+      if (error) throw error;
+      targetUserIds = (users || []).map(u => u.id);
+    } else if (targetType === 'selected') {
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: 'Please specify userIds for targeted notification.' });
+      }
+      targetUserIds = userIds;
+    } else if (targetType === 'track') {
+      if (!trackId) {
+        return res.status(400).json({ message: 'Please specify a trackId.' });
+      }
+      // Fetch all users studying this track (by looking in progress)
+      const { data: progressList, error } = await supabase
+        .from('progress')
+        .select('user_id')
+        .eq('track_id', trackId);
+      if (error) throw error;
+      targetUserIds = Array.from(new Set((progressList || []).map(p => p.user_id)));
+    } else {
+      return res.status(400).json({ message: 'Invalid targetType. Must be everyone, selected, or track.' });
+    }
+
+    if (targetUserIds.length === 0) {
+      return res.json({ success: true, message: 'No target users found.' });
+    }
+
+    // Bulk insert notifications
+    const notificationsToInsert = targetUserIds.map(uId => ({
+      user_id: uId,
+      title,
+      message,
+      type: type || 'Announcement',
+      icon: icon || '📢',
+      action_url: actionUrl || null,
+      scheduled_at: scheduledDate
+    }));
+
+    // Insert in batches of 100 to avoid limits
+    const batchSize = 100;
+    for (let i = 0; i < notificationsToInsert.length; i += batchSize) {
+      const batch = notificationsToInsert.slice(i, i + batchSize);
+      const { error } = await supabase.from('notifications').insert(batch);
+      if (error) throw error;
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully queued ${notificationsToInsert.length} notifications.`,
+      scheduledAt: scheduledDate
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Preview notification mock payload
+// @route   POST /api/admin/notifications/preview
+export const previewNotification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { title, message, type, icon, actionUrl } = req.body;
+    res.json({
+      preview: {
+        title,
+        message,
+        type: type || 'Announcement',
+        icon: icon || '📢',
+        action_url: actionUrl || null,
+        created_at: new Date().toISOString(),
+        is_read: false
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -26,6 +26,8 @@ import {
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,
+  sendAdminNotification,
+  previewNotification,
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -74,5 +76,9 @@ router.put('/settings', updateSettings);
 router.get('/announcements', getAnnouncements);
 router.post('/announcements', createAnnouncement);
 router.delete('/announcements/:id', deleteAnnouncement);
+
+// Admin Notifications
+router.post('/notifications', sendAdminNotification);
+router.post('/notifications/preview', previewNotification);
 
 export default router;

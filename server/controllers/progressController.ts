@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/db';
 import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
+import { createNotification } from '../utils/notifications';
 
 // @desc    Get all progress for current user
 // @route   GET /api/progress
@@ -374,6 +375,52 @@ export const submitCapstoneProject = async (req: Request, res: Response, next: N
       .single();
 
     if (certError) throw certError;
+
+    // Trigger Track Completed notification
+    await createNotification(
+      userId,
+      'Track Completed 🎉',
+      `Outstanding! You completed the track "${track.name}"!`,
+      'Learning',
+      '🎉',
+      `/track/${track.slug}`
+    );
+
+    // Trigger Certificate Earned notification
+    await createNotification(
+      userId,
+      'Certificate Earned 🎓',
+      `Congratulations! You earned a certificate for "${track.name}"!`,
+      'Certificate',
+      '🎓',
+      `/certificate/${certificateId}`
+    );
+
+    // Trigger Level Up notification if they leveled up
+    if (finalLevel > profile.level) {
+      await createNotification(
+        userId,
+        'Level Up! ⭐',
+        `Congratulations! You reached Level ${finalLevel}!`,
+        'Level Up',
+        '⭐',
+        '/profile'
+      );
+    }
+
+    // Trigger Badge unlocked notifications
+    if (newAchievements && newAchievements.length > 0) {
+      for (const ach of newAchievements) {
+        await createNotification(
+          userId,
+          'New Badge Unlocked 🏆',
+          `You unlocked the badge "${ach.name}": ${ach.description}!`,
+          'Badge',
+          ach.icon || '🏆',
+          '/profile'
+        );
+      }
+    }
 
     res.json({
       success: true,

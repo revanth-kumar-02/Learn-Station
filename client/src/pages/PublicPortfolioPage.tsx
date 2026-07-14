@@ -32,9 +32,15 @@ export default function PublicPortfolioPage() {
         setLoading(true);
         const result = await userService.getPublicProfile(username);
         setProfile(result);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading public profile:', err);
-        setError(err.response?.status === 404 ? 'User not found.' : 'Failed to load profile.');
+        setError(
+          err.response?.status === 403 
+            ? 'This profile is private.' 
+            : err.response?.status === 404 
+              ? 'User not found.' 
+              : 'Failed to load profile.'
+        );
       } finally {
         setLoading(false);
       }
@@ -45,14 +51,19 @@ export default function PublicPortfolioPage() {
   if (loading) return <Loader fullPage />;
 
   if (error) {
+    const isPrivate = error === 'This profile is private.';
     return (
       <PageTransition>
         <div className="portfolio-error">
           <div className="container">
             <div className="portfolio-error__card">
-              <span>👤</span>
+              <span>{isPrivate ? '🔒' : '👤'}</span>
               <h2>{error}</h2>
-              <p>The public profile for <strong>@{username}</strong> could not be found.</p>
+              <p>
+                {isPrivate 
+                  ? `@${username} has set their profile to private.` 
+                  : `The public profile for @${username} could not be found.`}
+              </p>
               <Link to="/" className="btn btn--primary btn--md">Go Home</Link>
             </div>
           </div>

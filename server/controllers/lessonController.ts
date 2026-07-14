@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/db';
 import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
+import { createNotification } from '../utils/notifications';
 
 interface Lesson {
   id: string;
@@ -406,6 +407,16 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
 
       if (createError) throw createError;
       progress = newProgress;
+
+      // Trigger Track started notification
+      await createNotification(
+        userId,
+        'Track Started 🚀',
+        `You started the track "${track.name}". Happy learning!`,
+        'Learning',
+        '🚀',
+        `/track/${track.slug}`
+      );
     }
 
     // Check if quiz is passed (hard gate check)
@@ -739,6 +750,80 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
     if (updateProfileError) throw updateProfileError;
 
     const dailyGoalMet = dailyXpEarned >= profile.daily_xp_goal;
+
+    // Trigger Lesson completed notification
+    await createNotification(
+      userId,
+      'Lesson Completed 📚',
+      `You completed "${lesson.title}"! Keep it up.`,
+      'Learning',
+      '📚',
+      `/track/${track.slug}`
+    );
+
+    // Trigger Quiz passed notification if quiz Passed
+    if (quizPassed) {
+      await createNotification(
+        userId,
+        'Quiz Passed 🎯',
+        `You scored ${quizScore}/5 on the quiz for "${lesson.title}"!`,
+        'Learning',
+        '🎯',
+        `/track/${track.slug}`
+      );
+    }
+
+    // Trigger Level Up notification
+    if (finalLevel > profile.level) {
+      await createNotification(
+        userId,
+        'Level Up! ⭐',
+        `Congratulations! You reached Level ${finalLevel}!`,
+        'Level Up',
+        '⭐',
+        '/profile'
+      );
+    }
+
+    // Trigger Badge unlocked notification
+    if (newAchievements && newAchievements.length > 0) {
+      for (const ach of newAchievements) {
+        await createNotification(
+          userId,
+          'New Badge Unlocked 🏆',
+          `You unlocked the badge "${ach.name}": ${ach.description}!`,
+          'Badge',
+          ach.icon || '🏆',
+          '/profile'
+        );
+      }
+    }
+
+    // Trigger Daily Goal Met notification
+    const wasDailyGoalMetBefore = (profile.daily_xp_earned || 0) >= profile.daily_xp_goal;
+    if (dailyGoalMet && !wasDailyGoalMetBefore) {
+      await createNotification(
+        userId,
+        'Daily Goal Met! 🎯',
+        `Great job! You achieved your daily target of ${profile.daily_xp_goal} XP today!`,
+        'XP',
+        '🎯',
+        '/'
+      );
+    }
+
+    // Trigger Streak Milestone notification
+    const streakMilestones = [1, 3, 7, 14, 30, 50, 75, 100, 365];
+    if (streak > (profile.streak || 0) && streakMilestones.includes(streak)) {
+      await createNotification(
+        userId,
+        'Streak Milestone! 🔥',
+        `Awesome! You have kept your streak alive for ${streak} days!`,
+        'Streak',
+        '🔥',
+        '/'
+      );
+    }
 
     res.json({
       passed: true,

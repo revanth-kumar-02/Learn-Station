@@ -15,6 +15,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   loadUser: () => Promise<void>;
+  settings: any | null;
+  updateUserSettings: (updates: any) => Promise<void>;
+  unreadCount: number;
+  setUnreadCount: (count: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -22,19 +26,66 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [settings, setSettings] = useState<any | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+
+  const applyAppearance = useCallback((settingsData: any) => {
+    if (!settingsData) return;
+
+    // 1. Theme
+    if (settingsData.theme === 'dark') {
+      document.documentElement.classList.add('dark-theme');
+    } else {
+      document.documentElement.classList.remove('dark-theme');
+    }
+
+    // 2. Font Size
+    document.documentElement.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
+    document.documentElement.classList.add(`font-size-${settingsData.font_size || 'medium'}`);
+
+    // 3. Compact Mode
+    if (settingsData.compact_mode) {
+      document.body.classList.add('compact-mode');
+    } else {
+      document.body.classList.remove('compact-mode');
+    }
+
+    // 4. Reduce Animations
+    if (settingsData.reduce_animations) {
+      document.body.classList.add('reduce-animations');
+    } else {
+      document.body.classList.remove('reduce-animations');
+    }
+  }, []);
 
   const loadProfile = useCallback(async () => {
     try {
       const { data } = await api.get<UserResponse>('/auth/me');
       setUser(data.user);
+
+      // Load settings
+      const { data: settingsData } = await api.get<any>('/users/me/settings');
+      setSettings(settingsData.settings);
+      applyAppearance(settingsData.settings);
+
+      // Load initial unread count
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', data.user.id)
+        .eq('is_read', false)
+        .lte('scheduled_at', new Date().toISOString());
+
+      setUnreadCount(count || 0);
     } catch (err) {
-      console.error('Error loading user profile:', err);
+      console.error('Error loading user profile or settings:', err);
       setUser(null);
+      setSettings(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyAppearance]);
 
   useEffect(() => {
     // 1. Get initial session
@@ -44,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loadProfile();
       } else {
         setUser(null);
+        setSettings(null);
         setLoading(false);
       }
     });
@@ -55,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadProfile();
       } else {
         setUser(null);
+        setSettings(null);
         setLoading(false);
       }
     });
@@ -63,6 +116,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [loadProfile]);
+
+  // Realtime notification listener
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const channel = supabase
+      .channel(`notifications-user-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          // Recalculate unread count
+          const { count } = await supabase
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('is_read', false)
+            .lte('scheduled_at', new Date().toISOString());
+          
+          setUnreadCount(count || 0);
+
+          if (payload.eventType === 'INSERT') {
+            const newNotif = payload.new as any;
+            if (new Date(newNotif.scheduled_at).getTime() <= Date.now()) {
+              const event = new CustomEvent('new-notification-alert', { detail: newNotif });
+              window.dispatchEvent(event);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -103,10 +200,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) console.error('Sign out error:', error.message);
     setUser(null);
     setSession(null);
+    setSettings(null);
   };
 
   const updateUser = (updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
+  };
+
+  const updateUserSettings = async (updates: any) => {
+    try {
+      const { data } = await api.put<any>('/users/me/settings', updates);
+      if (data.success) {
+        setSettings(data.settings);
+        applyAppearance(data.settings);
+      }
+    } catch (err) {
+      console.error('Failed to update user settings in context:', err);
+      throw err;
+    }
   };
 
   return (
@@ -121,6 +232,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         updateUser,
         loadUser: loadProfile,
+        settings,
+        updateUserSettings,
+        unreadCount,
+        setUnreadCount,
       }}
     >
       {children}

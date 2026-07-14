@@ -296,27 +296,54 @@ export const getPublicProfile = async (req: Request, res: Response, next: NextFu
       return res.status(404).json({ message: 'User profile not found.' });
     }
 
+    // Fetch user privacy settings
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', profile.id)
+      .maybeSingle();
+
+    // Check if profile is public
+    if (settings && !settings.public_profile) {
+      return res.status(403).json({ message: 'This profile is private.', isPrivate: true });
+    }
+
     // Fetch tracks completed
     const { data: allProgress } = await supabase
       .from('progress')
       .select('*, track:tracks(id, name, slug, color, icon)')
       .eq('user_id', profile.id);
 
-    const completedTracks = (allProgress || [])
+    let completedTracks = (allProgress || [])
       .filter((p) => p.progress_percent >= 100)
       .map((p) => p.track);
 
+    if (settings && !settings.show_current_track) {
+      completedTracks = [];
+    }
+
     // Fetch capstone submissions
-    const { data: submissions } = await supabase
-      .from('capstone_submissions')
-      .select('*, track:tracks(name, slug)')
-      .eq('user_id', profile.id);
+    let submissions: any[] = [];
+    if (!settings || settings.show_learning_history) {
+      const { data } = await supabase
+        .from('capstone_submissions')
+        .select('*, track:tracks(name, slug)')
+        .eq('user_id', profile.id);
+      submissions = data || [];
+    }
 
     // Fetch certificates
-    const { data: certificates } = await supabase
-      .from('certificates')
-      .select('*, track:tracks(name, slug)')
-      .eq('user_id', profile.id);
+    let certificates: any[] = [];
+    if (!settings || settings.show_certificates) {
+      const { data } = await supabase
+        .from('certificates')
+        .select('*, track:tracks(name, slug)')
+        .eq('user_id', profile.id);
+      certificates = data || [];
+    }
+
+    const showXp = !settings || settings.show_xp;
+    const showBadges = !settings || settings.show_badges;
 
     res.json({
       profile: {
@@ -324,16 +351,16 @@ export const getPublicProfile = async (req: Request, res: Response, next: NextFu
         name: profile.name,
         username: profile.username,
         bio: profile.bio || '',
-        xp: profile.xp,
-        level: profile.level,
-        streak: profile.streak,
-        longestStreak: profile.longest_streak,
-        achievements: profile.achievements || [],
+        xp: showXp ? profile.xp : null,
+        level: showXp ? profile.level : null,
+        streak: showXp ? profile.streak : null,
+        longestStreak: showXp ? profile.longest_streak : null,
+        achievements: showBadges ? (profile.achievements || []) : [],
         createdAt: profile.created_at,
       },
       completedTracks,
-      projects: submissions || [],
-      certificates: certificates || [],
+      projects: submissions,
+      certificates: certificates,
     });
   } catch (error) {
     next(error);
@@ -445,6 +472,82 @@ export const getLeaderboard = async (req: Request, res: Response, next: NextFunc
       streaks: streaks || [],
       tracksCompleted,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current user settings
+// @route   GET /api/users/me/settings
+export const getSettings = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { data: settings, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !settings) {
+      // Create settings if they don't exist
+      const { data: newSettings } = await supabase
+        .from('user_settings')
+        .insert({ user_id: userId })
+        .select()
+        .single();
+      return res.json({ settings: newSettings });
+    }
+
+    res.json({ settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update current user settings
+// @route   PUT /api/users/me/settings
+export const updateSettings = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { data: settings, error } = await supabase
+      .from('user_settings')
+      .update(req.body)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete current user account
+// @route   DELETE /api/users/me
+export const deleteAccount = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    
+    // 1. Delete all user data in database
+    await supabase.from('progress').delete().eq('user_id', userId);
+    await supabase.from('activity').delete().eq('user_id', userId);
+    await supabase.from('certificates').delete().eq('user_id', userId);
+    await supabase.from('capstone_submissions').delete().eq('user_id', userId);
+    await supabase.from('notifications').delete().eq('user_id', userId);
+    await supabase.from('user_settings').delete().eq('user_id', userId);
+    await supabase.from('profiles').delete().eq('id', userId);
+    
+    // Note: If the user is in admin_users, delete them as well
+    await supabase.from('admin_users').delete().eq('id', userId);
+
+    // 2. Delete user from Supabase auth (requires admin access via Service Role client)
+    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
+    if (deleteAuthError) {
+      console.error('[Account Deletion] Error deleting Auth user:', deleteAuthError);
+    }
+
+    res.json({ success: true, message: 'Account deleted successfully.' });
   } catch (error) {
     next(error);
   }

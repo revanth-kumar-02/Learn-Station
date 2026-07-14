@@ -115,6 +115,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
                 }
               }
             });
+
+          await supabase
+            .from('user_settings')
+            .upsert({ user_id: authUser.id });
         }
       } catch (err) {
         console.error('Error auto-creating or promoting owner:', err);
@@ -234,6 +238,11 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
         return res.status(401).json({ message: 'User profile not found and could not be created' });
       }
       profile = createdProfile;
+
+      // Create default user settings
+      await supabase
+        .from('user_settings')
+        .upsert({ user_id: authUser.id });
     } else {
       profile = profileData;
       // Self-healing check for legacy profiles missing provider/avatar_url/email fields
@@ -254,6 +263,19 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
         if (!updateError && updatedProfile) {
           profile = updatedProfile;
         }
+      }
+
+      // Ensure user settings exist (self-healing for existing users)
+      const { data: settingsCheck } = await supabase
+        .from('user_settings')
+        .select('user_id')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+
+      if (!settingsCheck) {
+        await supabase
+          .from('user_settings')
+          .insert({ user_id: authUser.id });
       }
     }
 

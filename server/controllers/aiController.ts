@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../config/db';
+import { createNotification } from '../utils/notifications';
 
 
 // Helper to slugify track name
@@ -1932,6 +1933,16 @@ Enforce:
     }
 
     console.log(`✨ [API Response Success] Stored AI learning blueprint successfully. Created Track Slug: "${trackSlug}"`);
+
+    // Trigger AI Path Generated notification
+    await createNotification(
+      req.user!.id,
+      'AI Learning Path Generated 🤖',
+      `Your custom path "${track.name}" has been compiled and is ready!`,
+      'AI',
+      '🤖',
+      `/track/${trackSlug}`
+    );
 
     res.status(201).json({
       message: 'Learning blueprint generated and initialized.',

@@ -36,6 +36,21 @@ export const userService = {
     const { data } = await api.get<any>(`/users/public/${username}`);
     return data;
   },
+
+  getSettings: async (): Promise<any> => {
+    const { data } = await api.get<any>('/users/me/settings');
+    return data;
+  },
+
+  updateSettings: async (settingsUpdates: any): Promise<any> => {
+    const { data } = await api.put<any>('/users/me/settings', settingsUpdates);
+    return data;
+  },
+
+  deleteAccount: async (): Promise<any> => {
+    const { data } = await api.delete<any>('/users/me');
+    return data;
+  },
 };
 
 export const lessonService = {

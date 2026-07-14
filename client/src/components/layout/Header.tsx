@@ -2,6 +2,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePathSelection } from '../../context/PathSelectionContext';
 import { useState, useEffect } from 'react';
+import { Bell } from 'lucide-react';
+import { notificationService } from '../../services/notificationService';
 
 const NAV_LINKS = [
   { path: '/', label: 'Home', icon: 'home' },
@@ -69,13 +71,75 @@ const Icons = {
 };
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, unreadCount } = useAuth();
   const { openOverlay } = usePathSelection();
   const navigate = useNavigate();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Notifications states
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [recentNotifs, setRecentNotifs] = useState<any[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [bellAnimated, setBellAnimated] = useState(false);
+
+  useEffect(() => {
+    const handleNewNotification = () => {
+      setBellAnimated(true);
+      setTimeout(() => setBellAnimated(false), 1000);
+    };
+
+    window.addEventListener('new-notification-alert', handleNewNotification);
+    return () => {
+      window.removeEventListener('new-notification-alert', handleNewNotification);
+    };
+  }, []);
+
+  const loadRecentNotifications = async () => {
+    setDrawerLoading(true);
+    try {
+      const data = await notificationService.getAll('All', '', 5, 0);
+      setRecentNotifs(data.notifications || []);
+    } catch (err) {
+      console.error('Failed to load recent notifications:', err);
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  const toggleNotificationsDrawer = () => {
+    const nextVal = !notifOpen;
+    setNotifOpen(nextVal);
+    if (nextVal) {
+      loadRecentNotifications();
+    }
+  };
+
+  const handleMarkAllAsRead = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await notificationService.markAllRead();
+      setRecentNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleNotificationClick = async (n: any) => {
+    if (!n.is_read) {
+      try {
+        await notificationService.markAsRead(n.id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setNotifOpen(false);
+    if (n.action_url) {
+      navigate(n.action_url);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -159,6 +223,156 @@ export default function Header() {
               <div className="header__streak">
                 <span className="header__streak-fire">🔥</span>
                 <span>{user.streak || 0}</span>
+              </div>
+
+              {/* Notification Bell */}
+              <div className="header__notification-wrapper" style={{ position: 'relative', marginLeft: '12px' }}>
+                <button
+                  onClick={toggleNotificationsDrawer}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    transition: 'all 0.2s',
+                  }}
+                  className={`header__notification-bell ${bellAnimated ? 'bell-shake' : ''}`}
+                >
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span 
+                      style={{
+                        position: 'absolute',
+                        top: '1px',
+                        right: '1px',
+                        backgroundColor: 'var(--accent-rose)',
+                        color: 'white',
+                        fontSize: '8px',
+                        fontWeight: 700,
+                        borderRadius: '50%',
+                        width: '13px',
+                        height: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '2px solid var(--bg-secondary)',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                      className="notification-pulse"
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notification Dropdown Drawer */}
+                {notifOpen && (
+                  <>
+                    <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998, background: 'transparent' }} />
+                    <div 
+                      className="header__dropdown"
+                      style={{
+                        position: 'absolute',
+                        top: '40px',
+                        right: 0,
+                        width: '320px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-lg)',
+                        padding: '12px 0 0',
+                        boxShadow: 'var(--shadow-lg)',
+                        zIndex: 999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        backdropFilter: 'blur(16px)',
+                      }}
+                    >
+                      {/* Drawer Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px 8px', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>Recent Notifications</span>
+                        {recentNotifs.length > 0 && (
+                          <button 
+                            onClick={handleMarkAllAsRead}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 500, cursor: 'pointer' }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Drawer Content */}
+                      <div style={{ maxHeight: '280px', overflowY: 'auto' }} className="no-scrollbar">
+                        {drawerLoading ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '11px' }}>
+                            Loading...
+                          </div>
+                        ) : recentNotifs.length === 0 ? (
+                          <div style={{ padding: '30px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <span style={{ fontSize: '24px', display: 'block', marginBottom: '6px' }}>📭</span>
+                            <span style={{ fontSize: '12px' }}>No notifications yet.</span>
+                          </div>
+                        ) : (
+                          recentNotifs.map((n: any) => (
+                            <div 
+                              key={n.id} 
+                              onClick={() => handleNotificationClick(n)}
+                              style={{
+                                padding: '10px 16px',
+                                borderBottom: '1px solid var(--border)',
+                                display: 'flex',
+                                gap: '10px',
+                                cursor: 'pointer',
+                                backgroundColor: n.is_read ? 'transparent' : 'rgba(59, 130, 246, 0.03)',
+                                transition: 'background 0.2s',
+                                textAlign: 'left'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = n.is_read ? 'transparent' : 'rgba(59, 130, 246, 0.03)'}
+                            >
+                              <span style={{ fontSize: '16px', flexShrink: 0 }}>{n.icon || '📢'}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: '12px', fontWeight: n.is_read ? 500 : 600, color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {n.title}
+                                </span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {n.message}
+                                </span>
+                              </div>
+                              {!n.is_read && (
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-blue)', alignSelf: 'center', flexShrink: 0 }} />
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Drawer Footer */}
+                      <Link 
+                        to="/notifications" 
+                        onClick={() => setNotifOpen(false)}
+                        style={{
+                          display: 'block',
+                          textAlign: 'center',
+                          padding: '10px',
+                          borderTop: '1px solid var(--border)',
+                          fontSize: '11px',
+                          color: 'var(--accent-blue)',
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                          backgroundColor: 'var(--bg-primary)'
+                        }}
+                      >
+                        View All Notifications
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
               
               {/* User Avatar Dropdown */}

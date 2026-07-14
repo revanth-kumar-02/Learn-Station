@@ -18,6 +18,8 @@ import PublicPortfolioPage from './pages/PublicPortfolioPage';
 import CertificatePage from './pages/CertificatePage';
 import PracticePage from './pages/PracticePage';
 import Loader from './components/common/Loader';
+import NotificationsPage from './pages/NotificationsPage';
+import SettingsPage from './pages/SettingsPage';
 import { AnimatePresence } from 'framer-motion';
 import AdminControlCenter from './pages/AdminControlCenter';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -161,6 +163,22 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
               </ProtectedRoute>
             }
           />
