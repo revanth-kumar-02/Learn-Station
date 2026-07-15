@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/db';
-import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
+import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions, updateWeeklyMissions } from '../utils/xpCalculator';
 
 // @desc    Get completed lessons and practice stats
 // @route   GET /api/practice
@@ -235,6 +235,13 @@ export const completePracticeActivity = async (req: Request, res: Response, next
         finalLevel = calculateLevel(finalTotalXp);
       }
 
+      // Update weekly missions and coins
+      const coinsEarned = Math.round(xpToAward / 2);
+      let weeklyMissionsObj = updateWeeklyMissions(profile.weekly_missions, 'xp', xpToAward);
+      if (activityType === 'challenge' || activityType === 'coding') {
+        weeklyMissionsObj = updateWeeklyMissions(weeklyMissionsObj, 'challenge', 1);
+      }
+
       // Save changes back to profile
       const { error: updateProfileError } = await supabase
         .from('profiles')
@@ -243,6 +250,8 @@ export const completePracticeActivity = async (req: Request, res: Response, next
           level: finalLevel,
           daily_xp_earned: dailyXpEarned,
           daily_missions: dailyMissionsObj,
+          weekly_missions: weeklyMissionsObj,
+          learn_coins: (profile.learn_coins || 0) + coinsEarned,
           achievements: updatedAchievements,
           last_active_date: new Date().toISOString(),
         })
@@ -485,12 +494,18 @@ export const validatePracticeSolution = async (req: Request, res: Response, next
         finalLevel = calculateLevel(finalTotalXp);
       }
 
+      const coinsEarned = Math.round(xpToAward / 2);
+      let weeklyMissionsObj = updateWeeklyMissions(profile.weekly_missions, 'xp', xpToAward);
+      weeklyMissionsObj = updateWeeklyMissions(weeklyMissionsObj, 'challenge', 1);
+
       await supabase
         .from('profiles')
         .update({
           xp: finalTotalXp,
           level: finalLevel,
-          achievements: updatedAchievements
+          achievements: updatedAchievements,
+          weekly_missions: weeklyMissionsObj,
+          learn_coins: (profile.learn_coins || 0) + coinsEarned
         })
         .eq('id', userId);
     }

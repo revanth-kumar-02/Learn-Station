@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/db';
-import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
+import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions, updateWeeklyMissions } from '../utils/xpCalculator';
 import { createNotification } from '../utils/notifications';
 
 interface Lesson {
@@ -746,6 +746,12 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
 
     console.log(`[Progression Engine Debug] Completing lesson "${lesson.title}". Base XP: +${lesson.xp_reward}, Quiz Bonus: +${bonusXp}, Missions Bonus: +${dailyMissionBonusXp}, Achievement Bonus: +${achievementBonusXp}. Total XP: ${finalTotalXp}. Streak: ${streak}.`);
 
+    // Update weekly missions and learn coins
+    const coinsEarned = Math.round(earnedXp / 2);
+    const achievementCoins = Math.round(achievementBonusXp / 2);
+    const totalCoinsEarned = coinsEarned + achievementCoins;
+    const weeklyMissionsObj = updateWeeklyMissions(profile.weekly_missions, 'xp', earnedXp + dailyMissionBonusXp + achievementBonusXp);
+
     // Update profiles table in DB
     const { error: updateProfileError } = await supabase
       .from('profiles')
@@ -758,6 +764,8 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
         daily_xp_earned: dailyXpEarned,
         achievements: updatedAchievements,
         daily_missions: dailyMissionsObj,
+        weekly_missions: weeklyMissionsObj,
+        learn_coins: (profile.learn_coins || 0) + totalCoinsEarned
       })
       .eq('id', userId);
 

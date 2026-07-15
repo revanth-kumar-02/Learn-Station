@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { path: '/', label: 'Home', icon: 'home' },
   { path: '/tracks', label: 'Tracks', icon: 'tracks' },
   { path: '/practice', label: 'Practice Hub', icon: 'practice' },
+  { path: '/rewards', label: 'Rewards & Shop', icon: 'rewards' },
   { path: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
   { path: '/analytics', label: 'Analytics', icon: 'analytics' },
   { path: '/profile', label: 'Profile', icon: 'profile' },
@@ -58,6 +59,13 @@ const Icons = {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10" />
       <polyline points="22 12 18 8 13 13 8 10 2 14" />
+    </svg>
+  ),
+  rewards: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
     </svg>
   ),
   admin: (

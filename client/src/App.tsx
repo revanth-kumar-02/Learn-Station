@@ -24,6 +24,7 @@ import { AnimatePresence } from 'framer-motion';
 import AdminControlCenter from './pages/AdminControlCenter';
 import AdminLoginPage from './pages/AdminLoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import RewardsPage from './pages/RewardsPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -211,6 +212,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <AnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rewards"
+            element={
+              <ProtectedRoute>
+                <RewardsPage />
               </ProtectedRoute>
             }
           />

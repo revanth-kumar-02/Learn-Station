@@ -703,3 +703,38 @@ export const updateDailyMissions = (missionsObj: DailyMissions | null, type: str
     missions: newMissions
   };
 };
+
+export const updateWeeklyMissions = (weeklyObj: any, type: string, value: number): any => {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(today.setDate(diff));
+  const weekStartStr = monday.toISOString().split('T')[0];
+
+  if (!weeklyObj || weeklyObj.week_start !== weekStartStr) {
+    weeklyObj = {
+      week_start: weekStartStr,
+      missions: [
+        { id: 'module', text: 'Complete 1 Module', target: 1, current: 0, xp_reward: 100, coins_reward: 50, completed: false },
+        { id: 'xp', text: 'Earn 700 XP', target: 700, current: 0, xp_reward: 150, coins_reward: 75, completed: false },
+        { id: 'challenge', text: 'Finish 15 Coding Exercises', target: 15, current: 0, xp_reward: 100, coins_reward: 50, completed: false },
+        { id: 'assessment', text: 'Complete 1 Assessment', target: 1, current: 0, xp_reward: 100, coins_reward: 50, completed: false }
+      ]
+    };
+  }
+
+  const newMissions = weeklyObj.missions.map((m: any) => {
+    if (m.id === type && !m.completed) {
+      m.current = Math.min(m.current + value, m.target);
+      if (m.current >= m.target) {
+        m.completed = true;
+      }
+    }
+    return m;
+  });
+
+  return {
+    ...weeklyObj,
+    missions: newMissions
+  };
+};

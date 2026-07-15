@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../config/db';
-import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions } from '../utils/xpCalculator';
+import { calculateLevel, checkAchievements, generateDailyMissions, updateDailyMissions, updateWeeklyMissions } from '../utils/xpCalculator';
 import { createNotification } from '../utils/notifications';
 
 // @desc    Get all progress for current user
@@ -592,11 +592,43 @@ export const submitAssessment = async (req: Request, res: Response, next: NextFu
 
     if (insertErr) throw insertErr;
 
+    let xpEarned = 0;
+    let coinsEarned = 0;
+
     if (passed) {
+      xpEarned = type === 'module' ? 100 : 200;
+      coinsEarned = type === 'module' ? 50 : 100;
+
+      // Fetch user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        let weeklyMissionsObj = updateWeeklyMissions(profile.weekly_missions, 'assessment', 1);
+        weeklyMissionsObj = updateWeeklyMissions(weeklyMissionsObj, 'xp', xpEarned);
+
+        const finalXp = (profile.xp || 0) + xpEarned;
+        const finalLevel = calculateLevel(finalXp);
+        const finalCoins = (profile.learn_coins || 0) + coinsEarned;
+
+        await supabase
+          .from('profiles')
+          .update({
+            xp: finalXp,
+            level: finalLevel,
+            learn_coins: finalCoins,
+            weekly_missions: weeklyMissionsObj
+          })
+          .eq('id', userId);
+      }
+
       await createNotification(
         userId,
         `Assessment Passed! 🎓`,
-        `Congratulations! You passed the ${type === 'module' ? 'Module' : 'Track'} Assessment with a score of ${score}%!`,
+        `Congratulations! You passed the ${type === 'module' ? 'Module' : 'Track'} Assessment with a score of ${score}%! (+${xpEarned} XP, +${coinsEarned} LearnCoins)`,
         'Achievement',
         '🏆',
         type === 'module' ? `/track/${trackId}` : '/profile'
