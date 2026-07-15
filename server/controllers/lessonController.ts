@@ -84,7 +84,21 @@ const checkIsLessonUnlocked = async (userId: string, lesson: Lesson): Promise<bo
       ? prevModuleLessons.every(l => completedSet.has(l.id))
       : true; // if no lessons, treat as completed
       
-    if (allCompleted) {
+    let assessmentPassed = true;
+    if (allCompleted && (prevModuleLessons || []).length > 0) {
+      const { data: attempts } = await supabase
+        .from('assessments')
+        .select('passed')
+        .eq('user_id', userId)
+        .eq('track_id', lesson.track_id)
+        .eq('module_id', prevModule.id)
+        .eq('type', 'module')
+        .eq('passed', true);
+      
+      assessmentPassed = (attempts || []).length > 0;
+    }
+      
+    if (allCompleted && assessmentPassed) {
       unlockedModules.add(sortedModules[i].id);
     }
   }

@@ -59,4 +59,28 @@ export const progressService = {
     const { data } = await api.get<any>(`/progress/certificate/${certId}`);
     return data;
   },
+
+  submitAssessment: async (payload: {
+    trackId: string;
+    moduleId?: string;
+    type: 'module' | 'track';
+    answers: { challengeId: string; answer: string }[];
+  }): Promise<any> => {
+    const { data } = await api.post<any>('/progress/assessment/submit', payload);
+    return data;
+  },
+
+  getAssessmentStatus: async (trackId: string, type: 'module' | 'track', moduleId?: string): Promise<any> => {
+    const { data } = await api.get<any>('/progress/assessment/status', {
+      params: { trackId, type, moduleId },
+    });
+    return data;
+  },
+
+  getAssessmentQuestions: async (trackId: string, type: 'module' | 'track', moduleId?: string): Promise<any> => {
+    const { data } = await api.get<any>('/progress/assessment/questions', {
+      params: { trackId, type, moduleId },
+    });
+    return data;
+  },
 };

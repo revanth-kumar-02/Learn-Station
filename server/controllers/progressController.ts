@@ -181,6 +181,20 @@ export const submitCapstoneProject = async (req: Request, res: Response, next: N
       return res.status(400).json({ message: 'Track ID and Repository URL are required.' });
     }
 
+    // 0. Enforce Track Assessment is passed
+    const { data: trackAssessment } = await supabase
+      .from('assessments')
+      .select('passed')
+      .eq('user_id', userId)
+      .eq('track_id', trackId)
+      .eq('type', 'track')
+      .eq('passed', true)
+      .maybeSingle();
+
+    if (!trackAssessment) {
+      return res.status(403).json({ message: 'You must pass the Final Track Assessment with an 80% score or higher before submitting your capstone project.' });
+    }
+
     // 1. Fetch user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -454,6 +468,259 @@ export const getCertificate = async (req: Request, res: Response, next: NextFunc
     }
 
     res.json({ certificate: cert });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Submit a module or track assessment
+// @route   POST /api/progress/assessment/submit
+export const submitAssessment = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { trackId, moduleId, type, answers } = req.body;
+
+    if (!trackId || !type) {
+      return res.status(400).json({ message: 'Track ID and Assessment Type are required.' });
+    }
+
+    if (type === 'module' && !moduleId) {
+      return res.status(400).json({ message: 'Module ID is required for module assessments.' });
+    }
+
+    let challengesToGrade: any[] = [];
+
+    if (type === 'module') {
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('module_id', moduleId);
+
+      const lessonIds = (lessons || []).map(l => l.id);
+      if (lessonIds.length === 0) {
+        return res.status(404).json({ message: 'No lessons found for this module.' });
+      }
+
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('*')
+        .in('lesson_id', lessonIds);
+
+      challengesToGrade = challenges || [];
+    } else {
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('track_id', trackId);
+
+      const lessonIds = (lessons || []).map(l => l.id);
+      if (lessonIds.length === 0) {
+        return res.status(404).json({ message: 'No lessons found for this track.' });
+      }
+
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('*')
+        .in('lesson_id', lessonIds);
+
+      challengesToGrade = challenges || [];
+    }
+
+    if (challengesToGrade.length === 0) {
+      return res.status(404).json({ message: 'No assessment questions compiled.' });
+    }
+
+    let correctCount = 0;
+    const gradedAnswers = answers || [];
+    const incorrectQuestions: any[] = [];
+
+    challengesToGrade.forEach(challenge => {
+      const userAnswerObj = gradedAnswers.find((a: any) => a.challengeId === challenge.id);
+      const userAnswerVal = userAnswerObj ? userAnswerObj.answer : '';
+
+      let isCorrect = false;
+      if (challenge.type === 'multiple-choice') {
+        const parsedOption = parseInt(userAnswerVal, 10);
+        isCorrect = parsedOption === challenge.correct_index;
+      } else if (challenge.type === 'fill-blank' || challenge.type === 'output-prediction' || challenge.type === 'debugging') {
+        isCorrect = userAnswerVal.trim().toLowerCase() === (challenge.answer || '').trim().toLowerCase();
+      } else if (challenge.type === 'match-following') {
+        try {
+          const userPairs = typeof userAnswerVal === 'string' ? JSON.parse(userAnswerVal) : userAnswerVal;
+          const correctPairs = challenge.pairs || {};
+          let pairsMatch = true;
+          for (const [key, val] of Object.entries(correctPairs)) {
+            if (userPairs[key] !== val) {
+              pairsMatch = false;
+              break;
+            }
+          }
+          isCorrect = pairsMatch;
+        } catch {
+          isCorrect = false;
+        }
+      }
+
+      if (isCorrect) {
+        correctCount++;
+      } else {
+        incorrectQuestions.push({
+          id: challenge.id,
+          question: challenge.question,
+          type: challenge.type,
+          correctAnswer: challenge.type === 'multiple-choice' ? challenge.options[challenge.correct_index] : challenge.answer,
+          explanation: challenge.explanation
+        });
+      }
+    });
+
+    const score = Math.round((correctCount / challengesToGrade.length) * 100);
+    const passed = score >= 80;
+
+    const { data: assessment, error: insertErr } = await supabase
+      .from('assessments')
+      .insert({
+        user_id: userId,
+        track_id: trackId,
+        module_id: type === 'module' ? moduleId : null,
+        type,
+        score,
+        passed
+      })
+      .select()
+      .single();
+
+    if (insertErr) throw insertErr;
+
+    if (passed) {
+      await createNotification(
+        userId,
+        `Assessment Passed! 🎓`,
+        `Congratulations! You passed the ${type === 'module' ? 'Module' : 'Track'} Assessment with a score of ${score}%!`,
+        'Achievement',
+        '🏆',
+        type === 'module' ? `/track/${trackId}` : '/profile'
+      );
+    }
+
+    res.json({
+      success: true,
+      score,
+      passed,
+      incorrectQuestions,
+      assessment
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get assessment status for a module or track
+// @route   GET /api/progress/assessment/status
+export const getAssessmentStatus = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { trackId, moduleId, type } = req.query;
+
+    if (!trackId || !type) {
+      return res.status(400).json({ message: 'Track ID and Assessment Type are required.' });
+    }
+
+    let query = supabase
+      .from('assessments')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('track_id', trackId)
+      .eq('type', type);
+
+    if (type === 'module') {
+      if (moduleId) {
+        query = query.eq('module_id', moduleId);
+      } else {
+        query = query.not('module_id', 'is', null);
+      }
+    } else {
+      query = query.is('module_id', null);
+    }
+
+    const { data: attempts, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const hasPassed = (attempts || []).some(a => a.passed);
+    const bestAttempt = (attempts || []).reduce((best, curr) => curr.score > best ? curr.score : best, 0);
+
+    res.json({
+      hasPassed,
+      bestAttempt,
+      attempts: attempts || []
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get questions for a module or track assessment (scrubbed of answers)
+// @route   GET /api/progress/assessment/questions
+export const getAssessmentQuestions = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { trackId, moduleId, type } = req.query;
+
+    if (!trackId || !type) {
+      return res.status(400).json({ message: 'Track ID and Assessment Type are required.' });
+    }
+
+    if (type === 'module' && !moduleId) {
+      return res.status(400).json({ message: 'Module ID is required for module assessments.' });
+    }
+
+    let challengesList: any[] = [];
+
+    if (type === 'module') {
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('module_id', moduleId);
+
+      const lessonIds = (lessons || []).map(l => l.id);
+      if (lessonIds.length === 0) {
+        return res.status(404).json({ message: 'No lessons found for this module.' });
+      }
+
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('id, type, question, options, template, starter_code, pairs')
+        .in('lesson_id', lessonIds);
+
+      challengesList = challenges || [];
+    } else {
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('track_id', trackId);
+
+      const lessonIds = (lessons || []).map(l => l.id);
+      if (lessonIds.length === 0) {
+        return res.status(404).json({ message: 'No lessons found for this track.' });
+      }
+
+      const { data: challenges } = await supabase
+        .from('challenges')
+        .select('id, type, question, options, template, starter_code, pairs')
+        .in('lesson_id', lessonIds);
+
+      challengesList = challenges || [];
+    }
+
+    if (challengesList.length === 0) {
+      return res.status(404).json({ message: 'No assessment questions found.' });
+    }
+
+    const shuffled = [...challengesList].sort(() => 0.5 - Math.random());
+    const limit = type === 'module' ? 10 : 20;
+    const questions = shuffled.slice(0, limit);
+
+    res.json({ questions });
   } catch (error) {
     next(error);
   }

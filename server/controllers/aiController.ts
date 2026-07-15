@@ -1576,14 +1576,46 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
       "concept_title": "Concept Section Title",
       "concept_content": "Detailed educational text covering concepts and explanations. 2-3 paragraphs.",
       "concept_highlights": ["keyword1", "keyword2"],
-      "example_language": "bash, python, javascript, html, css, dockerfile, or java",
-      "example_code": "Code example snippet",
-      "example_explanation": "Line-by-line explanation of the code snippet",
+      "learning_objective": "A numbered list of learning outcomes for this lesson",
+      "why_matters": "Real-world context on why this specific topic matters and what bottleneck it solves.",
+      "real_world_scenario": "🏢 Real-world industry application example (e.g. Amazon order JOINs, WhatsApp encryption, Netflix recommendations). Be specific and detailed.",
+      "visual_explanation": {
+        "type": "comparison",
+        "title": "Title of the visual explanation",
+        "headers": ["Option/Concept A", "Option/Concept B"],
+        "rows": [["Row 1 Col 1", "Row 1 Col 2"]],
+        "cards": [{"title": "Card Title", "description": "Card Description"}],
+        "nodes": [{"id": "1", "label": "Node Label", "connections": ["2"]}]
+      },
+      "code_walkthrough": {
+        "code": "Complete, working code example snippet demonstrating the concept",
+        "explanation": "Detailed explanation of what this code snippet does",
+        "annotations": [
+          {
+            "line": 3,
+            "text": "Detailed explanation of what this specific line does in the execution flow."
+          }
+        ]
+      },
+      "example_language": "bash, python, javascript, html, css, or java",
+      "example_code": "Duplicate of code_walkthrough.code for legacy compatibility",
+      "example_explanation": "Duplicate of code_walkthrough.explanation for legacy compatibility",
       "practice_type": "fill-blank",
-      "practice_instruction": "Task prompt for fill-in-the-blank practice",
+      "practice_instruction": "Task prompt for the interactive playground coding practice",
       "practice_template": "Code line with ___ blank, e.g. SELECT ___ FROM table",
       "practice_answer": "Value of the blank",
       "summary": "1-2 sentence lesson wrap-up summary",
+      "key_takeaways": {
+        "bullet_points": ["takeaway 1", "takeaway 2"],
+        "common_mistakes": ["mistake 1", "mistake 2"],
+        "quick_revision": "A quick summary statement for revision."
+      },
+      "flashcards": [
+        {
+          "front": "Question or term on front of card",
+          "back": "Answer or explanation on back of card"
+        }
+      ],
       "challenges": [
         {
           "type": "multiple-choice",
@@ -1593,32 +1625,35 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
           "explanation": "Why this answer is correct"
         },
         {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Concept Understanding Level: how or why a concept works)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
-        },
-        {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Real-World Application Level: realistic industry scenario or practical usage)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
-        },
-        {
           "type": "fill-blank",
-          "question": "Quiz question text (Problem Solving Level: code analysis, completing a statement, or debugging)",
-          "template": "Code template with ___",
-          "answer": "Answer value",
+          "question": "Quiz question text",
+          "template": "Code line with ___",
+          "answer": "correct_value",
           "explanation": "Why this answer is correct"
         },
         {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Advanced Understanding Level: performance tradeoffs, edge cases, or design constraints)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
+          "type": "output-prediction",
+          "question": "Predict the output of the following code snippet",
+          "starter_code": "def func():\n  print('Hello')\nfunc()",
+          "expected_output": "Hello",
+          "explanation": "Why this is the expected stdout"
+        },
+        {
+          "type": "match-following",
+          "question": "Match the term with its corresponding role/definition",
+          "pairs": {
+            "key1": "value1",
+            "key2": "value2"
+          },
+          "explanation": "Why these pairings are correct"
+        },
+        {
+          "type": "debugging",
+          "question": "Fix the syntax or logical bug in the following code block to produce the correct behavior",
+          "starter_code": "def buggy():\n  return x",
+          "template": "def buggy(x):\n  return x",
+          "answer": "def buggy(x):\n  return x",
+          "explanation": "Adding parameters fixes the undefined variable reference"
         }
       ]
     }
@@ -1740,14 +1775,46 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
       "concept_title": "Concept Section Title",
       "concept_content": "Detailed educational text covering concepts and explanations. 2-3 paragraphs.",
       "concept_highlights": ["keyword1", "keyword2"],
-      "example_language": "bash, python, javascript, html, css, dockerfile, or java",
-      "example_code": "Code example snippet",
-      "example_explanation": "Line-by-line explanation of the code snippet",
+      "learning_objective": "A numbered list of learning outcomes for this lesson",
+      "why_matters": "Real-world context on why this specific topic matters and what bottleneck it solves.",
+      "real_world_scenario": "🏢 Real-world industry application example (e.g. Amazon order JOINs, WhatsApp encryption, Netflix recommendations). Be specific and detailed.",
+      "visual_explanation": {
+        "type": "comparison",
+        "title": "Title of the visual explanation",
+        "headers": ["Option/Concept A", "Option/Concept B"],
+        "rows": [["Row 1 Col 1", "Row 1 Col 2"]],
+        "cards": [{"title": "Card Title", "description": "Card Description"}],
+        "nodes": [{"id": "1", "label": "Node Label", "connections": ["2"]}]
+      },
+      "code_walkthrough": {
+        "code": "Complete, working code example snippet demonstrating the concept",
+        "explanation": "Detailed explanation of what this code snippet does",
+        "annotations": [
+          {
+            "line": 3,
+            "text": "Detailed explanation of what this specific line does in the execution flow."
+          }
+        ]
+      },
+      "example_language": "bash, python, javascript, html, css, or java",
+      "example_code": "Duplicate of code_walkthrough.code for legacy compatibility",
+      "example_explanation": "Duplicate of code_walkthrough.explanation for legacy compatibility",
       "practice_type": "fill-blank",
-      "practice_instruction": "Task prompt for fill-in-the-blank practice",
+      "practice_instruction": "Task prompt for the interactive playground coding practice",
       "practice_template": "Code line with ___ blank, e.g. SELECT ___ FROM table",
       "practice_answer": "Value of the blank",
       "summary": "1-2 sentence lesson wrap-up summary",
+      "key_takeaways": {
+        "bullet_points": ["takeaway 1", "takeaway 2"],
+        "common_mistakes": ["mistake 1", "mistake 2"],
+        "quick_revision": "A quick summary statement for revision."
+      },
+      "flashcards": [
+        {
+          "front": "Question or term on front of card",
+          "back": "Answer or explanation on back of card"
+        }
+      ],
       "challenges": [
         {
           "type": "multiple-choice",
@@ -1757,32 +1824,35 @@ You must strictly output a single JSON object. The JSON object must contain EXAC
           "explanation": "Why this answer is correct"
         },
         {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Concept Understanding Level: how or why a concept works)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
-        },
-        {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Real-World Application Level: realistic industry scenario or practical usage)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
-        },
-        {
           "type": "fill-blank",
-          "question": "Quiz question text (Problem Solving Level: code analysis, completing a statement, or debugging)",
-          "template": "Code template with ___",
-          "answer": "Answer value",
+          "question": "Quiz question text",
+          "template": "Code line with ___",
+          "answer": "correct_value",
           "explanation": "Why this answer is correct"
         },
         {
-          "type": "multiple-choice",
-          "question": "Quiz question text (Advanced Understanding Level: performance tradeoffs, edge cases, or design constraints)",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correct_index": 0,
-          "explanation": "Why this answer is correct"
+          "type": "output-prediction",
+          "question": "Predict the output of the following code snippet",
+          "starter_code": "def func():\n  print('Hello')\nfunc()",
+          "expected_output": "Hello",
+          "explanation": "Why this is the expected stdout"
+        },
+        {
+          "type": "match-following",
+          "question": "Match the term with its corresponding role/definition",
+          "pairs": {
+            "key1": "value1",
+            "key2": "value2"
+          },
+          "explanation": "Why these pairings are correct"
+        },
+        {
+          "type": "debugging",
+          "question": "Fix the syntax or logical bug in the following code block to produce the correct behavior",
+          "starter_code": "def buggy():\n  return x",
+          "template": "def buggy(x):\n  return x",
+          "answer": "def buggy(x):\n  return x",
+          "explanation": "Adding parameters fixes the undefined variable reference"
         }
       ]
     }
@@ -1904,6 +1974,13 @@ Enforce:
           practice_template: lessonData.practice_template || '',
           practice_answer: lessonData.practice_answer || '',
           summary: lessonData.summary || '',
+          why_matters: lessonData.why_matters || '',
+          real_world_scenario: lessonData.real_world_scenario || '',
+          learning_objective: lessonData.learning_objective || '',
+          visual_explanation: lessonData.visual_explanation || null,
+          code_walkthrough: lessonData.code_walkthrough || null,
+          key_takeaways: lessonData.key_takeaways || null,
+          flashcards: lessonData.flashcards || null,
         })
         .select()
         .single();
@@ -1925,6 +2002,11 @@ Enforce:
               answer: challengeData.answer,
               explanation: challengeData.explanation || '',
               xp_reward: 10,
+              starter_code: challengeData.starter_code || null,
+              expected_output: challengeData.expected_output || null,
+              pairs: challengeData.pairs || null,
+              hint: challengeData.hint || null,
+              language: challengeData.language || null,
             });
 
           if (challengeError) throw challengeError;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { trackService } from '../services/trackService';
@@ -26,6 +26,30 @@ export default function TrackDetailPage() {
   const [capstoneResult, setCapstoneResult] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
 
+  // Assessment states
+  const [passedAssessments, setPassedAssessments] = useState<string[]>([]);
+  const [trackAssessmentStatus, setTrackAssessmentStatus] = useState<{ hasPassed: boolean; bestAttempt: number } | null>(null);
+  const [assessmentModal, setAssessmentModal] = useState<{
+    open: boolean;
+    type: 'module' | 'track';
+    moduleId?: string;
+    moduleName?: string;
+  } | null>(null);
+
+  const [assessmentQuestions, setAssessmentQuestions] = useState<any[]>([]);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, string>>({});
+  const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
+  const [assessmentUserText, setAssessmentUserText] = useState('');
+  const [assessmentMatches, setAssessmentMatches] = useState<Record<string, string>>({});
+  const [assessmentSelectedMatchKey, setAssessmentSelectedMatchKey] = useState<string | null>(null);
+  const [submittingAssessment, setSubmittingAssessment] = useState(false);
+  const [assessmentResult, setAssessmentResult] = useState<{
+    score: number;
+    passed: boolean;
+    incorrectQuestions: any[];
+  } | null>(null);
+
   const showToast = (message) => {
     setToast(message);
   };
@@ -44,6 +68,22 @@ export default function TrackDetailPage() {
         const data = await trackService.getBySlug(slug);
         setTrack(data.track);
         setProgress(data.progress);
+        
+        if (data.track) {
+          try {
+            const modStatus = await progressService.getAssessmentStatus(data.track.id || data.track._id, 'module');
+            if (modStatus && modStatus.attempts) {
+              const passed = modStatus.attempts.filter((a: any) => a.passed).map((a: any) => a.module_id);
+              setPassedAssessments(passed);
+            }
+            const trStatus = await progressService.getAssessmentStatus(data.track.id || data.track._id, 'track');
+            if (trStatus) {
+              setTrackAssessmentStatus({ hasPassed: trStatus.hasPassed, bestAttempt: trStatus.bestAttempt });
+            }
+          } catch (err) {
+            console.error('Failed to load assessment status:', err);
+          }
+        }
         
         // Default open the active module from progress, or first module
         const activeModId = data.progress?.currentModule || (data.track?.modules?.length ? data.track.modules[0].id : null);
@@ -92,13 +132,13 @@ export default function TrackDetailPage() {
   // Calculate unlocked state for each module
   const moduleUnlocked = {};
   if (track.modules && track.modules.length > 0) {
-    // Module 0 is always unlocked
     moduleUnlocked[track.modules[0].id] = true;
     
     for (let i = 1; i < track.modules.length; i++) {
       const prevMod = track.modules[i - 1];
       const prevModuleLessonsCompleted = prevMod.lessons && prevMod.lessons.length > 0 && prevMod.lessons.every(l => completedSet.has(l.id.toString()));
-      moduleUnlocked[track.modules[i].id] = prevModuleLessonsCompleted;
+      const prevModuleAssessmentPassed = passedAssessments.includes(prevMod.id.toString());
+      moduleUnlocked[track.modules[i].id] = prevModuleLessonsCompleted && prevModuleAssessmentPassed;
     }
   }
 
@@ -115,6 +155,112 @@ export default function TrackDetailPage() {
       if (currentLessonId) break;
     }
   }
+
+  // Start assessment helper
+  const handleStartAssessment = async (type: 'module' | 'track', moduleId?: string, moduleName?: string) => {
+    try {
+      setLoading(true);
+      const res = await progressService.getAssessmentQuestions(track.id || track._id, type, moduleId);
+      if (res && res.questions) {
+        setAssessmentQuestions(res.questions);
+        setCurrentQuestionIdx(0);
+        setAssessmentAnswers({});
+        setSelectedOpt(null);
+        setAssessmentUserText('');
+        setAssessmentMatches({});
+        setAssessmentSelectedMatchKey(null);
+        setAssessmentResult(null);
+        setAssessmentModal({
+          open: true,
+          type,
+          moduleId,
+          moduleName
+        });
+      } else {
+        showToast('No questions returned for this assessment.');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to load assessment questions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMatchClickModal = (side: 'left' | 'right', value: string) => {
+    if (side === 'left') {
+      setAssessmentSelectedMatchKey(value);
+    } else {
+      if (assessmentSelectedMatchKey) {
+        setAssessmentMatches(prev => ({
+          ...prev,
+          [assessmentSelectedMatchKey]: value
+        }));
+        setAssessmentSelectedMatchKey(null);
+      }
+    }
+  };
+
+  const handleNextAssessmentQuestion = async () => {
+    const q = assessmentQuestions[currentQuestionIdx];
+    if (!q) return;
+
+    let val = '';
+    if (q.type === 'multiple-choice') {
+      val = selectedOpt !== null ? selectedOpt.toString() : '';
+    } else if (q.type === 'fill-blank' || q.type === 'output-prediction' || q.type === 'debugging') {
+      val = assessmentUserText;
+    } else if (q.type === 'match-following') {
+      val = JSON.stringify(assessmentMatches);
+    }
+
+    const updatedAnswers = {
+      ...assessmentAnswers,
+      [q.id]: val
+    };
+    setAssessmentAnswers(updatedAnswers);
+
+    setSelectedOpt(null);
+    setAssessmentUserText('');
+    setAssessmentMatches({});
+    setAssessmentSelectedMatchKey(null);
+
+    if (currentQuestionIdx < assessmentQuestions.length - 1) {
+      setCurrentQuestionIdx(prev => prev + 1);
+    } else {
+      setSubmittingAssessment(true);
+      try {
+        const finalAnswers = Object.entries(updatedAnswers).map(([challengeId, answer]) => ({ challengeId, answer: answer as string }));
+        const res = await progressService.submitAssessment({
+          trackId: track.id || track._id,
+          moduleId: assessmentModal?.moduleId,
+          type: assessmentModal!.type,
+          answers: finalAnswers
+        });
+
+        if (res) {
+          setAssessmentResult({
+            score: res.score,
+            passed: res.passed,
+            incorrectQuestions: res.incorrectQuestions || []
+          });
+
+          if (res.passed) {
+            if (assessmentModal?.type === 'module') {
+              setPassedAssessments(prev => [...prev, assessmentModal.moduleId!]);
+            } else {
+              setTrackAssessmentStatus({ hasPassed: true, bestAttempt: res.score });
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error(err);
+        showToast(err.response?.data?.message || 'Failed to submit assessment.');
+      } finally {
+        setSubmittingAssessment(false);
+      }
+    }
+  };
 
   const handleModuleHeaderClick = (modId, isUnlocked) => {
     if (!isUnlocked) {
@@ -278,6 +424,36 @@ export default function TrackDetailPage() {
                           );
                         })}
                       </div>
+                      
+                      {mod.lessons && mod.lessons.length > 0 && mod.lessons.every(l => completedSet.has(l.id.toString())) && (
+                        <div style={{ padding: 'var(--space-4)', margin: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', marginTop: '16px' }}>
+                          {passedAssessments.includes(mod.id.toString()) ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-green)', fontSize: '13px', fontWeight: 600 }}>
+                              <span>🏆</span>
+                              <span>Module Assessment Passed! Next module unlocked.</span>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                              <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: 600, margin: 0 }}>Module Quiz Assessment Required</h4>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                                  Test your understanding with 10 questions. Passing score: 80% (8/10).
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleStartAssessment('module', mod.id, mod.name)}
+                                className="btn btn--primary btn--sm"
+                                style={{
+                                  background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                                  color: 'white'
+                                }}
+                              >
+                                Take Module Assessment
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </motion.div>
@@ -386,16 +562,35 @@ export default function TrackDetailPage() {
                 </motion.div>
               ) : (
                 <>
-                  {!showCapstone ? (
-                    <button
-                      type="button"
-                      className="btn btn--primary btn--md capstone-section__cta"
-                      onClick={() => setShowCapstone(true)}
-                      id="capstone-submit-btn"
-                    >
-                      🚀 Submit Capstone Project
-                    </button>
+                  {!trackAssessmentStatus?.hasPassed ? (
+                    <div style={{ padding: 'var(--space-5)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', textAlign: 'center', marginTop: '16px' }}>
+                      <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Final Track Assessment Required</h3>
+                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '6px 0 16px' }}>
+                        To unlock Capstone Project submission and earn your certificate, you must pass the final track-level comprehensive assessment with an 80% score or higher (16/20 questions).
+                      </p>
+                      <button
+                        onClick={() => handleStartAssessment('track')}
+                        className="btn btn--primary btn--md"
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                          color: 'white'
+                        }}
+                      >
+                        Take Final Track Assessment
+                      </button>
+                    </div>
                   ) : (
+                    <>
+                      {!showCapstone ? (
+                        <button
+                          type="button"
+                          className="btn btn--primary btn--md capstone-section__cta"
+                          onClick={() => setShowCapstone(true)}
+                          id="capstone-submit-btn"
+                        >
+                          🚀 Submit Capstone Project
+                        </button>
+                      ) : (
                     <motion.div
                       className="capstone-form"
                       initial={{ opacity: 0, height: 0 }}
@@ -461,6 +656,8 @@ export default function TrackDetailPage() {
                   )}
                 </>
               )}
+            </>
+          )}
             </motion.section>
           )}
         </div>
@@ -599,6 +796,231 @@ export default function TrackDetailPage() {
                   </div>
                 </div>
               </div>
+
+            </div>
+          </div>
+        )}
+
+        {assessmentModal?.open && (
+          <div className="cert-modal-backdrop" style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(9, 11, 18, 0.85)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflowY: 'auto'
+          }}>
+            <div className="cert-modal-content" style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '600px',
+              padding: '30px',
+              position: 'relative',
+              boxShadow: 'var(--shadow-xl)',
+              color: 'var(--text-primary)',
+              animation: 'scaleIn 0.3s var(--ease-spring)'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              <button 
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setAssessmentModal(null)}
+              >
+                ✕
+              </button>
+
+              <h3 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '18px', fontWeight: 700 }}>
+                {assessmentModal.type === 'module' ? `Module Assessment: ${assessmentModal.moduleName}` : 'Final Track Assessment'}
+              </h3>
+
+              {assessmentResult ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>
+                    {assessmentResult.passed ? '🏆' : '⚠️'}
+                  </span>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700 }}>
+                    {assessmentResult.passed ? 'Assessment Passed!' : 'Assessment Failed'}
+                  </h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                    You scored <strong>{assessmentResult.score}%</strong>. Minimum score to pass: 80%.
+                  </p>
+
+                  {!assessmentResult.passed && (
+                    <div style={{ marginTop: '16px', border: '1px solid var(--border)', padding: '12px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-secondary)', textAlign: 'left' }}>
+                      <strong style={{ fontSize: '12px', color: 'var(--accent-rose)', display: 'block', marginBottom: '6px' }}>Recommended Revision Topics:</strong>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
+                        Review the lessons in this module to solidify your understanding of syntax and application rules, then try again.
+                      </p>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                    {!assessmentResult.passed && (
+                      <button 
+                        onClick={() => handleStartAssessment(assessmentModal.type, assessmentModal.moduleId, assessmentModal.moduleName)} 
+                        className="btn btn--primary btn--sm"
+                      >
+                        Retry Assessment
+                      </button>
+                    )}
+                    <button onClick={() => setAssessmentModal(null)} className="btn btn--secondary btn--sm">
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                assessmentQuestions[currentQuestionIdx] && (
+                  <div className="lesson-challenge">
+                    <span className="lesson-challenge__counter">
+                      Question {currentQuestionIdx + 1} of {assessmentQuestions.length}
+                    </span>
+                    <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>
+                      {assessmentQuestions[currentQuestionIdx].question}
+                    </h4>
+
+                    {/* MCQ */}
+                    {assessmentQuestions[currentQuestionIdx].type === 'multiple-choice' && (
+                      <div className="lesson-challenge__options" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {assessmentQuestions[currentQuestionIdx].options?.map((opt: string, i: number) => {
+                          const isSelected = selectedOpt === i;
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedOpt(i)}
+                              className={`challenge-option ${isSelected ? 'challenge-option--selected' : ''}`}
+                            >
+                              <span className="challenge-option__letter">{String.fromCharCode(65 + i)}</span>
+                              <span>{opt}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Fill Blanks */}
+                    {assessmentQuestions[currentQuestionIdx].type === 'fill-blank' && (
+                      <div className="lesson-challenge__template">
+                        {assessmentQuestions[currentQuestionIdx].template?.split('___').map((part: string, i: number, arr: any[]) => (
+                          <React.Fragment key={i}>
+                            {part}
+                            {i < arr.length - 1 && (
+                              <input
+                                type="text"
+                                className="challenge-fill-input"
+                                value={assessmentUserText}
+                                onChange={e => setAssessmentUserText(e.target.value)}
+                                style={{ width: '100px', display: 'inline-block' }}
+                              />
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Output Prediction */}
+                    {assessmentQuestions[currentQuestionIdx].type === 'output-prediction' && (
+                      <div>
+                        <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: '11px', fontFamily: 'var(--font-mono)', overflowX: 'auto' }}>
+                          {assessmentQuestions[currentQuestionIdx].starter_code}
+                        </pre>
+                        <div style={{ marginTop: '12px' }}>
+                          <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Predict expected console output or return value:</label>
+                          <input
+                            type="text"
+                            className="challenge-fill-input"
+                            placeholder="Type output..."
+                            value={assessmentUserText}
+                            onChange={e => setAssessmentUserText(e.target.value)}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Match Following */}
+                    {assessmentQuestions[currentQuestionIdx].type === 'match-following' && (
+                      <div>
+                        <div className="match-grid-layout">
+                          <div className="match-column">
+                            {Object.keys(assessmentQuestions[currentQuestionIdx].pairs || {}).map(k => {
+                              const isSelected = assessmentSelectedMatchKey === k;
+                              const isMatched = !!assessmentMatches[k];
+                              return (
+                                <div 
+                                  key={k} 
+                                  onClick={() => !isMatched && handleMatchClickModal('left', k)}
+                                  className={`match-card ${isSelected ? 'match-card--selected' : ''} ${isMatched ? 'match-card--disabled' : ''}`}
+                                >
+                                  {k} {isMatched && `➔ ${assessmentMatches[k]}`}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="match-column">
+                            {Object.values(assessmentQuestions[currentQuestionIdx].pairs || {}).sort(() => 0.5 - Math.random()).map((v: any) => {
+                              const isMatched = Object.values(assessmentMatches).includes(v);
+                              return (
+                                <div 
+                                  key={v} 
+                                  onClick={() => !isMatched && handleMatchClickModal('right', v)}
+                                  className={`match-card ${isMatched ? 'match-card--disabled' : ''}`}
+                                >
+                                  {v}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Debugging */}
+                    {assessmentQuestions[currentQuestionIdx].type === 'debugging' && (
+                      <div>
+                        <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderLeft: '3px solid var(--accent-rose)', borderRadius: 'var(--radius-md)', fontSize: '11px', fontFamily: 'var(--font-mono)', overflowX: 'auto' }}>
+                          {assessmentQuestions[currentQuestionIdx].starter_code}
+                        </pre>
+                        <div style={{ marginTop: '12px' }}>
+                          <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Provide the corrected code line or statement:</label>
+                          <input
+                            type="text"
+                            className="challenge-fill-input"
+                            placeholder="Type fixed line..."
+                            value={assessmentUserText}
+                            onChange={e => setAssessmentUserText(e.target.value)}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                      <button
+                        onClick={handleNextAssessmentQuestion}
+                        className="btn btn--primary btn--md"
+                        disabled={submittingAssessment}
+                      >
+                        {submittingAssessment ? 'Submitting...' : (currentQuestionIdx < assessmentQuestions.length - 1 ? 'Next Question →' : 'Submit Assessment')}
+                      </button>
+                    </div>
+
+                  </div>
+                )
+              )}
 
             </div>
           </div>

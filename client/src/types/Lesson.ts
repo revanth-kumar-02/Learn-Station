@@ -21,7 +21,7 @@ export interface Challenge {
   _id: string;
   id: string;
   lesson: string;
-  type: 'multiple-choice' | 'fill-blank';
+  type: 'multiple-choice' | 'fill-blank' | 'output-prediction' | 'match-following' | 'debugging';
   question: string;
   xpReward: number;
   options?: string[];
@@ -30,6 +30,10 @@ export interface Challenge {
   answer?: string;
   explanation: string;
   hint?: string;
+  starter_code?: string;
+  expected_output?: string;
+  pairs?: Record<string, string>;
+  language?: string;
 }
 
 export interface Lesson {
@@ -47,6 +51,23 @@ export interface Lesson {
   example?: Example;
   practice?: Practice;
   challenges?: Challenge[];
+  
+  // Phase 3 extensions
+  why_matters?: string;
+  real_world_scenario?: string;
+  learning_objective?: string | string[];
+  visual_explanation?: any;
+  code_walkthrough?: any;
+  key_takeaways?: any;
+  flashcards?: any[];
+  concept_highlights?: string[];
+  example_language?: string;
+  example_code?: string;
+  example_explanation?: string;
+  practice_type?: string;
+  practice_instruction?: string;
+  practice_template?: string;
+  practice_answer?: string;
 }
 
 export interface LessonResponse {
