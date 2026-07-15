@@ -83,4 +83,24 @@ export const progressService = {
     });
     return data;
   },
+
+  generatePracticeChallenge: async (trackId: string, difficulty: 'easy' | 'medium' | 'hard', type: string): Promise<any> => {
+    const { data } = await api.post<any>('/practice/generate', { trackId, difficulty, type });
+    return data;
+  },
+
+  validatePracticeSolution: async (payload: {
+    code: string;
+    language: string;
+    challenge: any;
+    timeSpent: number;
+  }): Promise<any> => {
+    const { data } = await api.post<any>('/practice/validate', payload);
+    return data;
+  },
+
+  getCodingAnalytics: async (): Promise<any> => {
+    const { data } = await api.get<any>('/practice/analytics');
+    return data;
+  },
 };

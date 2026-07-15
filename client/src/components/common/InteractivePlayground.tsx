@@ -1,4 +1,9 @@
-import { useState, useEffect, useRef, KeyboardEvent } from 'react';
+import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
+import Editor from '@monaco-editor/react';
+import { progressService } from '../../services/progressService';
+import { 
+  Play, CheckCircle, RefreshCw, ZoomIn, ZoomOut, Download, Copy, Maximize2, Minimize2 
+} from 'lucide-react';
 
 // --- MOCK SQL DATASET ---
 const MOCK_DB = {
@@ -1142,483 +1147,66 @@ const isFoldableLine = (lineText: string, lang: string) => {
   return false;
 };
 
-interface IDECodeEditorProps {
-  value: string;
-  onChange: (val: string) => void;
+export default function InteractivePlayground({ language, template, instruction, answer, onCorrect, slug }: {
   language: string;
-  placeholder?: string;
-}
-
-function IDECodeEditor({ value, onChange, language, placeholder }: IDECodeEditorProps) {
-  const preRef = useRef<HTMLPreElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const gutterRef = useRef<HTMLDivElement>(null);
-  const [activeLine, setActiveLine] = useState(1);
-  const [theme, setTheme] = useState(() => {
-    return document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light';
-  });
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const isDark = document.documentElement.classList.contains('dark-theme');
-      setTheme(isDark ? 'dark' : 'light');
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  const handleScroll = () => {
-    if (!textareaRef.current) return;
-    const { scrollTop, scrollLeft } = textareaRef.current;
-    if (preRef.current) {
-      preRef.current.scrollTop = scrollTop;
-      preRef.current.scrollLeft = scrollLeft;
-    }
-    if (gutterRef.current) {
-      gutterRef.current.scrollTop = scrollTop;
-    }
-  };
-
-  const updateActiveLine = () => {
-    if (!textareaRef.current) return;
-    const pos = textareaRef.current.selectionStart;
-    const lines = value.substring(0, pos).split('\n');
-    setActiveLine(lines.length);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const val = textarea.value;
-
-    // 1. Tab Key -> 2 spaces
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const newVal = val.substring(0, start) + '  ' + val.substring(end);
-      onChange(newVal);
-      
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-        updateActiveLine();
-      }, 0);
-      return;
-    }
-
-    // 2. Enter Key -> Auto indentation
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const beforeCursor = val.substring(0, start);
-      const afterCursor = val.substring(end);
-      const linesBefore = beforeCursor.split('\n');
-      const currentLine = linesBefore[linesBefore.length - 1];
-      
-      const indentMatch = currentLine.match(/^(\s*)/);
-      let indent = indentMatch ? indentMatch[1] : '';
-      
-      const trimmedLine = currentLine.trim();
-      if (trimmedLine.endsWith(':') || trimmedLine.endsWith('{') || trimmedLine.endsWith('[')) {
-        indent += '  ';
-      }
-
-      const insertText = '\n' + indent;
-      const newVal = beforeCursor + insertText + afterCursor;
-      onChange(newVal);
-
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
-        updateActiveLine();
-      }, 0);
-      return;
-    }
-
-    // 3. Bracket / Quote completion
-    const pairs: Record<string, string> = {
-      '{': '}',
-      '[': ']',
-      '(': ')',
-      '"': '"',
-      "'": "'",
-      '`': '`'
-    };
-
-    if (pairs[e.key] !== undefined) {
-      e.preventDefault();
-      const closingChar = pairs[e.key];
-      const newVal = val.substring(0, start) + e.key + closingChar + val.substring(end);
-      onChange(newVal);
-
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 1;
-        updateActiveLine();
-      }, 0);
-      return;
-    }
-
-    // 4. Overtype bypass
-    const closers = ['}', ']', ')', '"', "'", '`'];
-    if (closers.includes(e.key)) {
-      if (val[start] === e.key) {
-        e.preventDefault();
-        setTimeout(() => {
-          textarea.selectionStart = textarea.selectionEnd = start + 1;
-          updateActiveLine();
-        }, 0);
-        return;
-      }
-    }
-
-    // 5. Backspace handler
-    if (e.key === 'Backspace') {
-      if (start === end && start > 0) {
-        const prevChar = val[start - 1];
-        const nextChar = val[start];
-        if (pairs[prevChar] === nextChar) {
-          e.preventDefault();
-          const newVal = val.substring(0, start - 1) + val.substring(start + 1);
-          onChange(newVal);
-          setTimeout(() => {
-            textarea.selectionStart = textarea.selectionEnd = start - 1;
-            updateActiveLine();
-          }, 0);
-          return;
-        }
-      }
-    }
-  };
-
-  const lines = value.split('\n');
-  const lineCount = Math.max(lines.length, 1);
-
-  return (
-    <div className={`ide-editor-container lang-${(language || '').toLowerCase()} theme-${theme}`} style={{
-      display: 'flex',
-      position: 'relative',
-      width: '100%',
-      flex: 1,
-      minHeight: '320px',
-      background: 'var(--editor-bg)',
-      border: '1px solid var(--gutter-border)',
-      borderRadius: '6px',
-      overflow: 'hidden',
-      color: 'var(--editor-fg)',
-      fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
-      fontSize: '13px',
-      lineHeight: '20px',
-      transition: 'background 0.3s, color 0.3s, border-color 0.3s'
-    }}>
-      <style>{`
-        .ide-editor-container * {
-          box-sizing: border-box;
-        }
-        
-        .ide-textarea-overlay, .ide-code-highlight code {
-          font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
-
-        .hl-comment { color: var(--hl-comment); font-style: italic; }
-        .hl-string { color: var(--hl-string); }
-        .hl-number { color: var(--hl-number); }
-        .hl-keyword { color: var(--hl-keyword); }
-        .hl-class { color: var(--hl-class); }
-        .hl-function { color: var(--hl-function); }
-        .hl-variable { color: var(--hl-variable); }
-        .hl-table { color: var(--hl-table); }
-        .hl-tag { color: var(--hl-tag); }
-        .hl-attribute { color: var(--hl-attribute); }
-        .hl-value { color: var(--hl-value); }
-        .hl-property { color: var(--hl-property); }
-        .hl-selector { color: var(--hl-selector); }
-
-        /* --- VS Dark Theme Styles --- */
-        .ide-editor-container.theme-dark {
-          --editor-bg: #1e1e1e;
-          --editor-fg: #d4d4d4;
-          --gutter-bg: #1e1e1e;
-          --gutter-border: #3c3c3c;
-          --gutter-num: #858585;
-          --gutter-num-active: #fff;
-          --active-line-bg: rgba(255, 255, 255, 0.04);
-          --active-line-border: #007acc;
-          --caret-color: #ffffff;
-          
-          --hl-keyword: #c586c0;
-          --hl-function: #dcdcaa;
-          --hl-variable: #9cdcfe;
-          --hl-string: #ce9178;
-          --hl-number: #b5cea8;
-          --hl-comment: #6a9955;
-          --hl-class: #4ec9b0;
-          --hl-table: #4fc1ff;
-          --hl-tag: #569cd6;
-          --hl-attribute: #9cdcfe;
-          --hl-value: #ce9178;
-          --hl-property: #9cdcfe;
-          --hl-selector: #dcdcaa;
-        }
-
-        /* --- VS Light Theme Styles --- */
-        .ide-editor-container.theme-light {
-          --editor-bg: #ffffff;
-          --editor-fg: #000000;
-          --gutter-bg: #f3f3f3;
-          --gutter-border: #e2e8f0;
-          --gutter-num: #a0a0a0;
-          --gutter-num-active: #098658;
-          --active-line-bg: rgba(0, 90, 255, 0.04);
-          --active-line-border: #007acc;
-          --caret-color: #000000;
-
-          --hl-keyword: #af00db;
-          --hl-function: #795e26;
-          --hl-variable: #001080;
-          --hl-string: #a31515;
-          --hl-number: #098658;
-          --hl-comment: #008000;
-          --hl-class: #267f99;
-          --hl-table: #08427b;
-          --hl-tag: #800000;
-          --hl-attribute: #e50000;
-          --hl-value: #a31515;
-          --hl-property: #001080;
-          --hl-selector: #795e26;
-        }
-
-        /* Language specific overrides */
-        .ide-editor-container.lang-python.theme-dark {
-          --hl-keyword: #c586c0;
-          --hl-variable: #9cdcfe;
-          --hl-string: #ce9178;
-          --hl-number: #b5cea8;
-          --hl-function: #dcdcaa;
-        }
-        .ide-editor-container.lang-python.theme-light {
-          --hl-keyword: #af00db;
-          --hl-variable: #001080;
-          --hl-string: #a31515;
-          --hl-number: #098658;
-          --hl-function: #795e26;
-        }
-
-        .ide-editor-container.lang-html.theme-dark {
-          --hl-tag: #ff79c6;
-          --hl-attribute: #f1fa8c;
-          --hl-value: #ffb86c;
-        }
-        .ide-editor-container.lang-html.theme-light {
-          --hl-tag: #af00db;
-          --hl-attribute: #795e26;
-          --hl-value: #cb4b16;
-        }
-
-        .ide-editor-container.lang-css.theme-dark {
-          --hl-selector: #f1fa8c;
-          --hl-property: #9cdcfe;
-          --hl-value: #ffb86c;
-        }
-        .ide-editor-container.lang-css.theme-light {
-          --hl-selector: #795e26;
-          --hl-property: #001080;
-          --hl-value: #cb4b16;
-        }
-
-        .ide-editor-container.lang-javascript.theme-dark,
-        .ide-editor-container.lang-js.theme-dark,
-        .ide-editor-container.lang-typescript.theme-dark,
-        .ide-editor-container.lang-ts.theme-dark {
-          --hl-keyword: #c586c0;
-          --hl-function: #dcdcaa;
-          --hl-string: #ce9178;
-        }
-        .ide-editor-container.lang-javascript.theme-light,
-        .ide-editor-container.lang-js.theme-light,
-        .ide-editor-container.lang-typescript.theme-light,
-        .ide-editor-container.lang-ts.theme-light {
-          --hl-keyword: #af00db;
-          --hl-function: #795e26;
-          --hl-string: #a31515;
-        }
-
-        .ide-editor-container.lang-sql.theme-dark {
-          --hl-keyword: #569cd6;
-          --hl-table: #4fc1ff;
-          --hl-string: #ce9178;
-        }
-        .ide-editor-container.lang-sql.theme-light {
-          --hl-keyword: #0000ff;
-          --hl-table: #008080;
-          --hl-string: #a31515;
-        }
-        
-        .ide-gutter {
-          background: var(--gutter-bg);
-          border-right: 1px solid var(--gutter-border);
-          padding: 10px 0;
-          user-select: none;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          width: 48px;
-          flex-shrink: 0;
-          text-align: right;
-          transition: background 0.3s, border-color 0.3s;
-        }
-        .ide-gutter-line {
-          height: 20px;
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          padding-right: 8px;
-          gap: 4px;
-        }
-        .ide-gutter-line.active {
-          background: var(--active-line-bg);
-          color: var(--gutter-num-active) !important;
-        }
-        .ide-gutter-num {
-          color: var(--gutter-num);
-          font-size: 11px;
-          width: 20px;
-          text-align: right;
-        }
-        .ide-gutter-caret {
-          color: var(--gutter-num);
-          font-size: 9px;
-          cursor: default;
-          width: 10px;
-          text-align: center;
-          opacity: 0.7;
-        }
-        
-        .ide-textarea-overlay, .ide-code-highlight {
-          margin: 0;
-          padding: 10px;
-          font-family: inherit;
-          font-size: inherit;
-          line-height: inherit;
-          white-space: pre;
-          word-wrap: normal;
-          overflow: auto;
-          position: absolute;
-          top: 0;
-          left: 48px;
-          right: 0;
-          bottom: 0;
-          height: 100%;
-        }
-        .ide-textarea-overlay {
-          background: transparent;
-          color: transparent;
-          caret-color: var(--caret-color);
-          border: none;
-          resize: none;
-          outline: none;
-          z-index: 2;
-        }
-        .ide-code-highlight {
-          color: var(--editor-fg);
-          z-index: 1;
-          pointer-events: none;
-          transition: color 0.3s;
-        }
-        .ide-code-highlight::-webkit-scrollbar {
-          display: none;
-        }
-        .ide-code-highlight {
-          scrollbar-width: none;
-        }
-        
-        .ide-active-line-bg {
-          position: absolute;
-          left: 48px;
-          right: 0;
-          height: 20px;
-          background: var(--active-line-bg);
-          border-left: 2px solid var(--active-line-border);
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .ide-textarea-overlay::-webkit-scrollbar {
-          width: 10px;
-          height: 10px;
-        }
-        .ide-textarea-overlay::-webkit-scrollbar-track {
-          background: var(--editor-bg);
-        }
-        .ide-textarea-overlay::-webkit-scrollbar-thumb {
-          background: var(--gutter-border);
-          border-radius: 5px;
-        }
-        .ide-textarea-overlay::-webkit-scrollbar-thumb:hover {
-          background: var(--gutter-num);
-        }
-      `}</style>
-
-      <div className="ide-gutter" ref={gutterRef}>
-        {Array.from({ length: lineCount }).map((_, idx) => {
-          const lineNum = idx + 1;
-          const lineText = lines[idx] || '';
-          const isFoldable = isFoldableLine(lineText, language);
-          const isActive = lineNum === activeLine;
-          return (
-            <div key={idx} className={`ide-gutter-line ${isActive ? 'active' : ''}`}>
-              <span className="ide-gutter-caret">{isFoldable ? '▼' : ' '}</span>
-              <span className="ide-gutter-num">{lineNum}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="ide-active-line-bg" style={{
-        top: `${(activeLine - 1) * 20 + 10}px`
-      }} />
-
-      <pre className="ide-code-highlight" ref={preRef}>
-        <code dangerouslySetInnerHTML={{ __html: highlightCode(value, language) + '\n' }} />
-      </pre>
-
-      <textarea
-        ref={textareaRef}
-        className="ide-textarea-overlay"
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          updateActiveLine();
-        }}
-        onScroll={handleScroll}
-        onKeyDown={handleKeyDown}
-        onKeyUp={updateActiveLine}
-        onMouseUp={updateActiveLine}
-        onFocus={updateActiveLine}
-        onClick={updateActiveLine}
-        placeholder={placeholder}
-        spellCheck="false"
-        autoCapitalize="none"
-        autoComplete="off"
-        autoCorrect="off"
-      />
-    </div>
-  );
-}
-
-export default function InteractivePlayground({ language, template, instruction, answer, onCorrect, slug }) {
+  template: string;
+  instruction: string;
+  answer: string;
+  onCorrect?: () => void;
+  slug?: string;
+}) {
   const [code, setCode] = useState('');
-  const [sqlResult, setSqlResult] = useState(null);
-  const [consoleLogs, setConsoleLogs] = useState([]);
+  const [zoom, setZoom] = useState(14);
+  const [splitWidth, setSplitWidth] = useState(40);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [editorTheme, setEditorTheme] = useState<'vs-light' | 'vs-dark'>('vs-light');
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'description' | 'hints' | 'generator' | 'analytics'>('description');
+  const [outputTab, setOutputTab] = useState<'output' | 'testcases' | 'review'>('output');
+
+  // Execution outputs
+  const [sqlResult, setSqlResult] = useState<any[] | null>(null);
+  const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [errors, setErrors] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [running, setRunning] = useState(false);
   const [verified, setVerified] = useState(false);
 
+  // AI Practice Generator
+  const [practiceDifficulty, setPracticeDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [practiceType, setPracticeType] = useState<string>('code-writing');
+  const [practiceChallenge, setPracticeChallenge] = useState<any>(null);
+  const [generatingChallenge, setGeneratingChallenge] = useState(false);
+  const [validatingSolution, setValidatingSolution] = useState(false);
+  
+  // Hint reveal state
+  const [revealedHints, setRevealedHints] = useState<number>(0);
+  const [testCasesResults, setTestCasesResults] = useState<any[]>([]);
+  const [aiReview, setAiReview] = useState<string>('');
+  
+  // Analytics
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [startTime, setStartTime] = useState<number>(Date.now());
+  const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | ''>('');
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const autoSaveTimeout = useRef<any>(null);
+
+  // Synchronize theme
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark-theme') || 
+                   document.body.classList.contains('dark-mode') ||
+                   localStorage.getItem('theme') === 'dark';
+    setEditorTheme(isDark ? 'vs-dark' : 'vs-light');
+  }, []);
+
+  // Reset timer on load
+  useEffect(() => {
+    setStartTime(Date.now());
+  }, [slug, practiceChallenge]);
+
+  // Load from template
   useEffect(() => {
     if (template) {
       const cleanTemplate = template.replace(/___/g, '');
@@ -1631,9 +1219,26 @@ export default function InteractivePlayground({ language, template, instruction,
     setErrors('');
     setSuccessMsg('');
     setVerified(false);
+    setRevealedHints(0);
+    setTestCasesResults([]);
+    setAiReview('');
   }, [template]);
 
-  const lang = language?.toLowerCase();
+  // Load analytics
+  const fetchAnalytics = async () => {
+    try {
+      const data = await progressService.getCodingAnalytics();
+      setAnalyticsData(data.analytics);
+    } catch (err) {
+      console.error('Failed to load coding analytics:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const lang = (practiceChallenge ? practiceChallenge.language : language)?.toLowerCase() || 'javascript';
   const isSql = lang === 'sql';
   const isPython = lang === 'python';
   const isWeb = ['html', 'css'].includes(lang);
@@ -1642,12 +1247,14 @@ export default function InteractivePlayground({ language, template, instruction,
   const isDockerfile = lang === 'dockerfile';
   const isJava = lang === 'java';
 
+  // Local compilation runner
   const handleRun = () => {
     setErrors('');
     setSqlResult(null);
     setConsoleLogs([]);
     setSuccessMsg('');
     setRunning(true);
+    setOutputTab('output');
 
     setTimeout(() => {
       setRunning(false);
@@ -1711,15 +1318,18 @@ export default function InteractivePlayground({ language, template, instruction,
     }, 400);
   };
 
-  const handleVerify = () => {
+  // Submit / AI Validation Check
+  const handleVerify = async () => {
     setErrors('');
     setSuccessMsg('');
-    const userCode = code.trim();
-    const cleanAnswer = answer?.trim();
+    setValidatingSolution(true);
+    setOutputTab('output');
 
-    // Custom Validation Interceptor
+    const userCode = code.trim();
+
+    // 1. Lesson Mode: if slug has a custom validator
     if (slug && customValidators[slug]) {
-      let runRes: { success: boolean; logs?: any[]; variables?: any; error?: string } = { success: true, logs: [], variables: {} };
+      let runRes: any = { success: true, logs: [], variables: {} };
       if (isPython) {
         runRes = runPythonCode(userCode);
       } else if (isJs || lang === 'typescript' || lang === 'ts') {
@@ -1731,458 +1341,784 @@ export default function InteractivePlayground({ language, template, instruction,
       } else if (['rust', 'go', 'csharp', 'swift', 'kotlin', 'php', 'cpp'].includes(lang)) {
         runRes = runSimulatedLanguage(userCode, lang);
       }
-
+      
       const valRes = customValidators[slug](userCode, runRes.logs || [], runRes.variables || {});
       if (valRes.success) {
         if (!isWeb) {
           setConsoleLogs(runRes.logs || []);
         }
-        triggerSuccess();
+        setSuccessMsg('Perfect! Challenge resolved successfully.');
+        setVerified(true);
+        if (onCorrect) onCorrect();
       } else {
         setErrors(valRes.error || 'Validation failed. Double check your implementation.');
       }
+      setValidatingSolution(false);
       return;
     }
 
-    if (!cleanAnswer) return;
+    // 2. AI Practice Generator Mode or Standard validation fallback
+    try {
+      const activeChallenge = practiceChallenge || {
+        scenario: "Write code to satisfy the lesson challenge requirements.",
+        objective: instruction || "Complete the practice exercise.",
+        starter_code: template || "",
+        expected_output: answer || "",
+        xp_reward: 20
+      };
 
-    // Helper: normalize whitespace and case for comparison
-    const normalize = (str) => str.replace(/\s+/g, ' ').replace(/[;']/g, '"').trim().toLowerCase();
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const res = await progressService.validatePracticeSolution({
+        code: userCode,
+        language: lang,
+        challenge: activeChallenge,
+        timeSpent: elapsed
+      });
 
-    // Build the "full correct query" for text match
-    const correctCode = template ? template.replace(/___/g, answer) : answer;
-
-    // 1. Exact normalized text match → immediate pass
-    if (normalize(userCode) === normalize(correctCode) || normalize(userCode) === normalize(cleanAnswer)) {
-      if (isSql) {
-        const res = runSQLQuery(code);
-        if (res.success) setSqlResult(res.rows);
-      }
-      triggerSuccess();
-      return;
-    }
-
-    // 2. SQL: compare query execution results
-    if (isSql) {
-      const userRes = runSQLQuery(code);
-      if (!userRes.success) {
-        setErrors(`SQL Error: ${userRes.error}`);
-        return;
-      }
-      setSqlResult(userRes.rows);
-
-      const expectedRes = runSQLQuery(cleanAnswer);
-      if (!expectedRes.success) {
-        // Can't compare — fall through to simple contains check
+      if (res.success) {
+        setSuccessMsg(`Congratulations! Solved successfully. +${res.xpEarned} XP awarded.`);
+        setVerified(true);
+        if (onCorrect) onCorrect();
+        fetchAnalytics();
       } else {
-        // Compare result sets: same columns, same rows in same order
-        const serializeRows = (rows) => {
-          if (!rows || rows.length === 0) return '[]';
-          return JSON.stringify(rows.map(row => {
-            const keys = Object.keys(row).sort();
-            const norm = {};
-            keys.forEach(k => { norm[k] = String(row[k]).toLowerCase().trim(); });
-            return norm;
-          }));
-        };
-        const serializeCols = (rows) => {
-          if (!rows || rows.length === 0) return '';
-          return Object.keys(rows[0]).sort().join(',');
-        };
-
-        const userSer = serializeRows(userRes.rows);
-        const expSer = serializeRows(expectedRes.rows);
-        const userCols = serializeCols(userRes.rows);
-        const expCols = serializeCols(expectedRes.rows);
-
-        if (userSer === expSer && userCols === expCols) {
-          triggerSuccess();
-          return;
-        } else {
-          // Rows mismatch — give a helpful specific error
-          if (userCols !== expCols) {
-            setErrors(`Column mismatch: Expected columns [${expCols}] but got [${userCols}]. Check which columns you are selecting.`);
-          } else if (userRes.rows.length !== expectedRes.rows.length) {
-            setErrors(`Row count mismatch: Expected ${expectedRes.rows.length} row(s) but got ${userRes.rows.length}. Check your WHERE / LIMIT clause.`);
-          } else {
-            setErrors(`The result values don't match the expected answer. Double-check your column selection, filtering conditions, or ORDER BY clause.`);
-          }
-          return;
-        }
+        setErrors('AI Review: Challenge requirements not fully satisfied. Check review logs.');
       }
-    }
 
-    // 3. Non-SQL: contains-answer check with execution validation
-    const userCodeLower = userCode.toLowerCase();
-    const answerLower = cleanAnswer.toLowerCase();
-
-    if (userCodeLower.includes(answerLower)) {
-      if (isPython) {
-        const res = runPythonCode(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(`Python execution error: ${res.error}`);
-        }
-      } else if (isJs || lang === 'typescript' || lang === 'ts') {
-        const res = (lang === 'typescript' || lang === 'ts') ? runTypeScriptCode(code) : runJSCode(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(`Execution error: ${res.error}`);
-        }
-      } else if (lang === 'redis') {
-        const res = runRedisCode(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(`Redis execution error: ${res.error}`);
-        }
-      } else if (['rust', 'go', 'csharp', 'swift', 'kotlin', 'php', 'cpp'].includes(lang)) {
-        const res = runSimulatedLanguage(code, lang);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(`Execution error: ${res.error}`);
-        }
-      } else if (isBash) {
-        const res = runBashCommand(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        }
-      } else if (isDockerfile) {
-        const res = runDockerfileBuild(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(res.error);
-        }
-      } else if (isJava) {
-        const res = runJavaCode(code);
-        if (res.success) {
-          setConsoleLogs(res.logs);
-          triggerSuccess();
-        } else {
-          setErrors(res.error);
-        }
-      } else {
-        triggerSuccess();
-      }
-    } else {
-      setErrors(`Solution check failed. Make sure to implement the correct answer: "${answer}"`);
+      setTestCasesResults(res.testCasesResults || []);
+      setAiReview(res.feedback || '');
+      setOutputTab('review');
+    } catch (err: any) {
+      console.error(err);
+      setErrors(err.response?.data?.message || 'Failed to validate solution.');
+    } finally {
+      setValidatingSolution(false);
     }
   };
 
-  const triggerSuccess = () => {
-    setSuccessMsg('✨ Excellent work! The validation test passed.');
-    setVerified(true);
-    onCorrect();
+  // Generate Unlimited Practice
+  const handleGeneratePractice = async () => {
+    setGeneratingChallenge(true);
+    setErrors('');
+    setSuccessMsg('');
+    setPracticeChallenge(null);
+
+    try {
+      // Find active track id from routing parameters or track variables
+      const trackId = localStorage.getItem('active_track_id') || 'd5f778a8-b649-411a-8bb7-f1cbe2d3db70'; // Fallback to a valid track uuid
+      const res = await progressService.generatePracticeChallenge(trackId, practiceDifficulty, practiceType);
+      
+      if (res && res.challenge) {
+        setPracticeChallenge(res.challenge);
+        setCode(res.challenge.starter_code || '');
+        setRevealedHints(0);
+        setTestCasesResults([]);
+        setAiReview('');
+        setActiveTab('description');
+        setStartTime(Date.now());
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrors(err.response?.data?.message || 'Failed to generate practice challenge.');
+    } finally {
+      setGeneratingChallenge(false);
+    }
+  };
+
+  // Auto save & History Logger
+  const handleCodeChange = (newVal: string | undefined) => {
+    const val = newVal || '';
+    setCode(val);
+    
+    if (slug) {
+      localStorage.setItem(`playground_history_${slug}`, val);
+    } else if (practiceChallenge) {
+      localStorage.setItem(`playground_history_practice`, val);
+    }
+
+    setSaveStatus('Saving...');
+    if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+    autoSaveTimeout.current = setTimeout(() => {
+      setSaveStatus('Saved');
+      setTimeout(() => setSaveStatus(''), 2000);
+    }, 1000);
+  };
+
+  // Drag resizer
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const newWidth = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+        setSplitWidth(Math.max(25, Math.min(75, newWidth)));
+      }
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  // Copy code to clipboard
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(code);
+    setSuccessMsg('Code copied to clipboard!');
+    setTimeout(() => setSuccessMsg(''), 2500);
+  };
+
+  // Download Code
+  const handleDownloadCode = () => {
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `learnstation_code.${lang === 'python' ? 'py' : lang === 'sql' ? 'sql' : 'js'}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Keyboard shortcut config
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      handleRun();
+    });
   };
 
   return (
-    <div className="interactive-playground" style={{
-      background: 'var(--bg-secondary)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden',
-      margin: 'var(--space-6) 0',
-      boxShadow: 'var(--shadow-md)'
-    }}>
-      {/* Header Panel */}
-      <div className="playground-header" style={{
-        padding: 'var(--space-3) var(--space-4)',
-        background: 'var(--bg-tertiary)',
-        borderBottom: '1px solid var(--border)',
+    <div 
+      ref={containerRef}
+      className={`ide-wrapper ${isFullscreen ? 'ide-wrapper--fullscreen' : ''}`}
+      style={{
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ff5f56' }} />
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ffbd2e' }} />
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#27c93f' }} />
-          </div>
-          <span style={{
-            marginLeft: 'var(--space-2)',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 'var(--font-semibold)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: 'var(--text-secondary)'
-          }}>
-            ⚡ {language?.toUpperCase()} PLAYGROUND
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {!isWeb && (
-            <button
-              className="btn btn--secondary btn--sm"
-              onClick={handleRun}
-              disabled={running}
-              style={{ padding: '4px 12px', fontSize: '12px' }}
-            >
-              {running ? 'Running...' : 'Run Code ⚡'}
-            </button>
-          )}
-          <button
-            className="btn btn--primary btn--sm"
-            onClick={handleVerify}
-            disabled={verified}
+        width: '100%',
+        height: isFullscreen ? '100vh' : '680px',
+        border: '1px solid var(--border)',
+        borderRadius: isFullscreen ? '0' : '20px',
+        overflow: 'hidden',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
+        position: isFullscreen ? 'fixed' : 'relative',
+        top: isFullscreen ? '0' : 'auto',
+        left: isFullscreen ? '0' : 'auto',
+        zIndex: isFullscreen ? '9999' : '1'
+      }}
+    >
+      {/* 1. LEFT SIDEBAR: Instructions, progressive hints, AI generators, analytics */}
+      <div 
+        style={{ 
+          width: `${splitWidth}%`, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          borderRight: '1px solid var(--border)',
+          background: 'var(--bg-secondary)'
+        }}
+      >
+        {/* Sidebar tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
+          <button 
+            onClick={() => setActiveTab('description')}
             style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              background: verified ? 'var(--accent-green)' : 'var(--accent-blue)',
-              color: 'white'
+              flex: 1, padding: '12px 6px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent',
+              color: activeTab === 'description' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'description' ? '2px solid var(--accent-blue)' : 'none', cursor: 'pointer'
             }}
           >
-            {verified ? 'Verified ✓' : 'Verify Code ✓'}
+            📋 Description
           </button>
+          <button 
+            onClick={() => setActiveTab('hints')}
+            style={{
+              flex: 1, padding: '12px 6px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent',
+              color: activeTab === 'hints' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'hints' ? '2px solid var(--accent-blue)' : 'none', cursor: 'pointer'
+            }}
+          >
+            💡 Hints {(revealedHints > 0) && `(${revealedHints}/4)`}
+          </button>
+          <button 
+            onClick={() => setActiveTab('generator')}
+            style={{
+              flex: 1, padding: '12px 6px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent',
+              color: activeTab === 'generator' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'generator' ? '2px solid var(--accent-blue)' : 'none', cursor: 'pointer'
+            }}
+          >
+            ⚡ Practice Gen
+          </button>
+          <button 
+            onClick={() => {
+              setActiveTab('analytics');
+              fetchAnalytics();
+            }}
+            style={{
+              flex: 1, padding: '12px 6px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent',
+              color: activeTab === 'analytics' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+              borderBottom: activeTab === 'analytics' ? '2px solid var(--accent-blue)' : 'none', cursor: 'pointer'
+            }}
+          >
+            📊 Analytics
+          </button>
+        </div>
+
+        {/* Sidebar panels content */}
+        <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* TAB 1: Description */}
+          {activeTab === 'description' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {practiceChallenge ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className={`badge badge--${practiceChallenge.difficulty}`} style={{ textTransform: 'capitalize' }}>
+                      {practiceChallenge.difficulty}
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                      ✦ {practiceChallenge.xp_reward} XP
+                    </span>
+                  </div>
+
+                  <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Real-World Scenario</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', background: 'var(--bg-primary)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    {practiceChallenge.scenario}
+                  </p>
+
+                  <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Objective</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                    {practiceChallenge.objective}
+                  </p>
+
+                  {practiceChallenge.requirements && (
+                    <>
+                      <h4 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Requirements</h4>
+                      <ul style={{ paddingLeft: '20px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {practiceChallenge.requirements.map((req: string, i: number) => (
+                          <li key={i}>{req}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {practiceChallenge.constraints && (
+                    <>
+                      <h4 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Constraints</h4>
+                      <ul style={{ paddingLeft: '20px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {practiceChallenge.constraints.map((req: string, i: number) => (
+                          <li key={i}>{req}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+
+                  {practiceChallenge.expected_output && (
+                    <>
+                      <h4 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Expected Output</h4>
+                      <pre style={{ background: '#1e1e1e', color: '#abb2bf', padding: '10px', borderRadius: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', overflowX: 'auto' }}>
+                        {practiceChallenge.expected_output}
+                      </pre>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Lesson Objectives</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                    {instruction}
+                  </p>
+                  {answer && (
+                    <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                      <strong style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', marginBottom: '4px' }}>Expected Solution Output</strong>
+                      <code style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}>{answer}</code>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: Hints */}
+          {activeTab === 'hints' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Progressive Hints</h3>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Level {revealedHints} of 4</span>
+              </div>
+
+              {/* Hint Blocks */}
+              {Array.from({ length: 4 }).map((_, i) => {
+                const hintNum = i + 1;
+                const isRevealed = revealedHints >= hintNum;
+                return (
+                  <div 
+                    key={i}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      background: isRevealed ? 'var(--bg-primary)' : 'var(--bg-tertiary)',
+                      opacity: isRevealed ? 1 : 0.6
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong style={{ fontSize: '12px', color: isRevealed ? 'var(--accent-blue)' : 'var(--text-muted)' }}>
+                        Hint {hintNum}: {hintNum === 1 ? 'Concept clue' : hintNum === 2 ? 'Logic structure' : hintNum === 3 ? 'Pseudo-code' : 'Reference solution'}
+                      </strong>
+                      {!isRevealed && hintNum === revealedHints + 1 && (
+                        <button 
+                          onClick={() => setRevealedHints(hintNum)}
+                          className="btn btn--secondary btn--xs"
+                        >
+                          Reveal Hint
+                        </button>
+                      )}
+                    </div>
+
+                    {isRevealed && (
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'pre-wrap', fontFamily: hintNum === 4 ? 'var(--font-mono)' : 'inherit' }}>
+                        {practiceChallenge?.hints?.[i] || (
+                          i === 0 ? "Check your syntax rules carefully." :
+                          i === 1 ? "Think about the order of statements." :
+                          i === 2 ? "Write loops to process records one-by-one." :
+                          `Reference answer: ${answer}`
+                        )}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TAB 3: Unlimited Practice Generator */}
+          {activeTab === 'generator' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Unlimited AI Practice Generator</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Generate unlimited, randomized software engineering challenges tailored to this track's primary language.
+              </p>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Choose Difficulty</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['easy', 'medium', 'hard'].map(d => (
+                    <button
+                      key={d}
+                      onClick={() => setPracticeDifficulty(d as any)}
+                      style={{
+                        flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', cursor: 'pointer',
+                        fontSize: '11px', textTransform: 'capitalize',
+                        background: practiceDifficulty === d ? 'var(--accent-blue)' : 'var(--bg-primary)',
+                        color: practiceDifficulty === d ? 'white' : 'var(--text-primary)'
+                      }}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Challenge Format</label>
+                <select
+                  value={practiceType}
+                  onChange={e => setPracticeType(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px'
+                  }}
+                >
+                  <option value="code-writing">Code Writing</option>
+                  <option value="debugging">Debugging Practice</option>
+                  <option value="complete-code">Complete the Code</option>
+                  <option value="optimization">Performance Optimization</option>
+                  <option value="refactoring">Code Refactoring</option>
+                </select>
+              </div>
+
+              <button
+                onClick={handleGeneratePractice}
+                disabled={generatingChallenge}
+                className="btn btn--primary btn--md"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                  color: 'white', marginTop: '12px'
+                }}
+              >
+                {generatingChallenge ? 'Generating with AI...' : '🚀 Generate Custom Challenge'}
+              </button>
+
+              {practiceChallenge && (
+                <button
+                  onClick={() => {
+                    setPracticeChallenge(null);
+                    setCode(template?.replace(/___/g, '') || '');
+                  }}
+                  className="btn btn--ghost btn--sm"
+                  style={{ color: 'var(--accent-rose)' }}
+                >
+                  Exit Practice Sandbox
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: Analytics */}
+          {activeTab === 'analytics' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Your Coding Analytics</h3>
+              
+              {analyticsData ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Solved</span>
+                      <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0 0' }}>{analyticsData.challenges_solved || 0}</h4>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Attempts</span>
+                      <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '4px 0 0' }}>{analyticsData.total_attempts || 0}</h4>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Time Spent</span>
+                      <h4 style={{ fontSize: '15px', fontWeight: 700, margin: '4px 0 0' }}>
+                        {Math.round((analyticsData.total_time_spent || 0) / 60)} mins
+                      </h4>
+                    </div>
+                    <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Languages</span>
+                      <p style={{ fontSize: '11px', margin: '4px 0 0', fontWeight: 600, color: 'var(--accent-blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {analyticsData.languages_practiced?.join(', ') || 'None'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', marginTop: '8px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Difficulty Distribution</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {['easy', 'medium', 'hard'].map(d => {
+                        const count = analyticsData.difficulty_distribution?.[d] || 0;
+                        const total = (analyticsData.difficulty_distribution?.easy || 0) + (analyticsData.difficulty_distribution?.medium || 0) + (analyticsData.difficulty_distribution?.hard || 0) || 1;
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={d}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', textTransform: 'capitalize', marginBottom: '4px' }}>
+                              <span>{d}</span>
+                              <strong>{count}</strong>
+                            </div>
+                            <div style={{ width: '100%', height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', background: d === 'easy' ? 'var(--accent-green)' : d === 'medium' ? 'var(--accent-amber)' : 'var(--accent-rose)' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No statistics compiled yet. Submit a challenge to begin tracking.</p>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
-      <div className="playground-body" style={{
-        display: 'grid',
-        gridTemplateColumns: isWeb ? '1fr' : '1fr 1fr',
-        minHeight: '280px',
-        background: 'var(--bg-primary)'
-      }}>
-        {/* Editor Pane */}
-        <div className="playground-editor" style={{
-          padding: 'var(--space-4)',
-          borderRight: isWeb ? 'none' : '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>EDITOR</span>
-            {template && (
-              <button
-                onClick={() => {
-                  const cleanTemplate = template.replace(/___/g, '');
-                  setCode(cleanTemplate || '');
-                  setVerified(false);
-                  setSuccessMsg('');
-                  setErrors('');
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '10px',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                Reset Template ↺
-              </button>
+      {/* DRAG SPLIT RESIZER HANDLE */}
+      <div 
+        onMouseDown={handleMouseDown}
+        style={{
+          width: '5px',
+          cursor: 'col-resize',
+          background: 'var(--border)',
+          transition: 'background 0.2s',
+          zIndex: 10
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-blue)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--border)'; }}
+      />
+
+      {/* 2. RIGHT WORKSPACE: Monaco Editor (Top) & Terminal (Bottom) */}
+      <div 
+        style={{ 
+          width: `${100 - splitWidth}%`, 
+          display: 'flex', 
+          flexDirection: 'column',
+          background: 'var(--bg-primary)'
+        }}
+      >
+        
+        {/* Editor controls bar */}
+        <div 
+          style={{ 
+            height: '45px', 
+            padding: '0 16px', 
+            borderBottom: '1px solid var(--border)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            background: 'var(--bg-secondary)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              {lang} Editor
+            </span>
+            {saveStatus && (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {saveStatus}
+              </span>
             )}
           </div>
-          <IDECodeEditor
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button 
+              onClick={() => setZoom(z => Math.max(10, z - 1))}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Zoom Out"
+            >
+              <ZoomOut size={16} />
+            </button>
+            <button 
+              onClick={() => setZoom(z => Math.min(24, z + 1))}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Zoom In"
+            >
+              <ZoomIn size={16} />
+            </button>
+            <button 
+              onClick={handleCopyCode}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Copy Code"
+            >
+              <Copy size={16} />
+            </button>
+            <button 
+              onClick={handleDownloadCode}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Download Code"
+            >
+              <Download size={16} />
+            </button>
+            <button 
+              onClick={() => {
+                const conf = window.confirm('Reset code template? Your current changes will be overwritten.');
+                if (conf) setCode(template?.replace(/___/g, '') || '');
+              }}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Reset Code Workspace"
+            >
+              <RefreshCw size={16} />
+            </button>
+            <button 
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}
+              title="Toggle Fullscreen"
+            >
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {/* MONACO CODE EDITOR CANVAS */}
+        <div style={{ flex: 1, minHeight: '200px', borderBottom: '1px solid var(--border)', position: 'relative' }}>
+          <Editor
+            height="100%"
+            language={lang}
+            theme={editorTheme}
             value={code}
-            onChange={(val) => {
-              setCode(val);
-              if (verified) setVerified(false);
+            onChange={handleCodeChange}
+            onMount={handleEditorDidMount}
+            options={{
+              fontSize: zoom,
+              minimap: { enabled: false },
+              lineNumbers: 'on',
+              bracketPairColorization: { enabled: true },
+              autoClosingBrackets: 'always',
+              folding: true,
+              wordWrap: 'on',
+              renderLineHighlight: 'all',
+              fontFamily: 'var(--font-mono)'
             }}
-            language={language}
-            placeholder={`Write your ${language || 'code'} here...`}
           />
         </div>
 
-        {/* Output/Live Preview Pane */}
-        <div className="playground-results" style={{
-          padding: 'var(--space-4)',
-          display: 'flex',
-          flexDirection: 'column',
-          borderLeft: isWeb ? 'none' : '1px solid var(--border)'
-        }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 'var(--space-2)', fontWeight: '500' }}>
-            {isWeb ? 'LIVE PREVIEW' : 'OUTPUT PANEL'}
-          </span>
-          
-          <div style={{
-            flex: 1,
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-3)',
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            {/* Success Rewards Message Card */}
-            {successMsg && (
-              <div style={{
-                background: 'hsla(142, 71%, 45%, 0.1)',
-                border: '1px solid var(--accent-green)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-4)',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                animation: 'scaleIn 0.3s var(--ease-spring)'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'var(--accent-green)',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  boxShadow: 'var(--shadow-glow-green)'
-                }}>
-                  ✓
-                </div>
-                <h4 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>Practice Challenge Completed!</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>
-                  {successMsg}
-                </p>
-                <div style={{
-                  marginTop: '4px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: 'var(--accent-amber)',
-                  background: 'rgba(251, 191, 36, 0.1)',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  border: '1px solid rgba(251, 191, 36, 0.2)'
-                }}>
-                  ✦ XP Rewards Active
-                </div>
-              </div>
-            )}
+        {/* BOTTOM PANEL: Runner triggers, Test Cases, and AI review tabs */}
+        <div style={{ height: '220px', display: 'flex', flexDirection: 'column', background: 'var(--bg-tertiary)' }}>
+          <div style={{ height: '40px', borderBottom: '1px solid var(--border)', display: 'flex', justifyItems: 'space-between', alignItems: 'center', padding: '0 16px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setOutputTab('output')}
+                style={{
+                  padding: '6px 12px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent', cursor: 'pointer',
+                  color: outputTab === 'output' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  borderBottom: outputTab === 'output' ? '2px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                💻 Console Output
+              </button>
+              <button 
+                onClick={() => setOutputTab('testcases')}
+                style={{
+                  padding: '6px 12px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent', cursor: 'pointer',
+                  color: outputTab === 'testcases' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  borderBottom: outputTab === 'testcases' ? '2px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                🧪 Test Cases
+              </button>
+              <button 
+                onClick={() => setOutputTab('review')}
+                style={{
+                  padding: '6px 12px', fontSize: '11px', fontWeight: 600, border: 'none', background: 'transparent', cursor: 'pointer',
+                  color: outputTab === 'review' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  borderBottom: outputTab === 'review' ? '2px solid var(--accent-blue)' : 'none'
+                }}
+              >
+                ✨ AI Review
+              </button>
+            </div>
 
-            {/* Error Message */}
-            {errors && (
-              <div style={{
-                color: 'var(--accent-rose)',
-                fontSize: '13px',
-                fontFamily: 'var(--font-mono)',
-                background: 'hsla(346, 77%, 50%, 0.08)',
-                border: '1px solid hsla(346, 77%, 50%, 0.2)',
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)'
-              }}>
-                ❌ {errors}
-              </div>
-            )}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleRun}
+                disabled={running}
+                className="btn btn--secondary btn--sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Play size={12} />
+                {running ? 'Running...' : 'Run Code'}
+              </button>
+              <button
+                onClick={handleVerify}
+                disabled={validatingSolution}
+                className="btn btn--primary btn--sm"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                  color: 'white'
+                }}
+              >
+                <CheckCircle size={12} />
+                {validatingSolution ? 'Analyzing...' : 'Submit Challenge'}
+              </button>
+            </div>
+          </div>
 
-            {/* SQL Results Grid Table */}
-            {isSql && sqlResult && (
-              <div style={{ width: '100%' }}>
-                {sqlResult.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                        {Object.keys(sqlResult[0]).map((key) => (
-                          <th key={key} style={{ textAlign: 'left', padding: '8px' }}>{key}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sqlResult.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                          {Object.values(row).map((val, j) => (
-                            <td key={j} style={{ padding: '8px', color: 'var(--text-secondary)' }}>{String(val)}</td>
+          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            
+            {/* Console Tab */}
+            {outputTab === 'output' && (
+              <>
+                {successMsg && (
+                  <div style={{ color: 'var(--accent-green)', fontSize: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', padding: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🏆</span>
+                    <strong>{successMsg}</strong>
+                  </div>
+                )}
+
+                {errors && (
+                  <div style={{ color: 'var(--accent-rose)', fontSize: '12px', fontFamily: 'var(--font-mono)', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', padding: '10px', borderRadius: '6px' }}>
+                    ❌ {errors}
+                  </div>
+                )}
+
+                {sqlResult && sqlResult.length > 0 && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                          {Object.keys(sqlResult[0]).map(key => (
+                            <th key={key} style={{ padding: '6px' }}>{key}</th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {sqlResult.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                            {Object.values(row).map((v: any, j) => (
+                              <td key={j} style={{ padding: '6px', color: 'var(--text-secondary)' }}>{String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {!isWeb && consoleLogs && consoleLogs.length > 0 && (
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {consoleLogs.map((log, i) => (
+                      <div key={i} style={{ color: log.includes('Error') ? 'var(--accent-rose)' : 'inherit' }}>
+                        &gt; {log}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!errors && !successMsg && !sqlResult && consoleLogs.length === 0 && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 'auto' }}>
+                    No output. Run code or submit challenge to view results.
+                  </span>
+                )}
+              </>
+            )}
+
+            {/* Test Cases Tab */}
+            {outputTab === 'testcases' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {testCasesResults.length > 0 ? (
+                  testCasesResults.map((tc, i) => (
+                    <div 
+                      key={i} 
+                      style={{
+                        padding: '10px', borderRadius: '8px', border: '1px solid var(--border)',
+                        background: tc.passed ? 'rgba(16,185,129,0.05)' : 'rgba(244,63,94,0.05)',
+                        display: 'flex', justifyItems: 'space-between', alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 600 }}>Test Case {i + 1}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Input: <code>{tc.input}</code> | Expected: <code>{tc.expected}</code>
+                        </div>
+                      </div>
+                      <div style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, color: tc.passed ? 'var(--accent-green)' : 'var(--accent-rose)' }}>
+                        {tc.passed ? 'PASSED' : 'FAILED'}
+                      </div>
+                    </div>
+                  ))
                 ) : (
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>(No rows returned matching criteria)</span>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
+                    No test case run data available. Submit your challenge to verify test criteria.
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Console Log outputs (Python / JS / Bash / Dockerfile / Java) */}
-            {!isWeb && consoleLogs && consoleLogs.length > 0 && (
-              <div style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '12px',
-                color: '#abb2bf',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px'
-              }}>
-                {consoleLogs.map((log, i) => (
-                  <div key={i} style={{
-                    color: log.startsWith('Error') ? 'var(--accent-rose)' :
-                           log.startsWith('Warning') ? 'var(--accent-amber)' :
-                           log.startsWith('$') ? 'var(--accent-blue)' : '#e5c07b'
-                  }}>
-                    {log.startsWith('$') ? '' : '> '}{log}
+            {/* AI Review Tab */}
+            {outputTab === 'review' && (
+              <div style={{ fontSize: '12px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+                {aiReview ? (
+                  <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                      <span>✨</span>
+                      <span>AI Code Review Feedback</span>
+                    </div>
+                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{aiReview}</p>
                   </div>
-                ))}
+                ) : (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
+                    Submit challenge to request a detailed AI code review for optimizations, best practices, and readability.
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Web Dev HTML Live Preview */}
-            {lang === 'html' && (
-              <iframe
-                title="html-preview"
-                srcDoc={`<!DOCTYPE html><html><head><style>body { font-family: sans-serif; color: #fff; margin: 10px; }</style></head><body>${code}</body></html>`}
-                style={{ width: '100%', height: '100%', border: 'none', background: 'transparent' }}
-              />
-            )}
-
-            {/* Web Dev CSS Live Preview */}
-            {lang === 'css' && (
-              <iframe
-                title="css-preview"
-                srcDoc={`<!DOCTYPE html><html><head><style>body { font-family: sans-serif; color: #fff; margin: 10px; } .box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center; transition: all 0.3s; } ${code}</style></head><body><div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:12px; font-size:10px; color:#888;">CSS PREVIEW AREA</div><h1>Heading 1 (h1)</h1><p>This is a paragraph element (p) that will be styled by your CSS rules.</p><div class="container" style="border: 1px dashed #444; padding: 12px; border-radius: 6px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;"><div class="box">Flex Item 1</div><div class="box">Flex Item 2</div></div></body></html>`}
-                style={{ width: '100%', height: '100%', border: 'none', background: 'transparent' }}
-              />
-            )}
-
-            {/* Empty Console State */}
-            {!errors && !successMsg && !sqlResult && consoleLogs.length === 0 && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 'auto' }}>
-                {isWeb ? 'Type HTML/CSS on left to see live preview.' : 'Click "Run Code" to view console outputs.'}
-              </span>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* Database Schema / Helper Footer */}
-      {isSql && (
-        <div style={{
-          padding: 'var(--space-2) var(--space-4)',
-          background: 'var(--bg-tertiary)',
-          borderTop: '1px solid var(--border)',
-          fontSize: '11px',
-          color: 'var(--text-secondary)'
-        }}>
-          <strong>Available Tables:</strong> 
-          <span style={{ marginLeft: '6px', fontFamily: 'var(--font-mono)' }}>users</span> (id, first_name, email, active, age) | 
-          <span style={{ marginLeft: '6px', fontFamily: 'var(--font-mono)' }}>products</span> (id, name, price, category) | 
-          <span style={{ marginLeft: '6px', fontFamily: 'var(--font-mono)' }}>orders</span> (id, user_id, amount, status)
-        </div>
-      )}
-      {isBash && (
-        <div style={{
-          padding: 'var(--space-2) var(--space-4)',
-          background: 'var(--bg-tertiary)',
-          borderTop: '1px solid var(--border)',
-          fontSize: '11px',
-          color: 'var(--text-secondary)'
-        }}>
-          <strong>Docker Sandbox Commands:</strong> try running <code style={{ color: 'var(--accent-blue)', background: 'none', padding: 0 }}>docker ps</code>, <code style={{ color: 'var(--accent-blue)', background: 'none', padding: 0 }}>docker images</code>, <code style={{ color: 'var(--accent-blue)', background: 'none', padding: 0 }}>docker run nginx</code>, or <code style={{ color: 'var(--accent-blue)', background: 'none', padding: 0 }}>git status</code>.
-        </div>
-      )}
+      </div>
     </div>
   );
 }
