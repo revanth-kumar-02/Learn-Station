@@ -8,6 +8,7 @@ import {
   Award, Heart, Share2, Compass, Plus, Send, ShieldAlert,
   ThumbsUp, Calendar, AlertCircle, FileText, CheckCircle, Play
 } from 'lucide-react';
+import PageHero from '../components/common/PageHero';
 import '../css/pages.css';
 
 type SectionTab = 'friends' | 'groups' | 'forums' | 'peer-review' | 'resources';
@@ -190,31 +191,36 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className="admin-container">
-      
-      {/* HEADER HERO */}
-      <div className="admin-header-card" style={{ marginBottom: '32px' }}>
-        <span className="badge badge-accent" style={{ marginBottom: '8px' }}>
-          <Users size={12} style={{ marginRight: '4px' }} /> Collaborative Learning
-        </span>
-        <h1 className="admin-title">Community & Study Groups</h1>
-        <p className="admin-subtitle">Connect with peers, collaborate on code reviews, clear doubts, and share templates.</p>
-      </div>
+    <div className="page-std">
+      <div className="container">
+
+      {/* ── Hero ── */}
+      <PageHero
+        icon={<Users size={22} />}
+        color="violet"
+        eyebrow="Collaborative Learning"
+        title="Community & Study Groups"
+        description="Connect with peers, collaborate on code reviews, clear doubts, and share templates."
+        stats={[
+          { label: 'Friends',    value: friendsData.active.length },
+          { label: 'My Groups',  value: groupsData.myGroups.length },
+          { label: 'Forum Posts', value: forumPosts.length },
+        ]}
+      />
 
       {/* TOP NAVIGATION TABS */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '32px', overflowX: 'auto' }}>
+      <div className="std-tabs">
         {(['friends', 'groups', 'forums', 'peer-review', 'resources'] as const).map((tab) => (
           <button 
             key={tab}
             onClick={() => { setActiveTab(tab); setActivePost(null); setActiveReview(null); }}
-            className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ textTransform: 'capitalize', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            className={`std-tab ${activeTab === tab ? 'std-tab--active' : ''}`}
           >
-            {tab === 'friends' && <Users size={16} />}
-            {tab === 'groups' && <Compass size={16} />}
-            {tab === 'forums' && <MessageSquare size={16} />}
-            {tab === 'peer-review' && <Code size={16} />}
-            {tab === 'resources' && <BookOpen size={16} />}
+            {tab === 'friends'     && <Users size={15} />}
+            {tab === 'groups'      && <Compass size={15} />}
+            {tab === 'forums'      && <MessageSquare size={15} />}
+            {tab === 'peer-review' && <Code size={15} />}
+            {tab === 'resources'   && <BookOpen size={15} />}
             {tab.replace('-', ' ')}
           </button>
         ))}
@@ -715,6 +721,7 @@ export default function CommunityPage() {
         </div>
       )}
 
+      </div>{/* /container */}
     </div>
   );
 }

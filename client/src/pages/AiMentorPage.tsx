@@ -9,6 +9,7 @@ import {
   Eye, HelpCircle as HelpIcon, FileText, CheckCircle, XCircle, 
   Play, Users, Map, Star, ShieldAlert
 } from 'lucide-react';
+import PageHero from '../components/common/PageHero';
 import '../css/pages.css';
 
 type SubTool = 'mentor' | 'quiz' | 'practice' | 'flashcards' | 'interview' | 'planner' | 'study' | 'career';
@@ -261,46 +262,56 @@ export default function AiMentorPage() {
     }
   };
 
+  const TOOLS = [
+    { key: 'mentor',    label: 'AI Mentor Chat',       icon: <Brain size={16} /> },
+    { key: 'quiz',      label: 'Adaptive Quizzes',      icon: <HelpIcon size={16} /> },
+    { key: 'practice',  label: 'Practice Generator',    icon: <Terminal size={16} /> },
+    { key: 'flashcards',label: 'Study Flashcards',      icon: <BookOpen size={16} /> },
+    { key: 'interview', label: 'Interview Simulator',   icon: <Users size={16} /> },
+    { key: 'planner',   label: 'Learning Planner',      icon: <Map size={16} /> },
+    { key: 'study',     label: 'Revision Guide',        icon: <FileText size={16} /> },
+    { key: 'career',    label: 'Career Coach',          icon: <Compass size={16} /> },
+  ] as const;
+
   return (
-    <div className="admin-container" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '32px' }}>
-      
-      {/* SIDEBAR TOOL SELECTION */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ padding: '0 8px 12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
-          <h3 className="text-primary" style={{ fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Sparkles size={16} className="rarity-legendary" /> AI Learning Hub
-          </h3>
-          <p className="text-secondary" style={{ fontSize: '11px', marginTop: '4px' }}>Personal adaptive AI mentor.</p>
+    <div className="page-std">
+      <div className="container">
+
+      {/* ── Hero ── */}
+      <PageHero
+        icon={<Sparkles size={22} />}
+        color="violet"
+        eyebrow="AI-Powered Learning"
+        title="AI Mentor Hub"
+        description="Personal adaptive AI mentor — quiz generator, flashcards, interview simulator, and career coach all in one."
+        stats={[
+          { label: 'AI Tools',   value: 8 },
+          { label: 'Status',     value: 'Online' },
+          { label: 'Powered by', value: 'Gemini' },
+        ]}
+      />
+
+      {/* ── Sidebar + Panel Layout ── */}
+      <div className="std-layout">
+
+        {/* SIDEBAR */}
+        <div className="std-sidebar">
+          <div className="std-sidebar__header">
+            <p className="std-sidebar__title"><Sparkles size={14} /> AI Learning Hub</p>
+            <p className="std-sidebar__desc">Choose a learning tool</p>
+          </div>
+          {TOOLS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTool(t.key as SubTool)}
+              className={`std-nav-btn ${activeTool === t.key ? 'std-nav-btn--active' : ''}`}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
         </div>
-
-        <button onClick={() => setActiveTool('mentor')} className={`btn ${activeTool === 'mentor' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Brain size={16} /> AI Mentor Chat
-        </button>
-        <button onClick={() => setActiveTool('quiz')} className={`btn ${activeTool === 'quiz' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <HelpIcon size={16} /> Adaptive Quizzes
-        </button>
-        <button onClick={() => setActiveTool('practice')} className={`btn ${activeTool === 'practice' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Terminal size={16} /> Practice Generator
-        </button>
-        <button onClick={() => setActiveTool('flashcards')} className={`btn ${activeTool === 'flashcards' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <BookOpen size={16} /> Study Flashcards
-        </button>
-        <button onClick={() => setActiveTool('interview')} className={`btn ${activeTool === 'interview' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Users size={16} /> Interview Simulator
-        </button>
-        <button onClick={() => setActiveTool('planner')} className={`btn ${activeTool === 'planner' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Map size={16} /> Learning Planner
-        </button>
-        <button onClick={() => setActiveTool('study')} className={`btn ${activeTool === 'study' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <FileText size={16} /> Revision Guide
-        </button>
-        <button onClick={() => setActiveTool('career')} className={`btn ${activeTool === 'career' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Compass size={16} /> Career Coach
-        </button>
-      </div>
-
-      {/* ACTIVE WORKSPACE */}
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '32px', minHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
+        {/* ACTIVE WORKSPACE */}
+        <div className="std-panel">
         
         {/* ================== AI MENTOR CHAT ================== */}
         {activeTool === 'mentor' && (
@@ -976,7 +987,9 @@ export default function AiMentorPage() {
           </div>
         )}
 
-      </div>
+        </div>{/* /std-panel */}
+      </div>{/* /std-layout */}
+      </div>{/* /container */}
     </div>
   );
 }

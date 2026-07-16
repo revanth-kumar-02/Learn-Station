@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import GithubIcon from '../components/common/GithubIcon';
 import LinkedinIcon from '../components/common/LinkedinIcon';
+import PageHero from '../components/common/PageHero';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../css/pages.css';
 
@@ -634,51 +635,46 @@ export default function CareerDashboardPage() {
   };
 
   return (
-    <div className="admin-container" style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '32px' }}>
-      
-      {/* LEFT SIDEBAR MENU */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ padding: '0 8px 12px', borderBottom: '1px solid var(--border)', marginBottom: '12px' }}>
-          <h3 className="text-primary" style={{ fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Briefcase size={16} className="text-accent-blue" /> LearnStation Career
-          </h3>
-          <p className="text-secondary" style={{ fontSize: '11px', marginTop: '4px' }}>Bridge learning and employment.</p>
+    <div className="page-std">
+      <div className="container">
+
+      {/* ── Hero ── */}
+      <PageHero
+        icon={<Briefcase size={22} />}
+        color="blue"
+        eyebrow="Career Development"
+        title="Career Hub"
+        description="Bridge your learning achievements into employment opportunities — resumes, portfolios, placement prep and more."
+        stats={[
+          { label: 'Resume',    value: resume.experience?.length > 0 ? 'Complete' : 'Draft' },
+          { label: 'Portfolio', value: portfolio.is_published ? 'Published' : 'Offline' },
+          { label: 'GitHub',    value: githubConnected ? 'Linked' : 'Not Linked' },
+        ]}
+      />
+
+      {/* ── Sidebar + Panel Layout ── */}
+      <div className="std-layout">
+
+        {/* LEFT SIDEBAR MENU */}
+        <div className="std-sidebar">
+          <div className="std-sidebar__header">
+            <p className="std-sidebar__title"><Briefcase size={14} /> LearnStation Career</p>
+            <p className="std-sidebar__desc">Bridge learning and employment</p>
+          </div>
+
+          <button onClick={() => setActiveTab('dashboard')}  className={`std-nav-btn ${activeTab === 'dashboard'  ? 'std-nav-btn--active' : ''}`}><Trophy size={15} /> Career Dashboard</button>
+          <button onClick={() => setActiveTab('roadmap')}    className={`std-nav-btn ${activeTab === 'roadmap'    ? 'std-nav-btn--active' : ''}`}><BookOpen size={15} /> Career Roadmaps</button>
+          <button onClick={() => setActiveTab('resume')}     className={`std-nav-btn ${activeTab === 'resume'     ? 'std-nav-btn--active' : ''}`}><FileText size={15} /> Resume Builder</button>
+          <button onClick={() => setActiveTab('portfolio')}  className={`std-nav-btn ${activeTab === 'portfolio'  ? 'std-nav-btn--active' : ''}`}><Globe size={15} /> Portfolio Generator</button>
+          <button onClick={() => setActiveTab('github')}     className={`std-nav-btn ${activeTab === 'github'     ? 'std-nav-btn--active' : ''}`}><GithubIcon size={15} /> GitHub Integration</button>
+          <button onClick={() => setActiveTab('linkedin')}   className={`std-nav-btn ${activeTab === 'linkedin'   ? 'std-nav-btn--active' : ''}`}><LinkedinIcon size={15} /> LinkedIn Sharing</button>
+          <button onClick={() => setActiveTab('placement')}  className={`std-nav-btn ${activeTab === 'placement'  ? 'std-nav-btn--active' : ''}`}><Award size={15} /> Placement Prep</button>
+          <button onClick={() => setActiveTab('verification')} className={`std-nav-btn ${activeTab === 'verification' ? 'std-nav-btn--active' : ''}`}><CheckCircle size={15} /> Skill Verification</button>
+          <button onClick={() => setActiveTab('showcase')}   className={`std-nav-btn ${activeTab === 'showcase'   ? 'std-nav-btn--active' : ''}`}><Code size={15} /> Project Showcase</button>
+          <button onClick={() => setActiveTab('reports')}    className={`std-nav-btn ${activeTab === 'reports'    ? 'std-nav-btn--active' : ''}`}><TrendingUp size={15} /> Learning Reports</button>
         </div>
-
-        <button onClick={() => setActiveTab('dashboard')} className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Trophy size={16} /> Career Dashboard
-        </button>
-        <button onClick={() => setActiveTab('roadmap')} className={`btn ${activeTab === 'roadmap' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <BookOpen size={16} /> Career Roadmaps
-        </button>
-        <button onClick={() => setActiveTab('resume')} className={`btn ${activeTab === 'resume' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <FileText size={16} /> Resume Builder
-        </button>
-        <button onClick={() => setActiveTab('portfolio')} className={`btn ${activeTab === 'portfolio' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Globe size={16} /> Portfolio Generator
-        </button>
-        <button onClick={() => setActiveTab('github')} className={`btn ${activeTab === 'github' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <GithubIcon size={16} /> GitHub Integration
-        </button>
-        <button onClick={() => setActiveTab('linkedin')} className={`btn ${activeTab === 'linkedin' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <LinkedinIcon size={16} /> LinkedIn Sharing
-        </button>
-        <button onClick={() => setActiveTab('placement')} className={`btn ${activeTab === 'placement' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Award size={16} /> Placement Prep
-        </button>
-        <button onClick={() => setActiveTab('verification')} className={`btn ${activeTab === 'verification' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <CheckCircle size={16} /> Skill Verification
-        </button>
-        <button onClick={() => setActiveTab('showcase')} className={`btn ${activeTab === 'showcase' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <Code size={16} /> Project Showcase
-        </button>
-        <button onClick={() => setActiveTab('reports')} className={`btn ${activeTab === 'reports' ? 'btn-primary' : 'btn-secondary'}`} style={{ justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-          <TrendingUp size={16} /> Learning Reports
-        </button>
-      </div>
-
-      {/* ACTIVE PANEL */}
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '32px', minHeight: '75vh' }}>
+        {/* ACTIVE PANEL */}
+        <div className="std-panel">
         
         {/* ================== CAREER DASHBOARD VIEW ================== */}
         {activeTab === 'dashboard' && (
@@ -1970,7 +1966,9 @@ export default function CareerDashboardPage() {
           </div>
         )}
 
-      </div>
+        </div>{/* /std-panel */}
+      </div>{/* /std-layout */}
+      </div>{/* /container */}
     </div>
   );
 }

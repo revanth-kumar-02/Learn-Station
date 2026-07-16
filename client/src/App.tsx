@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PathSelectionProvider } from './context/PathSelectionContext';
 import Layout from './components/layout/Layout';
@@ -20,7 +20,6 @@ import PracticePage from './pages/PracticePage';
 import Loader from './components/common/Loader';
 import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
-import { AnimatePresence } from 'framer-motion';
 import AdminControlCenter from './pages/AdminControlCenter';
 import AdminLoginPage from './pages/AdminLoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
@@ -92,11 +91,8 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AnimatedRoutes() {
-  const location = useLocation();
-
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Routes>
         <Route
           path="/admin/login"
           element={<AdminLoginPage />}
@@ -266,7 +262,6 @@ function AnimatedRoutes() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </AnimatePresence>
   );
 }
 

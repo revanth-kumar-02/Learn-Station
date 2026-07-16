@@ -3,23 +3,26 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import PageTransition from '../components/layout/PageTransition';
+import PageHero from '../components/common/PageHero';
 import Loader from '../components/common/Loader';
+import {
+  Trophy, Zap, Calendar, CalendarDays, Flame, Medal, BookOpenCheck
+} from 'lucide-react';
 
 const CATEGORIES = [
-  { key: 'globalXP', label: 'Global XP', icon: '⚡', valueKey: 'xp', suffix: ' XP' },
-  { key: 'weeklyXP', label: 'This Week', icon: '📅', valueKey: 'xp', suffix: ' XP' },
-  { key: 'monthlyXP', label: 'This Month', icon: '🗓️', valueKey: 'xp', suffix: ' XP' },
-  { key: 'streaks', label: 'Streaks', icon: '🔥', valueKey: 'longest_streak', suffix: ' days' },
-  { key: 'tracksCompleted', label: 'Tracks Done', icon: '🏆', valueKey: 'completedTracksCount', suffix: ' tracks' },
+  { key: 'globalXP',        label: 'Global XP',    icon: <Zap size={15} />,           valueKey: 'xp',                  suffix: ' XP'     },
+  { key: 'weeklyXP',        label: 'This Week',    icon: <Calendar size={15} />,       valueKey: 'xp',                  suffix: ' XP'     },
+  { key: 'monthlyXP',       label: 'This Month',   icon: <CalendarDays size={15} />,   valueKey: 'xp',                  suffix: ' XP'     },
+  { key: 'streaks',         label: 'Streaks',      icon: <Flame size={15} />,          valueKey: 'longest_streak',      suffix: ' days'   },
+  { key: 'tracksCompleted', label: 'Tracks Done',  icon: <BookOpenCheck size={15} />,  valueKey: 'completedTracksCount', suffix: ' tracks' },
 ];
-
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('globalXP');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -37,131 +40,107 @@ export default function LeaderboardPage() {
     fetchLeaderboard();
   }, []);
 
-  const currentCategory = CATEGORIES.find((c) => c.key === activeTab);
-  const entries = data ? (data[activeTab] || []) : [];
+  const currentCategory = CATEGORIES.find((c) => c.key === activeTab)!;
+  const entries: any[] = data ? (data[activeTab] || []) : [];
+
+  // Quick stats derived from data
+  const topXP  = data?.globalXP?.[0]?.xp ?? '—';
+  const topStreak = data?.streaks?.[0]?.longest_streak ?? '—';
+  const totalPlayers = data?.globalXP?.length ?? '—';
 
   return (
     <PageTransition>
-      <div className="leaderboard-page">
+      <div className="page-std">
         <div className="container">
-          {/* Header */}
-          <motion.div
-            className="leaderboard-header"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="leaderboard-header__icon">🏆</div>
-            <h1 className="leaderboard-header__title">Leaderboard</h1>
-            <p className="leaderboard-header__subtitle">
-              Compete with learners worldwide. Climb the ranks by completing lessons, maintaining streaks, and earning XP.
-            </p>
-          </motion.div>
+          {/* ── Hero ── */}
+          <PageHero
+            icon={<Trophy size={22} />}
+            color="amber"
+            eyebrow="Rankings"
+            title="Leaderboard"
+            description="Compete with learners worldwide. Climb the ranks by completing lessons, maintaining streaks, and earning XP."
+            stats={[
+              { label: 'Top XP',     value: typeof topXP === 'number' ? topXP.toLocaleString() : topXP },
+              { label: 'Top Streak', value: topStreak !== '—' ? `${topStreak}d` : '—' },
+              { label: 'Players',    value: totalPlayers },
+            ]}
+          />
 
-          {/* Category Tabs */}
-          <motion.div
-            className="leaderboard-tabs"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.15 }}
-          >
+          {/* ── Category Tabs ── */}
+          <div className="std-tabs">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
-                className={`leaderboard-tab ${activeTab === cat.key ? 'leaderboard-tab--active' : ''}`}
-                onClick={() => setActiveTab(cat.key)}
                 id={`leaderboard-tab-${cat.key}`}
+                className={`std-tab ${activeTab === cat.key ? 'std-tab--active' : ''}`}
+                onClick={() => setActiveTab(cat.key)}
               >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
+                {cat.icon}
+                {cat.label}
               </button>
             ))}
-          </motion.div>
+          </div>
 
-          {/* Rankings */}
+          {/* ── Rankings Panel ── */}
           <motion.div
-            className="leaderboard-content"
             key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: 0.3 }}
           >
             {loading ? (
               <Loader />
             ) : error ? (
-              <div className="leaderboard-error">
-                <span>⚠️</span>
-                <p>{error}</p>
+              <div className="std-empty">
+                <div className="std-empty__icon"><Medal size={24} /></div>
+                <p className="std-empty__title">Failed to load rankings</p>
+                <p className="std-empty__desc">{error}</p>
               </div>
             ) : entries.length === 0 ? (
-              <div className="leaderboard-empty">
-                <span className="leaderboard-empty__icon">{currentCategory?.icon}</span>
-                <h3>No rankings yet</h3>
-                <p>Be the first to earn {currentCategory?.label.toLowerCase()} rankings!</p>
+              <div className="std-empty">
+                <div className="std-empty__icon">{currentCategory.icon}</div>
+                <p className="std-empty__title">No rankings yet</p>
+                <p className="std-empty__desc">Be the first to earn {currentCategory.label.toLowerCase()} rankings!</p>
               </div>
             ) : (
               <div className="leaderboard-list">
                 {/* Top 3 Podium */}
                 {entries.length >= 3 && (
                   <div className="leaderboard-podium">
-                    {/* 2nd place */}
-                    <motion.div
-                      className="podium-slot podium-slot--2nd"
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <div className="podium-avatar">
-                        {entries[1]?.name?.[0]?.toUpperCase() || '?'}
-                      </div>
+                    {/* 2nd */}
+                    <motion.div className="podium-slot podium-slot--2nd"
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                      <div className="podium-avatar">{entries[1]?.name?.[0]?.toUpperCase() || '?'}</div>
                       <div className="podium-medal">🥈</div>
                       <div className="podium-name">{entries[1]?.name || 'Anonymous'}</div>
-                      <div className="podium-value">
-                        {(entries[1]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}
-                      </div>
+                      <div className="podium-value">{(entries[1]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}</div>
                       <div className="podium-bar podium-bar--2nd" />
                     </motion.div>
 
-                    {/* 1st place */}
-                    <motion.div
-                      className="podium-slot podium-slot--1st"
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.05 }}
-                    >
+                    {/* 1st */}
+                    <motion.div className="podium-slot podium-slot--1st"
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
                       <div className="podium-crown">👑</div>
-                      <div className="podium-avatar podium-avatar--gold">
-                        {entries[0]?.name?.[0]?.toUpperCase() || '?'}
-                      </div>
+                      <div className="podium-avatar podium-avatar--gold">{entries[0]?.name?.[0]?.toUpperCase() || '?'}</div>
                       <div className="podium-medal">🥇</div>
                       <div className="podium-name">{entries[0]?.name || 'Anonymous'}</div>
-                      <div className="podium-value">
-                        {(entries[0]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}
-                      </div>
+                      <div className="podium-value">{(entries[0]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}</div>
                       <div className="podium-bar podium-bar--1st" />
                     </motion.div>
 
-                    {/* 3rd place */}
-                    <motion.div
-                      className="podium-slot podium-slot--3rd"
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 }}
-                    >
-                      <div className="podium-avatar">
-                        {entries[2]?.name?.[0]?.toUpperCase() || '?'}
-                      </div>
+                    {/* 3rd */}
+                    <motion.div className="podium-slot podium-slot--3rd"
+                      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                      <div className="podium-avatar">{entries[2]?.name?.[0]?.toUpperCase() || '?'}</div>
                       <div className="podium-medal">🥉</div>
                       <div className="podium-name">{entries[2]?.name || 'Anonymous'}</div>
-                      <div className="podium-value">
-                        {(entries[2]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}
-                      </div>
+                      <div className="podium-value">{(entries[2]?.[currentCategory.valueKey] || 0).toLocaleString()}{currentCategory.suffix}</div>
                       <div className="podium-bar podium-bar--3rd" />
                     </motion.div>
                   </div>
                 )}
 
-                {/* Remaining entries */}
+                {/* Remaining rows */}
                 <div className="leaderboard-rows">
                   {entries.slice(3).map((entry, idx) => {
                     const rank = idx + 4;
@@ -175,9 +154,7 @@ export default function LeaderboardPage() {
                         transition={{ delay: idx * 0.05 }}
                       >
                         <span className="leaderboard-row__rank">#{rank}</span>
-                        <div className="leaderboard-row__avatar">
-                          {entry.name?.[0]?.toUpperCase() || '?'}
-                        </div>
+                        <div className="leaderboard-row__avatar">{entry.name?.[0]?.toUpperCase() || '?'}</div>
                         <div className="leaderboard-row__info">
                           <span className="leaderboard-row__name">
                             {entry.name || 'Anonymous'}
@@ -186,14 +163,10 @@ export default function LeaderboardPage() {
                           <span className="leaderboard-row__username">@{entry.username || 'unknown'}</span>
                         </div>
                         <div className="leaderboard-row__score">
-                          <span className="leaderboard-row__value">
-                            {(entry[currentCategory.valueKey] || 0).toLocaleString()}
-                          </span>
+                          <span className="leaderboard-row__value">{(entry[currentCategory.valueKey] || 0).toLocaleString()}</span>
                           <span className="leaderboard-row__suffix">{currentCategory.suffix.trim()}</span>
                         </div>
-                        {entry.level && (
-                          <div className="leaderboard-row__level">Lv.{entry.level}</div>
-                        )}
+                        {entry.level && <div className="leaderboard-row__level">Lv.{entry.level}</div>}
                       </motion.div>
                     );
                   })}

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '../supabase';
 import api from '../services/api';
 import { User, UserResponse } from '../types/User';
@@ -24,12 +24,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Hard startup timeout — if loading hasn't resolved in this many ms, force it
+// to false so the UI is never blocked indefinitely by a hanging Supabase call.
+const STARTUP_TIMEOUT_MS = 8000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [settings, setSettings] = useState<any | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+
+  // Tracks whether the initial session check is done so onAuthStateChange
+  // does not fire a redundant loadProfile() for the INITIAL_SESSION event.
+  const initialSessionDone = useRef(false);
 
   const applyAppearance = useCallback((settingsData: any) => {
     if (!settingsData) return;
@@ -69,19 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(async () => {
     try {
-      const { data } = await api.get<UserResponse>('/auth/me');
-      setUser(data.user);
+      // ── Step 1: Fetch user profile and settings in parallel ───────────────
+      const [userRes, settingsRes] = await Promise.all([
+        api.get<UserResponse>('/auth/me'),
+        api.get<any>('/users/me/settings'),
+      ]);
+      // ─────────────────────────────────────────────────────────────────────
 
-      // Load settings
-      const { data: settingsData } = await api.get<any>('/users/me/settings');
-      setSettings(settingsData.settings);
-      applyAppearance(settingsData.settings);
+      const fetchedUser = userRes.data.user;
+      setUser(fetchedUser);
 
-      // Load initial unread count
+      const fetchedSettings = settingsRes.data.settings;
+      setSettings(fetchedSettings);
+      applyAppearance(fetchedSettings);
+
+      // ── Step 2: Fetch notification count (requires user ID from Step 1) ──
       const { count } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', data.user.id)
+        .eq('user_id', fetchedUser.id)
         .eq('is_read', false)
         .lte('scheduled_at', new Date().toISOString());
 
@@ -101,20 +115,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loadProfile();
     });
 
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        loadProfile();
+    // Hard startup timeout — never block the UI forever
+    const startupTimeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn('[Auth] Startup timeout reached. Forcing loading=false to unblock UI.');
+          return false;
+        }
+        return prev;
+      });
+    }, STARTUP_TIMEOUT_MS);
+
+    // 1. Get initial session — this is the ONLY place that calls loadProfile on startup.
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      if (initialSession) {
+        loadProfile().finally(() => {
+          initialSessionDone.current = true;
+          clearTimeout(startupTimeout);
+        });
       } else {
         setUser(null);
         setSettings(null);
         setLoading(false);
+        initialSessionDone.current = true;
+        clearTimeout(startupTimeout);
       }
     });
 
-    // 2. Listen to authentication changes
+    // 2. Listen to subsequent authentication changes.
+    //    Skip the very first INITIAL_SESSION event because getSession() above
+    //    already handles it — firing loadProfile() twice doubles startup cost.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Skip the initial event that mirrors getSession()
+      if (!initialSessionDone.current) return;
+
       setSession(session);
       if (session) {
         await loadProfile();
@@ -127,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(startupTimeout);
     };
   }, [loadProfile]);
 

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { rewardsService, RewardsStatusResponse, ShopItem, Challenge } from '../services/rewardsService';
 import { 
   Coins, Trophy, Calendar, CheckCircle2, Circle, Flame, Sparkles, 
-  Lock, Award, Shield, User, GraduationCap, Code2, Monitor, AlertCircle
+  Lock, Award, Shield, User, GraduationCap, Code2, Monitor, AlertCircle, Star
 } from 'lucide-react';
+import PageHero from '../components/common/PageHero';
 import '../css/pages.css';
 
 interface Particle {
@@ -110,19 +111,25 @@ export default function RewardsPage() {
 
   if (loading && !data) {
     return (
-      <div className="admin-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <div className="loading-spinner" />
+      <div className="page-std">
+        <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <div className="loading-spinner" />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="admin-container" style={{ padding: '40px', textAlign: 'center' }}>
-        <AlertCircle size={48} className="rarity-mythic" style={{ margin: '0 auto 16px' }} />
-        <h3>Error loading rewards</h3>
-        <p className="text-secondary">{error}</p>
-        <button className="btn btn-primary" onClick={fetchRewardsStatus} style={{ marginTop: '16px' }}>Retry</button>
+      <div className="page-std">
+        <div className="container">
+          <div className="std-empty">
+            <div className="std-empty__icon"><AlertCircle size={24} /></div>
+            <p className="std-empty__title">Error loading rewards</p>
+            <p className="std-empty__desc">{error}</p>
+            <button className="btn btn--primary btn--sm" onClick={fetchRewardsStatus}>Retry</button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -156,50 +163,30 @@ export default function RewardsPage() {
   };
 
   return (
-    <div className="admin-container" style={{ position: 'relative' }}>
-      
-      {/* 1. HERO SECTION: Welcome + Level + Coin Balance */}
-      <div className="admin-header-card" style={{ marginBottom: '32px', display: 'grid', gridTemplateColumns: '1fr auto', gap: '32px', alignItems: 'center' }}>
-        <div>
-          <span className="badge badge-accent" style={{ marginBottom: '8px' }}>
-            <Sparkles size={12} style={{ marginRight: '4px' }} /> Gamification & Progression
-          </span>
-          <h1 className="admin-title">Learning Rewards & Economy</h1>
-          <p className="admin-subtitle">Maintain streaks, complete missions, collect rare cosmetics, and build consistent habits.</p>
-          
-          {/* LEVEL PROGRESS BAR */}
-          <div style={{ marginTop: '24px', maxWidth: '480px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span className="text-primary" style={{ fontWeight: 600 }}>Level {levelProgress.level}</span>
-              <span className="text-secondary" style={{ fontSize: '12px' }}>
-                {levelProgress.xpInLevel} / {levelProgress.xpNeeded} XP ({Math.round(levelProgress.progress * 100)}%)
-              </span>
-            </div>
-            <div className="progress-bar-container" style={{ height: '8px', background: 'var(--border)', borderRadius: '4px' }}>
-              <div 
-                className="progress-bar-fill" 
-                style={{ 
-                  width: `${levelProgress.progress * 100}%`, 
-                  height: '100%', 
-                  background: 'var(--accent-blue)', 
-                  borderRadius: '4px',
-                  transition: 'width 0.4s ease'
-                }} 
-              />
-            </div>
-            <p className="text-secondary" style={{ fontSize: '11px', marginTop: '6px' }}>
-              🎯 {levelProgress.xpNeeded - levelProgress.xpInLevel} XP remaining until Level {levelProgress.level + 1}
-            </p>
-          </div>
-        </div>
+    <div className="page-std" style={{ position: 'relative' }}>
+      <div className="container">
 
-        {/* COIN BALANCE DISPLAY */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: '24px 32px', textAlign: 'center', minWidth: '180px' }}>
-          <Coins size={44} className="coin-icon-spin" style={{ color: '#eab308', marginBottom: '8px' }} />
-          <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)' }}>{coins}</div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>LearnCoins Balance</div>
-        </div>
-      </div>
+      {/* ── Hero ── */}
+      <PageHero
+        icon={<Coins size={22} />}
+        color="amber"
+        eyebrow="Gamification & Progression"
+        title="Rewards & Economy"
+        description="Maintain streaks, complete missions, collect rare cosmetics, and build consistent habits."
+        stats={[
+          { label: 'LearnCoins', value: coins },
+          { label: 'Level',      value: levelProgress.level },
+          { label: 'XP Progress', value: `${Math.round(levelProgress.progress * 100)}%` },
+          { label: 'Season',     value: season?.name || 'Active' },
+        ]}
+        actions={
+          <div style={{ textAlign: 'center' }}>
+            <Coins size={36} style={{ color: 'var(--accent-amber)', display: 'block', margin: '0 auto 4px' }} />
+            <span style={{ fontSize: 'var(--text-xl)', fontWeight: 800 }}>{coins}</span>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>LearnCoins</p>
+          </div>
+        }
+      />
 
       {/* 2. MAIN LAYOUT GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '32px' }}>
@@ -548,6 +535,7 @@ export default function RewardsPage() {
         </div>
       )}
 
+      </div>{/* /container */}
     </div>
   );
 }

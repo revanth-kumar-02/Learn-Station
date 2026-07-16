@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Download, Trash2, FileText, Award, Layers, 
-  HelpCircle, HardDrive, RefreshCcw, CheckCircle, Database
+  HelpCircle, HardDrive, RefreshCcw, CheckCircle, Database, WifiOff
 } from 'lucide-react';
 import { offlineDb, DownloadedFile, OfflineLesson } from '../utils/offlineDb';
 import PageTransition from '../components/layout/PageTransition';
+import PageHero from '../components/common/PageHero';
 import '../css/pages.css';
 
 // Mock list of ready-to-download materials
@@ -221,41 +222,45 @@ export default function DownloadCenterPage() {
 
   return (
     <PageTransition>
-      <div className="download-center-page" style={{ padding: 'var(--space-8) 0', minHeight: '80vh' }}>
+      <div className="page-std">
         <div className="container" style={{ maxWidth: '1000px' }}>
-          
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <div>
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, margin: 0 }}>Download & Offline Hub</h1>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Access and manage study notes, flashcards, reports, and lessons offline.
-              </p>
-            </div>
-            {!navigator.onLine && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ef4444', color: '#ffffff', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: '12px', fontWeight: 600 }}>
-                Offline Mode Active
-              </span>
-            )}
-          </div>
+
+          {/* ── Hero ── */}
+          <PageHero
+            icon={<HardDrive size={22} />}
+            color="green"
+            eyebrow="Offline Access"
+            title="Download & Offline Hub"
+            description="Access and manage study notes, flashcards, reports, and lessons even without an internet connection."
+            stats={[
+              { label: 'Offline Files',    value: downloadedFiles.length },
+              { label: 'Offline Lessons',  value: offlineLessons.length },
+              { label: 'Storage Used',     value: formatSize(storageStats.usage) },
+            ]}
+            actions={
+              !navigator.onLine ? (
+                <span className="std-badge std-badge--rose" style={{ gap: '6px', padding: '6px 12px' }}>
+                  <WifiOff size={12} /> Offline Mode
+                </span>
+              ) : undefined
+            }
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '24px', alignItems: 'start' }}>
             <div>
               {/* Tabs */}
-              <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '20px' }}>
-                <button 
-                  onClick={() => setActiveSubTab('files')} 
-                  className={`btn ${activeSubTab === 'files' ? 'btn-primary' : 'btn-secondary'}`} 
-                  style={{ fontSize: '13px' }}
+              <div className="std-tabs">
+                <button
+                  onClick={() => setActiveSubTab('files')}
+                  className={`std-tab ${activeSubTab === 'files' ? 'std-tab--active' : ''}`}
                 >
-                  <FileText size={14} /> Downloaded Files ({downloadedFiles.length})
+                  <FileText size={15} /> Downloaded Files ({downloadedFiles.length})
                 </button>
-                <button 
-                  onClick={() => setActiveSubTab('lessons')} 
-                  className={`btn ${activeSubTab === 'lessons' ? 'btn-primary' : 'btn-secondary'}`} 
-                  style={{ fontSize: '13px' }}
+                <button
+                  onClick={() => setActiveSubTab('lessons')}
+                  className={`std-tab ${activeSubTab === 'lessons' ? 'std-tab--active' : ''}`}
                 >
-                  <Layers size={14} /> Offline Lessons ({offlineLessons.length})
+                  <Layers size={15} /> Offline Lessons ({offlineLessons.length})
                 </button>
               </div>
 

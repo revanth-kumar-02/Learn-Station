@@ -1,27 +1,6 @@
-import { motion } from 'framer-motion';
-
-const pageVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
-};
-
-const pageTransition = {
-  type: 'tween',
-  ease: [0.16, 1, 0.3, 1],
-  duration: 0.3,
-};
-
+// PageTransition is now a passthrough — centralized page transitions
+// are handled at Layout level via AnimatePresence + motion.div keyed on location.pathname.
+// This component is kept for backward compatibility with pages that still import it.
 export default function PageTransition({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={pageTransition as any}
-    >
-      {children}
-    </motion.div>
-  );
+  return <>{children}</>;
 }
