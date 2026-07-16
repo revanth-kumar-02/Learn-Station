@@ -8335,6 +8335,104 @@ html.dark-theme .category-chip--active {
 .leaderboard-badge--2 { background: #94a3b8; color: #ffffff; }
 .leaderboard-badge--3 { background: #b45309; color: #ffffff; }
 
+/* ── UI/UX Polishes & Micro-Animations ───────────────────────── */
+/* Button and tab interactions */
+.btn:active, 
+.std-tab:active, 
+.resume-template-card:active, 
+.nav-group__btn:active, 
+.leaderboard-row:active {
+  transform: scale(0.985);
+  transition: transform 0.05s ease;
+}
+
+/* Hover scales */
+.resume-template-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.storage-card:hover {
+  border-color: var(--accent-green);
+  box-shadow: var(--shadow-md);
+  transition: all var(--duration-normal) ease;
+}
+
+/* Premium Loading Skeletons */
+.skeleton-bar {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-elevated) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-elevated) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Success & Error State Alert banners */
+.std-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-bottom: var(--space-4);
+  border: 1px solid transparent;
+}
+
+.std-alert--success {
+  background: hsla(142, 71%, 45%, 0.08);
+  border-color: hsla(142, 71%, 45%, 0.2);
+  color: var(--accent-green);
+}
+
+.std-alert--error {
+  background: hsla(346, 77%, 50%, 0.08);
+  border-color: hsla(346, 77%, 50%, 0.2);
+  color: var(--accent-rose);
+}
+
+/* Accessibility Focus Outlines */
+input:focus-visible, 
+textarea:focus-visible, 
+select:focus-visible, 
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Screen Reader Only helper class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .resume-template-grid {
+    grid-template-columns: 1fr;
+  }
+  .resume-sheet {
+    padding: var(--space-4) var(--space-5);
+  }
+}
+
 
 
 
