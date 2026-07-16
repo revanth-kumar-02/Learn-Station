@@ -25,6 +25,7 @@ import AdminControlCenter from './pages/AdminControlCenter';
 import AdminLoginPage from './pages/AdminLoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import RewardsPage from './pages/RewardsPage';
+import AiMentorPage from './pages/AiMentorPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -220,6 +221,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <RewardsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-mentor"
+            element={
+              <ProtectedRoute>
+                <AiMentorPage />
               </ProtectedRoute>
             }
           />

@@ -2127,4 +2127,317 @@ Do NOT:
   }
 };
 
+// --- DYNAMIC AI PROGRESSION SERVICES ---
+
+const extractJson = (text: string): any => {
+  const start = text.indexOf('[');
+  const startObj = text.indexOf('{');
+  if (start !== -1 && (startObj === -1 || start < startObj)) {
+    const end = text.lastIndexOf(']');
+    if (end !== -1) {
+      try {
+        return JSON.parse(text.substring(start, end + 1));
+      } catch (err) {
+        console.error('Failed to parse JSON array:', err);
+      }
+    }
+  } else if (startObj !== -1) {
+    const end = text.lastIndexOf('}');
+    if (end !== -1) {
+      try {
+        return JSON.parse(text.substring(startObj, end + 1));
+      } catch (err) {
+        console.error('Failed to parse JSON object:', err);
+      }
+    }
+  }
+  throw new Error('No valid JSON structure found in AI response.');
+};
+
+// @desc    AI Quiz Generator — adaptive questions
+// @route   POST /api/ai/quiz/generate
+export const generateQuiz = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { scope, difficulty, trackSlug, moduleId, lessonSlug } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Generate an adaptive technical quiz of exactly 5 questions on the topic scope "${scope || 'general development'}" with difficulty "${difficulty || 'medium'}".
+Question types should include multiple choice (MCQ), fill-in-the-blank, debugging code, and output prediction.
+Provide the output as a JSON array of objects with this exact structure:
+[
+  {
+    "question": "question text",
+    "type": "multiple-choice" or "fill-blank" or "debugging" or "output-prediction",
+    "options": ["Option A", "Option B", "Option C", "Option D"] (only for multiple-choice),
+    "correct_index": 0 (only for multiple-choice, index of correct option),
+    "answer": "correct string answer" (only for non-MCQ),
+    "explanation": "concise explanation of why the answer is correct"
+  }
+]`;
+
+    const result = await model.generateContent(prompt);
+    const questions = extractJson(result.response.text());
+
+    res.json({ questions });
+  } catch (error) {
+    console.error('❌ [AI Quiz Gen Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Practice Generator — challenges
+// @route   POST /api/ai/practice/generate
+export const generatePractice = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { language, topic } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Generate a unique practice challenge for language "${language || 'Javascript'}" and topic "${topic || 'general logic'}".
+Return a JSON object with this exact structure:
+{
+  "title": "challenge title",
+  "description": "brief scenario description and requirements",
+  "starter_code": "template code with placeholder comments",
+  "expected_output": "expected output of correct solution",
+  "language": "lowercase language slug"
+}`;
+
+    const result = await model.generateContent(prompt);
+    const challenge = extractJson(result.response.text());
+
+    res.json({ challenge });
+  } catch (error) {
+    console.error('❌ [AI Practice Gen Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Flashcards — study items
+// @route   POST /api/ai/flashcards/generate
+export const generateFlashcards = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { topic } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Generate exactly 5 flashcards for revision of "${topic || 'web development concepts'}".
+Return a JSON array of objects with this exact structure:
+[
+  {
+    "question": "short question or term",
+    "answer": "concise answer or definition",
+    "category": "topic area"
+  }
+]`;
+
+    const result = await model.generateContent(prompt);
+    const cards = extractJson(result.response.text());
+
+    res.json({ cards });
+  } catch (error) {
+    console.error('❌ [AI Flashcards Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Interview Simulator — mock chat steps
+// @route   POST /api/ai/interview/chat
+export const interviewChat = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { category, mode, history, message } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const historyPrompt = (history || []).map((h: any) => `${h.sender === 'user' ? 'Candidate' : 'Interviewer'}: ${h.text}`).join('\n');
+
+    const prompt = `You are a senior technical mock interviewer conducting a ${mode || 'technical'} interview for a ${category || 'Software Engineer'} role.
+Conversation history:
+${historyPrompt}
+Candidate response: "${message || 'Hello, I am ready to start.'}"
+
+Your role:
+- Ask exactly ONE relevant follow-up question or present a mini coding/system design challenge.
+- Be realistic, professional, and technical.
+- Do not explain yourself, just output the interviewer's question.`;
+
+    const result = await model.generateContent(prompt);
+    res.json({ response: result.response.text().trim() });
+  } catch (error) {
+    console.error('❌ [AI Interview Chat Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Interview Simulator — scorecard evaluate
+// @route   POST /api/ai/interview/evaluate
+export const interviewEvaluate = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { category, mode, history } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const historyPrompt = (history || []).map((h: any) => `${h.sender === 'user' ? 'Candidate' : 'Interviewer'}: ${h.text}`).join('\n');
+
+    const prompt = `Evaluate the candidate's performance in this simulated mock interview:
+Interview Details: Category=${category || 'General'}, Mode=${mode || 'Technical'}
+Chat transcript:
+${historyPrompt}
+
+Generate a concise report and scorecards (out of 100). Return a JSON object with this exact structure:
+{
+  "communicationScore": 85,
+  "technicalAccuracyScore": 75,
+  "confidenceScore": 80,
+  "problemSolvingScore": 70,
+  "overallFeedback": "detailed summary of candidates performance, strengths, and improvement areas",
+  "keyTakeaways": ["key point 1", "key point 2"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const evaluation = extractJson(result.response.text());
+
+    res.json(evaluation);
+  } catch (error) {
+    console.error('❌ [AI Interview Eval Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Learning Planner — roadmaps
+// @route   POST /api/ai/planner/roadmap
+export const plannerRoadmap = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { careerGoal, skillLevel, hoursAvailable } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Create a custom, step-by-step learning roadmap to achieve the career goal of "${careerGoal || 'Full Stack Engineer'}".
+Skill level: ${skillLevel || 'Beginner'}.
+Study commitment: ${hoursAvailable || '5'} hours per week.
+Provide a JSON array of stages representing milestones:
+[
+  {
+    "title": "Stage title (e.g. Frontend basics)",
+    "duration": "Estimated weeks",
+    "topics": ["topic A", "topic B", "topic C"]
+  }
+]`;
+
+    const result = await model.generateContent(prompt);
+    const roadmap = extractJson(result.response.text());
+
+    res.json({ roadmap });
+  } catch (error) {
+    console.error('❌ [AI Planner Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Study Assistant — cheat sheets and guide sheets
+// @route   POST /api/ai/study/assist
+export const studyAssist = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { topic, type } = req.body; // type is 'summary' | 'cheatsheet' | 'mindmap'
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Create a markdown formatted study assistant document of type "${type || 'summary'}" for the concept/topic "${topic || 'software engineering'}".
+Include cheat sheet parameters, definitions, clean styling, and markdown headers.`;
+
+    const result = await model.generateContent(prompt);
+    res.json({ markdown: result.response.text() });
+  } catch (error) {
+    console.error('❌ [AI Study Assist Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Career Coach — portfolios and resumes suggestions
+// @route   POST /api/ai/career/coach
+export const careerCoach = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { careerGoal, skills } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `As an expert career coach, evaluate this candidate wanting to become a "${careerGoal || 'Data Analyst'}".
+Candidate reported skills: ${skills || 'none stated'}
+Return a JSON object detailing actions:
+{
+  "skillGaps": ["gap 1", "gap 2"],
+  "resumeTips": ["tip 1", "tip 2"],
+  "projects": ["suggested project 1 with features", "suggested project 2"],
+  "nextTracks": ["suggested tracks or learning areas"]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const advice = extractJson(result.response.text());
+
+    res.json(advice);
+  } catch (error) {
+    console.error('❌ [AI Career Coach Error]:', error);
+    next(error);
+  }
+};
+
+// @desc    AI Weak Topic Detection
+// @route   POST /api/ai/detect-weakness
+export const detectWeakness = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { mistakes } = req.body; // mistakes array
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'AI service not configured.' });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Analyze these recent technical mistakes/errors made by a learner:
+${JSON.stringify(mistakes || [])}
+
+Identify exactly 3 specific weakness topics (e.g. "SQL INNER vs OUTER JOINs", "CSS Box Model alignment").
+Return a JSON array of strings:
+["topic 1", "topic 2", "topic 3"]`;
+
+    const result = await model.generateContent(prompt);
+    const weakTopics = extractJson(result.response.text());
+
+    await supabase
+      .from('profiles')
+      .update({ weak_topics: weakTopics })
+      .eq('id', userId);
+
+    res.json({ weakTopics });
+  } catch (error) {
+    console.error('❌ [AI Weakness Detection Error]:', error);
+    next(error);
+  }
+};
+
 
