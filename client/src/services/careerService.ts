@@ -46,7 +46,13 @@ export interface LearningReportMetrics {
 }
 
 export const careerService = {
-  getResume: async (): Promise<{ resume: ResumeData; profile: any }> => {
+  getResume: async (): Promise<{ 
+    resume: ResumeData; 
+    profile: any; 
+    completedTracks: any[];
+    certificates: any[];
+    projects: any[];
+  }> => {
     const { data } = await api.get('/career/resume');
     return data;
   },
