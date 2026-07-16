@@ -20,6 +20,7 @@ import adminRoutes from './routes/admin';
 import practiceRoutes from './routes/practice';
 import notificationsRoutes from './routes/notifications';
 import rewardsRoutes from './routes/rewards';
+import communityRoutes from './routes/community';
 
 // Connect to database
 connectDB();
@@ -44,6 +45,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/practice', practiceRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/rewards', rewardsRoutes);
+app.use('/api/community', communityRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

@@ -26,6 +26,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import RewardsPage from './pages/RewardsPage';
 import AiMentorPage from './pages/AiMentorPage';
+import CommunityPage from './pages/CommunityPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -229,6 +230,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <AiMentorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/community"
+            element={
+              <ProtectedRoute>
+                <CommunityPage />
               </ProtectedRoute>
             }
           />
