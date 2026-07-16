@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { path: '/ai-mentor', label: 'AI Mentor Hub', icon: 'ai' },
   { path: '/community', label: 'Community', icon: 'community' },
   { path: '/career', label: 'Career Hub', icon: 'career' },
+  { path: '/downloads', label: 'Download Center', icon: 'downloads' },
   { path: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
   { path: '/analytics', label: 'Analytics', icon: 'analytics' },
   { path: '/profile', label: 'Profile', icon: 'profile' },
@@ -91,6 +92,13 @@ const Icons = {
       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
     </svg>
   ),
+  downloads: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
   admin: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -109,6 +117,36 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`[PWA] User choice outcome: ${outcome}`);
+    setDeferredPrompt(null);
+  };
 
   // Notifications states
   const [notifOpen, setNotifOpen] = useState(false);
@@ -244,6 +282,49 @@ export default function Header() {
         {user ? (
           <>
             <div className="header__actions-desktop">
+              {/* PWA Install Button */}
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstallPwa}
+                  className="btn btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    marginRight: '8px',
+                    borderColor: 'var(--accent-blue)',
+                    color: 'var(--accent-blue)',
+                    fontWeight: 600,
+                  }}
+                >
+                  📥 Install App
+                </button>
+              )}
+
+              {/* Offline Badge */}
+              {isOffline && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    marginRight: '8px',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'inline-block' }} />
+                  Offline Mode
+                </div>
+              )}
+
               <div className="header__xp-badge">
                 <span className="header__xp-icon">⚡</span>
                 <span>{user.xp?.toLocaleString() || 0} XP</span>

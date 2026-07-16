@@ -28,6 +28,7 @@ import RewardsPage from './pages/RewardsPage';
 import AiMentorPage from './pages/AiMentorPage';
 import CommunityPage from './pages/CommunityPage';
 import CareerDashboardPage from './pages/CareerDashboardPage';
+import DownloadCenterPage from './pages/DownloadCenterPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -247,6 +248,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <CareerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/downloads"
+            element={
+              <ProtectedRoute>
+                <DownloadCenterPage />
               </ProtectedRoute>
             }
           />

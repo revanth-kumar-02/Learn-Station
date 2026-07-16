@@ -393,3 +393,76 @@ label {
 .gap-8 { gap: var(--space-8); }
 
 .grid { display: grid; }
+
+/* ============================================
+   Accessibility & PWA Overrides
+   ============================================ */
+
+/* Global Font Scaling classes */
+html.font-size-small {
+  font-size: 14px !important;
+}
+html.font-size-medium {
+  font-size: 16px !important;
+}
+html.font-size-large {
+  font-size: 18px !important;
+}
+html.font-size-extra-large {
+  font-size: 20px !important;
+}
+
+/* High Contrast mode theme variables */
+html.high-contrast-theme {
+  --bg-primary: #ffffff !important;
+  --bg-secondary: #ffffff !important;
+  --bg-tertiary: #f8fafc !important;
+  --border: #000000 !important;
+  --border-light: #000000 !important;
+  --text-primary: #000000 !important;
+  --text-secondary: #000000 !important;
+  --text-muted: #1e293b !important;
+  --accent-blue: #0000ff !important;
+  --accent-green: #008000 !important;
+  --accent-rose: #ff0000 !important;
+  --accent-amber: #d97706 !important;
+}
+
+html.dark-theme.high-contrast-theme {
+  --bg-primary: #000000 !important;
+  --bg-secondary: #000000 !important;
+  --bg-tertiary: #0f172a !important;
+  --border: #ffffff !important;
+  --border-light: #ffffff !important;
+  --text-primary: #ffffff !important;
+  --text-secondary: #ffffff !important;
+  --text-muted: #e2e8f0 !important;
+  --accent-blue: #00ffff !important;
+  --accent-green: #00ff00 !important;
+  --accent-rose: #ff007f !important;
+  --accent-amber: #fbbf24 !important;
+}
+
+/* Accessible focus outlines for keyboard navigation */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent-blue) !important;
+  outline-offset: 2px !important;
+}
+
+/* Reduced animation overrides */
+body.reduce-animations,
+body.reduce-animations *,
+body.reduce-animations *::before,
+body.reduce-animations *::after {
+  animation-delay: -1ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  background-attachment: scroll !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}

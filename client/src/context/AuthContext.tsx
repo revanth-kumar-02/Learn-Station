@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { supabase } from '../supabase';
 import api from '../services/api';
 import { User, UserResponse } from '../types/User';
+import { syncEngine } from '../utils/syncEngine';
 import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // 2. Font Size
-    document.documentElement.classList.remove('font-size-small', 'font-size-medium', 'font-size-large');
+    document.documentElement.classList.remove('font-size-small', 'font-size-medium', 'font-size-large', 'font-size-extra-large');
     document.documentElement.classList.add(`font-size-${settingsData.font_size || 'medium'}`);
 
     // 3. Compact Mode
@@ -56,6 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.body.classList.add('reduce-animations');
     } else {
       document.body.classList.remove('reduce-animations');
+    }
+
+    // 5. High Contrast Mode
+    if (settingsData.high_contrast_mode) {
+      document.documentElement.classList.add('high-contrast-theme');
+    } else {
+      document.documentElement.classList.remove('high-contrast-theme');
     }
   }, []);
 
@@ -88,6 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyAppearance]);
 
   useEffect(() => {
+    // Register sync engine triggers to reload profile after background synchronizations
+    syncEngine.registerSyncTriggers(() => {
+      loadProfile();
+    });
+
     // 1. Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

@@ -27,13 +27,13 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   
-  // Local Form States mapped to settings/profile
   const [appearanceForm, setAppearanceForm] = useState({
     theme: 'light',
     code_editor_theme: 'vs-dark',
     font_size: 'medium',
     compact_mode: false,
     reduce_animations: false,
+    high_contrast_mode: false,
   });
 
   const [notificationForm, setNotificationForm] = useState({
@@ -83,6 +83,7 @@ export default function SettingsPage() {
         font_size: settings.font_size || 'medium',
         compact_mode: !!settings.compact_mode,
         reduce_animations: !!settings.reduce_animations,
+        high_contrast_mode: !!settings.high_contrast_mode,
       });
 
       setNotificationForm({
@@ -356,6 +357,7 @@ export default function SettingsPage() {
                         <option value="small">Small (14px)</option>
                         <option value="medium">Medium (16px)</option>
                         <option value="large">Large (18px)</option>
+                        <option value="extra-large">Extra Large (20px)</option>
                       </select>
                     </div>
 
@@ -385,6 +387,20 @@ export default function SettingsPage() {
                         type="checkbox" 
                         checked={appearanceForm.reduce_animations} 
                         onChange={() => handleToggle('appearance', 'reduce_animations')}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    {/* High Contrast Mode Toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', display: 'block' }}>High Contrast Mode</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Enhance legibility with high contrast borders and solid background contrasts.</span>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={appearanceForm.high_contrast_mode} 
+                        onChange={() => handleToggle('appearance', 'high_contrast_mode')}
                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                       />
                     </div>
