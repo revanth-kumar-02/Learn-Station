@@ -25,7 +25,6 @@ export default function Layout() {
   return (
     <div className="layout">
       <Header />
-      {user && <Breadcrumbs />}
       <main className={`layout__main ${isLanding ? 'layout__main--landing' : ''}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -37,6 +36,7 @@ export default function Layout() {
             transition={pageTransition as any}
             style={{ minHeight: '100%' }}
           >
+            {user && <Breadcrumbs />}
             <Outlet />
           </motion.div>
         </AnimatePresence>
