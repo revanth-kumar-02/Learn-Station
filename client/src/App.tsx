@@ -27,6 +27,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import RewardsPage from './pages/RewardsPage';
 import AiMentorPage from './pages/AiMentorPage';
 import CommunityPage from './pages/CommunityPage';
+import CareerDashboardPage from './pages/CareerDashboardPage';
 
 
 // Separate route wrapper to handle conditional landing page / home page rendering
@@ -241,8 +242,17 @@ function AnimatedRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/career"
+            element={
+              <ProtectedRoute>
+                <CareerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
           {/* Public routes — no auth required */}
           <Route path="/u/:username" element={<PublicPortfolioPage />} />
+          <Route path="/p/:slug" element={<PublicPortfolioPage />} />
           <Route path="/certificate/:certId" element={<CertificatePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

@@ -21,6 +21,7 @@ import practiceRoutes from './routes/practice';
 import notificationsRoutes from './routes/notifications';
 import rewardsRoutes from './routes/rewards';
 import communityRoutes from './routes/community';
+import careerRoutes from './routes/career';
 
 // Connect to database
 connectDB();
@@ -46,6 +47,7 @@ app.use('/api/practice', practiceRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/community', communityRoutes);
+app.use('/api/career', careerRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
