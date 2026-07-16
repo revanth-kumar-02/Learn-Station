@@ -807,32 +807,26 @@ export default function CareerDashboardPage() {
               {CAREER_ROADMAPS.map((rm, i) => (
                 <div 
                   key={i} 
+                  className="roadmap-card"
                   style={{
-                    border: '1px solid var(--border)', 
                     background: activeRoadmapGoal === rm.goal ? 'var(--bg-tertiary)' : 'var(--bg-secondary)', 
-                    padding: '20px', 
-                    borderRadius: 'var(--radius-lg)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    boxShadow: activeRoadmapGoal === rm.goal ? 'var(--shadow-glow-blue)' : 'none',
-                    borderLeft: activeRoadmapGoal === rm.goal ? '4px solid var(--accent-blue)' : '1px solid var(--border)'
+                    borderLeft: activeRoadmapGoal === rm.goal ? '4px solid var(--accent-violet)' : '1px solid var(--border)'
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{rm.goal}</h3>
-                      <span style={{ fontSize: '10px', background: 'var(--border)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-secondary)' }}>{rm.time}</span>
+                      <span className="std-badge std-badge--violet" style={{ fontSize: '10px', padding: '2px 8px' }}>{rm.time}</span>
                     </div>
-                    <p className="text-secondary" style={{ fontSize: '12px', marginBottom: '16px', lineHeight: 1.4 }}>{rm.description}</p>
+                    <p className="text-secondary" style={{ fontSize: '12px', marginBottom: '16px', lineHeight: 1.45 }}>{rm.description}</p>
                     
                     <div style={{ marginBottom: '16px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Required Tracks</span>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {rm.tracks.slice(0, 4).map((t, idx) => (
-                          <span key={idx} className="badge badge-secondary" style={{ fontSize: '9px' }}>{t}</span>
+                          <span key={idx} className="std-badge std-badge--blue" style={{ fontSize: '9.5px', padding: '1px 6px' }}>{t}</span>
                         ))}
-                        {rm.tracks.length > 4 && <span style={{ fontSize: '9px', color: 'var(--text-muted)', alignSelf: 'center' }}>+{rm.tracks.length - 4} more</span>}
+                        {rm.tracks.length > 4 && <span style={{ fontSize: '9.5px', color: 'var(--text-muted)', alignSelf: 'center' }}>+{rm.tracks.length - 4} more</span>}
                       </div>
                     </div>
                   </div>
@@ -842,7 +836,7 @@ export default function CareerDashboardPage() {
                       setActiveRoadmapGoal(rm.goal);
                       alert(`Switched career goal to: ${rm.goal}! recommendations updated.`);
                     }} 
-                    className={`btn ${activeRoadmapGoal === rm.goal ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`btn btn--sm ${activeRoadmapGoal === rm.goal ? 'btn--primary' : 'btn--secondary'}`}
                     style={{ width: '100%', fontSize: '12px', justifyContent: 'center' }}
                   >
                     {activeRoadmapGoal === rm.goal ? 'Active Goal' : 'Switch to Goal'}
@@ -872,23 +866,22 @@ export default function CareerDashboardPage() {
             </div>
 
             {/* Config & Preview Columns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.1fr', gap: '32px' }} className="rewards-grid">
               
               {/* Form Config */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
                 {/* Template picker */}
                 <div>
-                  <label className="text-secondary" style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Select Layout Template</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <label className="text-secondary" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '10px' }}>Select Layout Template</label>
+                  <div className="resume-template-grid">
                     {(['modern', 'professional', 'ats', 'minimal'] as const).map(t => (
                       <button 
                         key={t}
                         onClick={() => setResume(prev => ({ ...prev, template: t }))}
-                        className={`btn ${resume.template === t ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '11px', textTransform: 'capitalize', padding: '6px 12px' }}
+                        className={`resume-template-card ${resume.template === t ? 'resume-template-card--active' : ''}`}
                       >
-                        {t}
+                        <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'capitalize', display: 'block' }}>{t}</span>
                       </button>
                     ))}
                   </div>
@@ -908,15 +901,15 @@ export default function CareerDashboardPage() {
                   <div style={{ marginBottom: '12px' }}>
                     <textarea placeholder="Job description, achievements, etc." value={expDetails} onChange={(e) => setExpDetails(e.target.value)} rows={2} style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px', fontSize: '12px', color: 'var(--text-primary)', resize: 'vertical' }} />
                   </div>
-                  <button onClick={addExperience} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', gap: '4px' }}>
+                  <button onClick={addExperience} className="btn btn--secondary btn--sm" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', gap: '4px' }}>
                     <Plus size={12} /> Add Experience Item
                   </button>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
                     {resume.experience?.map((exp, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 600 }}>{exp.role} @ {exp.company}</span>
-                        <button onClick={() => deleteExperience(i)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                        <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{exp.role} @ {exp.company}</span>
+                        <button onClick={() => deleteExperience(i)} style={{ color: 'var(--accent-rose)', border: 'none', background: 'none', cursor: 'pointer' }}><Trash2 size={13} /></button>
                       </div>
                     ))}
                   </div>
@@ -933,15 +926,15 @@ export default function CareerDashboardPage() {
                   <div style={{ marginBottom: '12px' }}>
                     <input type="text" placeholder="Passing Year" value={eduYear} onChange={(e) => setEduYear(e.target.value)} style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px', fontSize: '12px', color: 'var(--text-primary)' }} />
                   </div>
-                  <button onClick={addEducation} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', gap: '4px' }}>
+                  <button onClick={addEducation} className="btn btn--secondary btn--sm" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', gap: '4px' }}>
                     <Plus size={12} /> Add Education Item
                   </button>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
                     {resume.education?.map((edu, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 600 }}>{edu.degree} - {edu.institution}</span>
-                        <button onClick={() => deleteEducation(i)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                        <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{edu.degree} - {edu.institution}</span>
+                        <button onClick={() => deleteEducation(i)} style={{ color: 'var(--accent-rose)', border: 'none', background: 'none', cursor: 'pointer' }}><Trash2 size={13} /></button>
                       </div>
                     ))}
                   </div>
@@ -952,23 +945,24 @@ export default function CareerDashboardPage() {
                   <h3 className="text-primary" style={{ fontSize: '13px', fontWeight: 800, marginBottom: '12px' }}>Additional Skills</h3>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                     <input type="text" placeholder="Skill Name (e.g. AWS, Next.js)" value={additionalSkillInput} onChange={(e) => setAdditionalSkillInput(e.target.value)} style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px', fontSize: '12px', color: 'var(--text-primary)' }} />
-                    <button onClick={addAdditionalSkill} className="btn btn-secondary" style={{ fontSize: '12px' }}>Add</button>
+                    <button onClick={addAdditionalSkill} className="btn btn--secondary btn--sm" style={{ fontSize: '12px' }}>Add</button>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {resume.additional_skills?.map((s, idx) => (
-                      <span key={idx} className="badge badge-secondary" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 10px' }}>
-                        {s} <button onClick={() => removeAdditionalSkill(idx)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex' }}>×</button>
+                      <span key={idx} className="std-badge std-badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px' }}>
+                        {s} <button onClick={() => removeAdditionalSkill(idx)} style={{ color: 'var(--accent-rose)', border: 'none', background: 'none', cursor: 'pointer', display: 'inline-flex' }}>×</button>
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <button onClick={saveResumeData} className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>Save Resume Data</button>
+                <button onClick={saveResumeData} className="btn btn--primary" style={{ alignSelf: 'flex-start' }}>Save Resume Data</button>
               </div>
 
               {/* LIVE RESUME DOCUMENT PREVIEW */}
-              <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '32px', color: '#000000', fontFamily: "'Inter', sans-serif", boxShadow: 'var(--shadow-md)', maxHeight: '78vh', overflowY: 'auto' }}>
-                <div id="resume-print-area" style={{ padding: '10px' }}>
+              <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxHeight: '82vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Resume Page Preview Sheet</div>
+                <div id="resume-print-area" className="resume-sheet">
                   
                   {/* MODERN TEMPLATE */}
                   {resume.template === 'modern' && (
@@ -1106,16 +1100,24 @@ export default function CareerDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="text-secondary" style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Layout Theme Colorway</label>
-                  <select 
-                    value={portfolio.theme} 
-                    onChange={(e) => setPortfolio(prev => ({ ...prev, theme: e.target.value as any }))}
-                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', fontSize: '13px', color: 'var(--text-primary)' }}
-                  >
-                    <option value="minimal">Minimal White</option>
-                    <option value="developer">Developer (Mono Dark Mode)</option>
-                    <option value="creative">Creative Neon Purple (Glassmorphism)</option>
-                  </select>
+                  <label className="text-secondary" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '10px' }}>Layout Theme Colorway</label>
+                  <div className="resume-template-grid" style={{ marginBottom: 0 }}>
+                    {[
+                      { key: 'minimal', label: 'Minimal White' },
+                      { key: 'developer', label: 'Developer (Mono)' },
+                      { key: 'creative', label: 'Creative Neon' }
+                    ].map(t => (
+                      <button 
+                        key={t.key}
+                        type="button"
+                        onClick={() => setPortfolio(prev => ({ ...prev, theme: t.key as any }))}
+                        className={`resume-template-card ${portfolio.theme === t.key ? 'resume-template-card--active' : ''}`}
+                        style={{ padding: '10px 6px' }}
+                      >
+                        <span style={{ fontSize: '11px', fontWeight: 700, display: 'block' }}>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Section selection */}
@@ -1481,7 +1483,7 @@ export default function CareerDashboardPage() {
                   </div>
 
                   {/* Right Details Panel */}
-                  <div style={{ border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', background: 'var(--bg-tertiary)' }}>
+                  <div className="std-card" style={{ padding: '24px' }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px' }}>{companies[selectedCompanyIdx].name} Prep Guide</h3>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
@@ -1491,8 +1493,8 @@ export default function CareerDashboardPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
                           {companies[selectedCompanyIdx].roadmap.map((step, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                              <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-blue)', color: '#ffffff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}>{idx + 1}</span>
-                              <span>{step}</span>
+                              <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent-blue)', color: '#ffffff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', flexShrink: 0 }}>{idx + 1}</span>
+                              <span className="text-primary">{step}</span>
                             </div>
                           ))}
                         </div>
@@ -1503,13 +1505,13 @@ export default function CareerDashboardPage() {
                         <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Important Questions</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
                           {(companies[selectedCompanyIdx] as any).questions?.map((item: any, idx: number) => (
-                            <div key={idx} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, display: 'block' }}>Q: {item.q}</span>
-                              <button onClick={() => handleRevealAnswer(`${selectedCompanyIdx}-${idx}`)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '10px', marginTop: '4px' }}>
+                            <div key={idx} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
+                              <span style={{ fontSize: '12.5px', fontWeight: 700, display: 'block', color: 'var(--text-primary)' }}>Q: {item.q}</span>
+                              <button onClick={() => handleRevealAnswer(`${selectedCompanyIdx}-${idx}`)} className="btn btn--secondary btn--sm" style={{ padding: '2px 8px', fontSize: '10px', marginTop: '6px' }}>
                                 {prepRevealed[`${selectedCompanyIdx}-${idx}`] ? 'Hide Answer' : 'Reveal Answer'}
                               </button>
                               {prepRevealed[`${selectedCompanyIdx}-${idx}`] && (
-                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', borderTop: '1px solid var(--border)', paddingTop: '6px' }}>{item.a}</p>
+                                <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '6px', borderTop: '1px solid var(--border)', paddingTop: '6px', lineHeight: 1.4 }}>{item.a}</p>
                               )}
                             </div>
                           ))}
@@ -1521,27 +1523,26 @@ export default function CareerDashboardPage() {
                     {(companies[selectedCompanyIdx] as any).codingChallenges && (
                       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
                         <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Top Coding Challenge</span>
-                        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginTop: '10px' }}>
+                        <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', marginTop: '10px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 700 }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].title}</span>
-                            <span className="badge badge-secondary" style={{ fontSize: '10px', background: 'orange', color: '#ffffff' }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].difficulty}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].title}</span>
+                            <span className="std-badge std-badge--amber" style={{ fontSize: '9px', fontWeight: 700 }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].difficulty}</span>
                           </div>
-                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].desc}</p>
+                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.45 }}>{(companies[selectedCompanyIdx] as any).codingChallenges[0].desc}</p>
                           
                           {/* Code Editor */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <textarea 
                               value={companyCodingInput || (companies[selectedCompanyIdx] as any).codingChallenges[0].solution}
                               onChange={(e) => setCompanyCodingInput(e.target.value)}
                               rows={8}
-                              style={{ width: '100%', background: '#1e293b', color: '#f8fafc', fontFamily: 'monospace', fontSize: '12px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                              style={{ width: '100%', background: '#0f172a', color: '#f8fafc', fontFamily: 'var(--font-mono)', fontSize: '11.5px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
                             />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                               <button 
                                 onClick={() => runCompanyCodingChallenge((companies[selectedCompanyIdx] as any).codingChallenges[0].solution)} 
                                 disabled={compilingCode}
-                                className="btn btn-primary" 
-                                style={{ fontSize: '12px' }}
+                                className="btn btn--primary btn--sm" 
                               >
                                 {compilingCode ? 'Compiling...' : 'Run Test Cases'}
                               </button>
@@ -1550,7 +1551,8 @@ export default function CareerDashboardPage() {
 
                           {/* Coding execution console */}
                           {codingConsole.length > 0 && (
-                            <div style={{ background: '#0f172a', color: '#38bdf8', padding: '12px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '11px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div className="code-compiler-console" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ color: '#94a3b8', borderBottom: '1px solid #1e293b', paddingBottom: '4px', marginBottom: '4px', fontSize: '10px', fontWeight: 700 }}>CONSOLE EXECUTION LOG</div>
                               {codingConsole.map((line, i) => (
                                 <div key={i} style={{ color: line.startsWith('❌') ? '#ef4444' : line.startsWith('✔') ? '#4ade80' : '#38bdf8' }}>{line}</div>
                               ))}

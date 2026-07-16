@@ -300,6 +300,20 @@ export default function AiMentorPage() {
             <p className="std-sidebar__title"><Sparkles size={14} /> AI Learning Hub</p>
             <p className="std-sidebar__desc">Choose a learning tool</p>
           </div>
+          
+          {/* MENTOR PROFILE CARD */}
+          <div className="mentor-profile-card">
+            <div className="mentor-avatar">
+              <Brain size={20} />
+              <div className="mentor-status-dot"></div>
+            </div>
+            <div>
+              <div className="text-primary" style={{ fontWeight: 700, fontSize: '13px' }}>Architect AI</div>
+              <span className="std-badge std-badge--violet" style={{ fontSize: '9px', padding: '1px 6px', display: 'inline-block', marginTop: '2px' }}>Gemini 1.5 Pro</span>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>Specialty: Full-Stack</div>
+            </div>
+          </div>
+
           {TOOLS.map((t) => (
             <button
               key={t.key}
@@ -323,39 +337,85 @@ export default function AiMentorPage() {
 
             {/* QUICK ACTIONS ROW */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Explain with a simple real-world analogy')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Explain with a simple real-world analogy')} className="btn btn--secondary btn--sm" style={{ padding: '6px 12px', fontSize: '11px' }}>
                 💡 Simple Analogy
               </button>
-              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Simplify this explanation for a beginner')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Simplify this explanation for a beginner')} className="btn btn--secondary btn--sm" style={{ padding: '6px 12px', fontSize: '11px' }}>
                 👶 Simplify Explanation
               </button>
-              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Provide an advanced coding demonstration')} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+              <button disabled={mentorLoading} onClick={() => sendMentorMessage('Provide an advanced coding demonstration')} className="btn btn--secondary btn--sm" style={{ padding: '6px 12px', fontSize: '11px' }}>
                 🚀 Advanced Code Demo
               </button>
             </div>
 
             {/* CHAT BUBBLES */}
             <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '420px', marginBottom: '20px' }}>
-              {mentorHistory.map((m, idx) => (
-                <div key={idx} style={{ 
-                  alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '75%',
-                  background: m.sender === 'user' ? 'var(--accent-blue)' : 'var(--bg-secondary)',
-                  color: m.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '12px 16px',
-                  boxShadow: 'var(--shadow-sm)',
-                  fontSize: '13px',
-                  lineHeight: 1.5,
-                  whiteSpace: 'pre-line',
-                  border: m.sender === 'user' ? 'none' : '1px solid var(--border)'
-                }}>
-                  {m.text}
+              {mentorHistory.length === 1 ? (
+                <div style={{ textAlign: 'center', padding: '24px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className="mentor-avatar" style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-xl)', fontSize: '24px', marginBottom: '16px' }}>🤖</div>
+                  <h3 className="text-primary" style={{ fontSize: '16px', fontWeight: 800 }}>Start a chat with Architect AI</h3>
+                  <p className="text-secondary" style={{ fontSize: '12px', maxWidth: '360px', margin: '4px auto 24px', lineHeight: 1.4 }}>
+                    I can explain algorithms, review syntax, provide coding analogies, or help guide your development career.
+                  </p>
+                  
+                  <div style={{ width: '100%', maxWidth: '480px' }}>
+                    <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textAlign: 'left', letterSpacing: '0.5px' }}>Suggested Prompts</div>
+                    <div className="suggested-prompts-grid">
+                      <button disabled={mentorLoading} onClick={() => { setMentorInput('Explain OOP inheritance using a library analogy.'); }} className="suggested-prompt-btn">
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>💡 Analogy Prompt</span>
+                        <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>OOP inheritance library analogy</span>
+                      </button>
+                      <button disabled={mentorLoading} onClick={() => { setMentorInput('Give me a quick checklist for responsive web design.'); }} className="suggested-prompt-btn">
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>📱 Web Design Checklist</span>
+                        <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>Responsive web UI checklist</span>
+                      </button>
+                      <button disabled={mentorLoading} onClick={() => { setMentorInput('Explain React Context vs Redux like I am five.'); }} className="suggested-prompt-btn">
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>👶 Explain like I\'m 5</span>
+                        <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>React Context vs Redux</span>
+                      </button>
+                      <button disabled={mentorLoading} onClick={() => { setMentorInput('Show me a quick SQL schema for an e-commerce order table.'); }} className="suggested-prompt-btn">
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>🗄️ SQL Schema Demo</span>
+                        <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>E-commerce order table SQL</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                mentorHistory.map((m, idx) => (
+                  <div key={idx} style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
+                    maxWidth: '80%',
+                    flexDirection: m.sender === 'user' ? 'row-reverse' : 'row'
+                  }}>
+                    <div className={`chat-bubble-avatar chat-bubble-avatar--${m.sender === 'user' ? 'user' : 'ai'}`} style={{ fontSize: '11px', fontWeight: 700 }}>
+                      {m.sender === 'user' ? 'U' : 'AI'}
+                    </div>
+                    <div style={{ 
+                      background: m.sender === 'user' ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+                      color: m.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '12px 16px',
+                      boxShadow: 'var(--shadow-sm)',
+                      fontSize: '13px',
+                      lineHeight: 1.5,
+                      whiteSpace: 'pre-line',
+                      border: m.sender === 'user' ? 'none' : '1px solid var(--border)'
+                    }}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))
+              )}
               {mentorLoading && (
-                <div style={{ alignSelf: 'flex-start', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', border: '1px solid var(--border)' }}>
-                  <div className="loading-spinner" style={{ width: '16px', height: '16px' }} />
+                <div style={{ alignSelf: 'flex-start', display: 'flex', gap: '12px' }}>
+                  <div className="chat-bubble-avatar chat-bubble-avatar--ai" style={{ fontSize: '11px', fontWeight: 700 }}>AI</div>
+                  <div className="typing-indicator">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                  </div>
                 </div>
               )}
             </div>
@@ -370,7 +430,7 @@ export default function AiMentorPage() {
                 onKeyDown={(e) => e.key === 'Enter' && sendMentorMessage()}
                 style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '12px 16px', color: 'var(--text-primary)', fontSize: '13px' }}
               />
-              <button onClick={() => sendMentorMessage()} className="btn btn-primary" style={{ padding: '12px 20px' }}>
+              <button onClick={() => sendMentorMessage()} className="btn btn--primary" style={{ padding: '12px 20px', borderRadius: 'var(--radius-lg)' }}>
                 <Send size={16} />
               </button>
             </div>
