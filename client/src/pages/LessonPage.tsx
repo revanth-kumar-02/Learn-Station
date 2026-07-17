@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { lessonService, aiService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
@@ -78,11 +79,54 @@ export default function LessonPage() {
   const [activeWalkthroughLine, setActiveWalkthroughLine] = useState<number | null>(null);
 
   // AI Mentor State
-  const [mentorOpen, setMentorOpen] = useState(false);
+  const [mentorOpen, setMentorOpen] = useState(() => {
+    const saved = localStorage.getItem('ls_ai_panel_open');
+    return saved !== 'false';
+  });
   const [mentorMessages, setMentorMessages] = useState<any[]>([]);
   const [mentorInput, setMentorInput] = useState('');
   const [mentorLoading, setMentorLoading] = useState(false);
   const mentorEndRef = useRef<HTMLDivElement>(null);
+
+  const toggleMentorOpen = () => {
+    setMentorOpen(prev => {
+      const next = !prev;
+      localStorage.setItem('ls_ai_panel_open', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const getSuggestedPromptsForStep = (step: number) => {
+    switch (step) {
+      case 0: // Overview
+      case 1: // Lesson
+        return [
+          { text: '📖 Explain concept differently', prompt: 'Explain the concept of this lesson differently using a simple analogy.' },
+          { text: '✨ Simplify this topic', prompt: 'Can you simplify the explanation of this lesson concept?' },
+          { text: '🏢 Show real-world examples', prompt: 'Provide 3 real-world practical use cases for this concept.' }
+        ];
+      case 2: // Practice
+        return [
+          { text: '💡 Give me a hint', prompt: 'Give me a hint for this practice task without revealing the direct solution.' },
+          { text: '🔍 Explain step-by-step logic', prompt: 'Explain the step-by-step logic required to solve this practice task.' },
+          { text: '🐛 Debug my code', prompt: 'Here is my current practice code. Can you help me debug it and explain my errors?' }
+        ];
+      case 3: // Quiz
+        return [
+          { text: '🧠 Hint for current question', prompt: 'Provide a helpful hint for this quiz question without telling me the answer.' },
+          { text: '📝 Explain quiz mistakes', prompt: 'Can you explain the concepts behind this quiz question and review common mistakes?' }
+        ];
+      case 4: // Summary
+        return [
+          { text: '🏋️ Generate extra practice', prompt: 'Generate 2 additional practice code exercises with instructions for this topic.' },
+          { text: '🎓 Test my understanding', prompt: 'Ask me a challenging conceptual question about this lesson to test my knowledge.' }
+        ];
+      default:
+        return [
+          { text: '💬 Summarize lesson', prompt: 'Explain the core concepts of this lesson in a simple summary.' }
+        ];
+    }
+  };
 
   // Fetch data
   useEffect(() => {
@@ -243,6 +287,14 @@ export default function LessonPage() {
     if (isCorrect) {
       setQuizScore(prev => prev + 1);
     }
+
+    // Safe gating: if last question is verified correct, and total expected score >= 4, unlock Summary
+    const challengesList = lesson.challenges || [];
+    const isLastQuestion = challengeIndex === challengesList.length - 1;
+    const finalExpectedScore = quizScore + (isCorrect ? 1 : 0);
+    if (isLastQuestion && finalExpectedScore >= 4) {
+      setMaxStepReached(prev => Math.max(prev, 4));
+    }
   };
 
   const handleNextQuestion = () => {
@@ -252,12 +304,16 @@ export default function LessonPage() {
     setMatches({});
     setSelectedMatchKey(null);
 
-    const challenges = lesson.challenges || [];
-    if (challengeIndex < challenges.length - 1) {
+    const challengesList = lesson.challenges || [];
+    if (challengeIndex < challengesList.length - 1) {
       setChallengeIndex(challengeIndex + 1);
     } else {
       // Quiz finished
       setQuizSubmitted(true);
+      // Ensure Summary is unlocked if quiz is passed
+      if (quizScore >= 4) {
+        setMaxStepReached(prev => Math.max(prev, 4));
+      }
     }
   };
 
@@ -362,12 +418,71 @@ export default function LessonPage() {
     setMentorMessages(prev => [...prev, { sender: 'student', text: userText }]);
     setMentorLoading(true);
 
+    // Context parameters injected dynamically
+    const trackName = track?.name || '';
+    const lessonTitle = lesson?.title || '';
+    const activeTabName = TABS[currentStep]?.label || '';
+    
+    let userPracticeCode = '';
+    if (currentStep === 2) {
+      const playgroundCode = localStorage.getItem(`ls_playground_${lesson.slug}`);
+      if (playgroundCode) {
+        userPracticeCode = `\nUSER PRACTICE CODE ATTEMPT:\n\`\`\`\n${playgroundCode}\n\`\`\``;
+      }
+    }
+
+    let quizContext = '';
+    if (currentStep === 3) {
+      const challenges = lesson.challenges || [];
+      const challenge = challenges[challengeIndex];
+      if (challenge) {
+        quizContext = `\nACTIVE QUIZ QUESTION: "${challenge.question}"\nTYPE: ${challenge.type}\nUSER ANSWER GIVEN: "${userAnswer}"\nIS CORRECT: ${feedback ? (feedback.correct ? 'Yes' : 'No') : 'Unsubmitted'}`;
+      }
+    }
+
+    const fullMessageForAI = `
+[CONTEXT INJECTED AUTOMATICALLY]
+TRACK: ${trackName}
+LESSON: ${lessonTitle}
+ACTIVE TAB STEP: ${activeTabName}
+${userPracticeCode}
+${quizContext}
+----------------------------------------
+STUDENT MESSAGE:
+${userText}
+`.trim();
+
     try {
-      const res = await aiService.mentor(userText, lesson.slug, track.slug, 'default');
+      const res = await aiService.mentor(fullMessageForAI, lesson.slug, track.slug, 'default');
       setMentorMessages(prev => [...prev, { sender: 'mentor', text: res.response || res.message }]);
+
+      if (res.reward && res.reward.rewarded) {
+        // Grant XP and Coins in client state immediately
+        updateUser({
+          ...user,
+          xp: res.reward.totalXp,
+          learn_coins: res.reward.totalCoins,
+          level: res.reward.level
+        });
+
+        // Insert a friendly system notice in chat log
+        setMentorMessages(prev => [
+          ...prev,
+          { 
+            sender: 'system', 
+            text: `🎉 Reward Earned! +10 XP and +5 LearnCoins awarded for your first AI mentor interaction in this lesson.` 
+          }
+        ]);
+      }
     } catch (err) {
-      console.error(err);
-      setMentorMessages(prev => [...prev, { sender: 'mentor', text: 'Error communicating with mentor. Check your network connection.' }]);
+      console.error('AI Service Error:', err);
+      setMentorMessages(prev => [
+        ...prev, 
+        { 
+          sender: 'mentor', 
+          text: '🤖 Note: The AI Mentor is currently offline or unreachable. You can still continue studying your lesson, practice, and complete the quiz normally!' 
+        }
+      ]);
     } finally {
       setMentorLoading(false);
     }
@@ -378,7 +493,17 @@ export default function LessonPage() {
       <div className="workspace-layout">
         
         {/* Workspace Body */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 'var(--space-6)', height: 'calc(100vh - 100px)', padding: 'var(--space-4)' }} className="workspace-main-panel">
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: mentorOpen ? '1fr 340px' : '1fr 48px', 
+            gap: 'var(--space-6)', 
+            height: 'calc(100vh - 100px)', 
+            padding: 'var(--space-4)',
+            transition: 'grid-template-columns 0.3s ease-in-out'
+          }} 
+          className="workspace-main-panel"
+        >
           
           {/* Main workspace */}
           <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '12px' }} className="no-scrollbar">
@@ -841,13 +966,32 @@ export default function LessonPage() {
                         </p>
                       </div>
 
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        {quizScore >= 4 && (
+                          <button
+                            onClick={handleCompleteLesson}
+                            disabled={isCompleting}
+                            className="btn btn--primary btn--md"
+                            style={{
+                              background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
+                              color: 'white',
+                              fontWeight: 600,
+                              minWidth: '220px'
+                            }}
+                          >
+                            {isCompleting ? 'Completing...' : 'Complete Lesson & Continue'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => setMaxStepReached(prev => Math.max(prev, 5))}
+                          onClick={() => {
+                            setMaxStepReached(prev => Math.max(prev, 5));
+                            setCurrentStep(5);
+                          }}
                           className="btn btn--secondary btn--md"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                          Unlock Flashcards <ChevronRight size={14} />
+                          Try Flashcards (Optional) <ChevronRight size={14} />
                         </button>
                       </div>
                     </div>
@@ -923,24 +1067,6 @@ export default function LessonPage() {
                         </div>
                       )}
 
-                      {quizScore >= 4 && (
-                        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px', width: '100%', textAlign: 'center' }}>
-                          <button
-                            onClick={handleCompleteLesson}
-                            disabled={isCompleting}
-                            className="btn btn--primary btn--md"
-                            style={{
-                              background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
-                              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
-                              color: 'white',
-                              fontWeight: 600,
-                              minWidth: '180px'
-                            }}
-                          >
-                            {isCompleting ? 'Completing...' : 'Complete Lesson & Continue'}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -972,70 +1098,176 @@ export default function LessonPage() {
 
           </div>
 
-          {/* AI Mentor Chat Sidebar */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '10px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '20px' }}>🤖</span>
-              <div>
-                <strong style={{ fontSize: '13px', display: 'block' }}>AI Lesson Mentor</strong>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ask questions about this concept</span>
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }} className="no-scrollbar">
-              <div className="chat-msg chat-msg--mentor" style={{ backgroundColor: 'var(--bg-primary)', padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '12px', alignSelf: 'flex-start', maxWidth: '85%' }}>
-                Hi! I am your interactive AI coding mentor. Ask me anything about <strong>{lesson.title}</strong>, or ask me for simpler explanations or more examples!
-              </div>
-
-              {mentorMessages.map((msg, i) => (
-                <div 
-                  key={i} 
-                  style={{
-                    padding: '10px',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: '12px',
-                    alignSelf: msg.sender === 'student' ? 'flex-end' : 'flex-start',
-                    maxWidth: '85%',
-                    backgroundColor: msg.sender === 'student' ? 'var(--accent-blue-glow)' : 'var(--bg-primary)',
-                    color: msg.sender === 'student' ? 'var(--accent-blue)' : 'var(--text-primary)',
-                    border: msg.sender === 'student' ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
-                  }}
-                >
-                  {msg.text}
-                </div>
-              ))}
-
-              {mentorLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', paddingLeft: '8px' }}>
-                  <span className="btn__spinner" style={{ width: '12px', height: '12px', border: '2px solid var(--text-muted)', borderTopColor: 'transparent' }} />
-                  Mentor is typing...
-                </div>
-              )}
-              <div ref={mentorEndRef} />
-            </div>
-
-            <form onSubmit={handleSendMentorMsg} style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
-              <input
-                type="text"
-                value={mentorInput}
-                onChange={e => setMentorInput(e.target.value)}
-                placeholder="Ask your mentor..."
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: 'var(--text-primary)',
-                  fontSize: '12px',
-                  outline: 'none'
-                }}
-              />
-              <button type="submit" disabled={!mentorInput.trim() || mentorLoading} className="btn btn--primary btn--sm" style={{ padding: '6px 12px' }}>
-                Send
+          {/* Collapsible AI Mentor Chat Sidebar */}
+          {!mentorOpen ? (
+            <div 
+              className="card" 
+              onClick={toggleMentorOpen}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'flex-start', 
+                padding: '24px 6px', 
+                cursor: 'pointer', 
+                gap: '16px',
+                borderRadius: 'var(--radius-xl)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px dashed var(--border)',
+                height: '100%',
+                opacity: 0.8,
+                transition: 'opacity 0.2s',
+                overflow: 'hidden'
+              }}
+              title="Expand AI Mentor"
+            >
+              <button 
+                className="btn btn--secondary" 
+                style={{ padding: '6px', border: 'none', background: 'transparent', fontSize: '18px' }}
+              >
+                🤖
               </button>
-            </form>
-          </div>
+              <div style={{ writingMode: 'vertical-rl', textTransform: 'uppercase', fontSize: '10.5px', fontWeight: 700, letterSpacing: '3px', color: 'var(--text-muted)', userSelect: 'none' }}>
+                AI MENTOR
+              </div>
+            </div>
+          ) : (
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)', position: 'relative', overflow: 'hidden' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '10px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>🤖</span>
+                  <div>
+                    <strong style={{ fontSize: '13px', display: 'block' }}>AI Lesson Mentor</strong>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ask questions about this concept</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={toggleMentorOpen}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: 'var(--text-muted)', 
+                    cursor: 'pointer', 
+                    fontSize: '12px', 
+                    padding: '4px',
+                    fontWeight: 'bold'
+                  }}
+                  title="Collapse Panel"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Chat messages */}
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }} className="no-scrollbar">
+                <div className="chat-msg chat-msg--mentor" style={{ backgroundColor: 'var(--bg-primary)', padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '12px', alignSelf: 'flex-start', maxWidth: '85%' }}>
+                  Hi! I am your interactive AI coding mentor. Ask me anything about <strong>{lesson.title}</strong>, or select one of the suggested prompts below!
+                </div>
+
+                {mentorMessages.map((msg, i) => {
+                  if (msg.sender === 'system') {
+                    return (
+                      <div 
+                        key={i}
+                        style={{
+                          alignSelf: 'center',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-secondary)',
+                          border: '1px dashed var(--border)',
+                          fontSize: '11px',
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          textAlign: 'center',
+                          margin: '6px 0',
+                          maxWidth: '90%'
+                        }}
+                      >
+                        {msg.text}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div 
+                      key={i} 
+                      style={{
+                        padding: '10px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px',
+                        alignSelf: msg.sender === 'student' ? 'flex-end' : 'flex-start',
+                        maxWidth: '85%',
+                        backgroundColor: msg.sender === 'student' ? 'var(--accent-blue-glow)' : 'var(--bg-primary)',
+                        color: msg.sender === 'student' ? 'var(--accent-blue)' : 'var(--text-primary)',
+                        border: msg.sender === 'student' ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
+                      }}
+                    >
+                      {msg.text}
+                    </div>
+                  );
+                })}
+
+                {mentorLoading && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', paddingLeft: '8px' }}>
+                    <span className="btn__spinner" style={{ width: '12px', height: '12px', border: '2px solid var(--text-muted)', borderTopColor: 'transparent' }} />
+                    Mentor is typing...
+                  </div>
+                )}
+                <div ref={mentorEndRef} />
+              </div>
+
+              {/* Dynamic Suggested Prompts badges */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Suggested Prompts</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '110px', overflowY: 'auto' }} className="no-scrollbar">
+                  {getSuggestedPromptsForStep(currentStep).map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setMentorInput(s.prompt)}
+                      style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '4px 8px',
+                        fontSize: '10.5px',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {s.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Input Form */}
+              <form onSubmit={handleSendMentorMsg} style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
+                <input
+                  type="text"
+                  value={mentorInput}
+                  onChange={e => setMentorInput(e.target.value)}
+                  placeholder="Ask your mentor..."
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12px',
+                    outline: 'none'
+                  }}
+                />
+                <button type="submit" disabled={!mentorInput.trim() || mentorLoading} className="btn btn--primary btn--sm" style={{ padding: '6px 12px' }}>
+                  Send
+                </button>
+              </form>
+            </div>
+          )}
 
         </div>
 

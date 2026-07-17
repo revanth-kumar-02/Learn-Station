@@ -19,6 +19,8 @@ export interface User {
   avatarUrl?: string;
   provider?: string;
   daily_missions?: any;
+  learn_coins?: number;
+  mentor_profile?: any;
 }
 
 export interface UserResponse {

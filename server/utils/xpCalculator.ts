@@ -18,6 +18,7 @@ export interface UserDataStats {
   isWeekendLearning?: boolean;
   achievements?: string[];
   level?: number;
+  aiHelperCount?: number;
 }
 
 export interface AchievementDef {
@@ -527,6 +528,39 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
     xpBonus: 1000,
     target: 20,
     check: (stats) => (stats.aiPathsGenerated || 0) >= 20,
+  },
+  'ai-helper-1': {
+    id: 'ai-helper-1',
+    name: 'AI Helper Initiate',
+    description: 'Ask the AI Mentor for help on a lesson',
+    icon: '🤖',
+    category: 'ai',
+    rarity: 'Standard',
+    xpBonus: 50,
+    target: 1,
+    check: (stats) => (stats.aiHelperCount || 0) >= 1,
+  },
+  'ai-helper-5': {
+    id: 'ai-helper-5',
+    name: 'AI Helper Companion',
+    description: 'Ask the AI Mentor for help 5 times',
+    icon: '💡',
+    category: 'ai',
+    rarity: 'Standard',
+    xpBonus: 150,
+    target: 5,
+    check: (stats) => (stats.aiHelperCount || 0) >= 5,
+  },
+  'ai-helper-15': {
+    id: 'ai-helper-15',
+    name: 'AI Helper Champion',
+    description: 'Ask the AI Mentor for help 15 times',
+    icon: '🧠',
+    category: 'ai',
+    rarity: 'Legendary',
+    xpBonus: 500,
+    target: 15,
+    check: (stats) => (stats.aiHelperCount || 0) >= 15,
   },
 
   // --- Project Achievements ---

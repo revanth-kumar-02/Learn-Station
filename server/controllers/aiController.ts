@@ -2103,24 +2103,147 @@ Do NOT:
 - Repeat the same content already in the lesson
 - Use jargon without explanation`;
 
+    let text = '';
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ message: 'AI service not configured.' });
+      console.warn('⚠️ Gemini API key missing. Returning offline helper response.');
+      text = '🤖 Note: The AI Mentor is currently offline (service configuration issue). Feel free to continue with your lesson modules!';
+    } else {
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-2.0-flash',
+          systemInstruction: systemPrompt,
+        });
+
+        const result = await model.generateContent(message);
+        text = result.response.text();
+        console.log(`🤖 [AI Mentor] Responded to: "${message.substring(0, 60)}..." (${text.length} chars)`);
+      } catch (geminiError: any) {
+        console.error('❌ Gemini generation failed:', geminiError.message);
+        text = '🤖 Note: The AI Mentor is currently offline or experiencing heavy load. Please feel free to continue your lesson practice and quiz!';
+      }
     }
 
-    
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: systemPrompt,
+    // Award rewards for first meaningful AI interaction in this lesson
+    const userId = req.user?.id;
+    let rewardData: any = null;
+
+    if (userId && lessonSlug) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        let mentorProfile = profile.mentor_profile;
+        if (!mentorProfile || typeof mentorProfile !== 'object') {
+          mentorProfile = { interacted_lessons: [], ai_helper_count: 0 };
+        }
+        if (!Array.isArray(mentorProfile.interacted_lessons)) {
+          mentorProfile.interacted_lessons = [];
+        }
+        if (typeof mentorProfile.ai_helper_count !== 'number') {
+          mentorProfile.ai_helper_count = 0;
+        }
+
+        const alreadyInteracted = mentorProfile.interacted_lessons.includes(lessonSlug);
+        mentorProfile.ai_helper_count += 1;
+
+        let xpEarned = 0;
+        let coinsEarned = 0;
+        let newAchievementsList: any[] = [];
+        let didLevelUp = false;
+
+        let updatedXp = profile.xp || 0;
+        let updatedCoins = profile.learn_coins || 0;
+        let updatedLevel = profile.level || 1;
+        let achievements = profile.achievements || [];
+
+        const { calculateLevel, checkAchievements } = require('../utils/xpCalculator');
+
+        if (!alreadyInteracted) {
+          mentorProfile.interacted_lessons.push(lessonSlug);
+          xpEarned = 10;
+          coinsEarned = 5;
+
+          updatedXp += xpEarned;
+          updatedCoins += coinsEarned;
+
+          // Check level progression
+          const calculatedLevel = calculateLevel(updatedXp);
+          if (calculatedLevel > updatedLevel) {
+            updatedLevel = calculatedLevel;
+            didLevelUp = true;
+          }
+
+          // Check AI helper achievements
+          const unlocked = checkAchievements({
+            achievements,
+            aiHelperCount: mentorProfile.ai_helper_count,
+            xp: updatedXp,
+            level: updatedLevel
+          });
+
+          if (unlocked.length > 0) {
+            unlocked.forEach((ach: any) => {
+              achievements.push(ach.id);
+              updatedXp += ach.xpBonus;
+              newAchievementsList.push({
+                id: ach.id,
+                name: ach.name,
+                description: ach.description,
+                icon: ach.icon
+              });
+            });
+            // Recalculate level after achievement bonus
+            const finalCalculatedLevel = calculateLevel(updatedXp);
+            if (finalCalculatedLevel > updatedLevel) {
+              updatedLevel = finalCalculatedLevel;
+              didLevelUp = true;
+            }
+          }
+        }
+
+        // Update profile in DB
+        await supabase
+          .from('profiles')
+          .update({
+            mentor_profile: mentorProfile,
+            xp: updatedXp,
+            learn_coins: updatedCoins,
+            level: updatedLevel,
+            achievements
+          })
+          .eq('id', userId);
+
+        if (!alreadyInteracted) {
+          rewardData = {
+            rewarded: true,
+            xpEarned,
+            coinsEarned,
+            newAchievements: newAchievementsList,
+            didLevelUp,
+            totalXp: updatedXp,
+            totalCoins: updatedCoins,
+            level: updatedLevel
+          };
+        } else {
+          rewardData = {
+            rewarded: false,
+            totalXp: updatedXp,
+            totalCoins: updatedCoins,
+            level: updatedLevel
+          };
+        }
+      }
+    }
+
+    res.json({
+      response: text,
+      reward: rewardData
     });
-
-    const result = await model.generateContent(message);
-    const text = result.response.text();
-
-    console.log(`🤖 [AI Mentor] Responded to: "${message.substring(0, 60)}..." (${text.length} chars)`);
-
-    res.json({ response: text });
   } catch (error) {
     console.error('❌ [AI Mentor Error]:', error);
     next(error);
