@@ -8,7 +8,7 @@ import {
   Award, Heart, Compass, Plus, Send, ShieldAlert,
   ThumbsUp, Calendar, AlertCircle, FileText, CheckCircle, Play, Sparkles
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import '../css/pages.css';
 
 type SectionTab = 'friends' | 'groups' | 'forums' | 'peer-review' | 'resources';
@@ -220,11 +220,8 @@ export default function CommunityPage() {
   );
 
   return (
-    <div className="page-std">
-      <div className="container">
-
-      {/* ── Hero ── */}
-      <PageHero
+    <div className="page-std animate-fade-in">
+      <PageHeader
         icon={<Users size={22} />}
         color="violet"
         eyebrow="Collaborative Learning"
@@ -236,6 +233,8 @@ export default function CommunityPage() {
           { label: 'Forum Posts', value: forumPosts.length },
         ]}
       />
+
+      <div className="container" style={{ marginTop: '0px' }}>
 
       {/* TOP NAVIGATION TABS */}
       <div className="std-tabs" style={{ marginBottom: '24px' }}>

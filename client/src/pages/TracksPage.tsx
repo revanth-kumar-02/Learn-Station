@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { trackService } from '../services/trackService';
+import PageHeader from '../components/common/PageHeader';
 import ProgressBar from '../components/common/ProgressBar';
 import PageTransition from '../components/layout/PageTransition';
 
@@ -635,12 +636,15 @@ export default function TracksPage() {
         <div className="gradient-orb gradient-orb--1" style={{ '--orb-color': 'var(--accent-blue)', '--orb-size': '600px', top: '-15%', left: '-10%' } as React.CSSProperties} />
         <div className="gradient-orb gradient-orb--2" style={{ '--orb-color': 'var(--accent-violet)', '--orb-size': '450px', bottom: '10%', right: '-5%' } as React.CSSProperties} />
 
-        <div className="container discover-container">
+        <PageHeader 
+          title="Explore Learning Discoveries" 
+          description="Discover expert tracks and generate paths tailored to your career milestones."
+        />
+
+        <div className="container discover-container" style={{ marginTop: '0px' }}>
           
-          {/* Header & Filter Controls */}
-          <header className="discover-header">
-            <h1 className="discover-title">Explore Learning Discoveries</h1>
-            <p className="discover-subtitle">Discover expert tracks and generate paths tailored to your career milestones.</p>
+          {/* Filter Controls */}
+          <div className="discover-header" style={{ marginBottom: '40px' }}>
             
             <div className="discover-controls">
               <div className="discover-search__wrapper">
@@ -696,7 +700,7 @@ export default function TracksPage() {
                 );
               })}
             </div>
-          </header>
+          </div>
 
           {/* Continue Learning Spotlight */}
           {activeTrack && !searchQuery && selectedDifficulty === 'All' && selectedCategory === 'All' && (

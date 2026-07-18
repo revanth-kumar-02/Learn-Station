@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import GithubIcon from '../components/common/GithubIcon';
 import LinkedinIcon from '../components/common/LinkedinIcon';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../css/pages.css';
 
@@ -635,11 +635,8 @@ export default function CareerDashboardPage() {
   };
 
   return (
-    <div className="page-std">
-      <div className="container">
-
-      {/* ── Hero ── */}
-      <PageHero
+    <div className="page-std animate-fade-in">
+      <PageHeader
         icon={<Briefcase size={22} />}
         color="blue"
         eyebrow="Career Development"
@@ -651,6 +648,8 @@ export default function CareerDashboardPage() {
           { label: 'GitHub',    value: githubConnected ? 'Linked' : 'Not Linked' },
         ]}
       />
+
+      <div className="container" style={{ marginTop: '0px' }}>
 
       {/* ── Sidebar + Panel Layout ── */}
       <div className="std-layout">

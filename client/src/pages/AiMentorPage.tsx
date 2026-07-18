@@ -9,7 +9,7 @@ import {
   Eye, HelpCircle as HelpIcon, FileText, CheckCircle, XCircle, 
   Play, Users, Map, Star, ShieldAlert
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import '../css/pages.css';
 
 type SubTool = 'mentor' | 'quiz' | 'practice' | 'flashcards' | 'interview' | 'planner' | 'study' | 'career';
@@ -274,11 +274,8 @@ export default function AiMentorPage() {
   ] as const;
 
   return (
-    <div className="page-std">
-      <div className="container">
-
-      {/* ── Hero ── */}
-      <PageHero
+    <div className="page-std animate-fade-in">
+      <PageHeader
         icon={<Sparkles size={22} />}
         color="violet"
         eyebrow="AI-Powered Learning"
@@ -290,6 +287,8 @@ export default function AiMentorPage() {
           { label: 'Powered by', value: 'Gemini' },
         ]}
       />
+
+      <div className="container" style={{ marginTop: '0px' }}>
 
       {/* ── Sidebar + Panel Layout ── */}
       <div className="std-layout">

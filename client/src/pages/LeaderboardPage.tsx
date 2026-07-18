@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import { communityService } from '../services/communityService';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import Loader from '../components/common/Loader';
 import {
   Trophy, Zap, Calendar, CalendarDays, Flame, Medal, BookOpenCheck, Users
@@ -94,22 +94,21 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="page-std">
-      <div className="container">
-        
-        {/* ── Hero ── */}
-        <PageHero
-          icon={<Trophy size={22} />}
-          color="amber"
-          eyebrow="Rankings"
-          title="Leaderboard"
-          description="Compete with learners worldwide. Climb the ranks by completing lessons, maintaining streaks, and earning XP."
-          stats={[
-            { label: 'Top XP',     value: typeof topXP === 'number' ? topXP.toLocaleString() : topXP },
-            { label: 'Top Streak', value: topStreak !== '—' ? `${topStreak}d` : '—' },
-            { label: 'Players',    value: totalPlayers },
-          ]}
-        />
+    <div className="page-std animate-fade-in">
+      <PageHeader
+        icon={<Trophy size={22} />}
+        color="amber"
+        eyebrow="Rankings"
+        title="Leaderboard"
+        description="Compete with learners worldwide. Climb the ranks by completing lessons, maintaining streaks, and earning XP."
+        stats={[
+          { label: 'Top XP',     value: typeof topXP === 'number' ? topXP.toLocaleString() : topXP },
+          { label: 'Top Streak', value: topStreak !== '—' ? `${topStreak}d` : '—' },
+          { label: 'Players',    value: totalPlayers },
+        ]}
+      />
+
+      <div className="container" style={{ marginTop: '0px' }}>
 
         {/* ── Category Tabs ── */}
         <div className="std-tabs" style={{ marginBottom: '24px' }}>

@@ -4,7 +4,7 @@ import {
   HardDrive, RefreshCcw, CheckCircle, Database, WifiOff
 } from 'lucide-react';
 import { offlineDb, DownloadedFile, OfflineLesson } from '../utils/offlineDb';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import '../css/pages.css';
 
 const AVAILABLE_MATERIALS = [
@@ -258,34 +258,32 @@ export default function DownloadCenterPage() {
   );
 
   return (
-    <div className="page-std">
-      <div className="container">
+    <div className="page-std animate-fade-in">
+      <PageHeader
+        icon={<Database size={22} />}
+        color="green"
+        eyebrow="Offline Access"
+        title="Download & Offline Hub"
+        description="Access and manage study notes, flashcards, reports, and lessons even without an internet connection."
+        stats={[
+          { label: 'Offline Files',    value: downloadedFiles.length },
+          { label: 'Offline Lessons',  value: offlineLessons.length },
+          { label: 'Storage Used',     value: formatSize(storageStats.usage) },
+        ]}
+        actions={
+          !navigator.onLine ? (
+            <span className="std-badge std-badge--rose" style={{ gap: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
+              <WifiOff size={12} /> Offline Mode
+            </span>
+          ) : (
+            <span className="std-badge std-badge--green" style={{ gap: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
+              🟢 Network Connected
+            </span>
+          )
+        }
+      />
 
-        {/* ── Hero ── */}
-        <PageHero
-          icon={<Database size={22} />}
-          color="green"
-          eyebrow="Offline Access"
-          title="Download & Offline Hub"
-          description="Access and manage study notes, flashcards, reports, and lessons even without an internet connection."
-          stats={[
-            { label: 'Offline Files',    value: downloadedFiles.length },
-            { label: 'Offline Lessons',  value: offlineLessons.length },
-            { label: 'Storage Used',     value: formatSize(storageStats.usage) },
-          ]}
-          actions={
-            !navigator.onLine ? (
-              <span className="std-badge std-badge--rose" style={{ gap: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
-                <WifiOff size={12} /> Offline Mode
-              </span>
-            ) : (
-              <span className="std-badge std-badge--green" style={{ gap: '6px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
-                🟢 Network Connected
-              </span>
-            )
-          }
-        />
-
+      <div className="container" style={{ marginTop: '0px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px' }} className="rewards-grid">
           <div>
             {/* Tabs */}

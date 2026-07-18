@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { progressService } from '../services/userService';
 import PageTransition from '../components/layout/PageTransition';
 import Loader from '../components/common/Loader';
+import PageHeader from '../components/common/PageHeader';
 
 export default function CertificatePage() {
   const { certId } = useParams();
@@ -110,14 +111,17 @@ export default function CertificatePage() {
             }
           }
         `}</style>
-        <div className="container">
-          {/* Top navigation */}
-          <div className="cert-header-nav">
-            <Link to="/" className="cert-back-link" id="cert-back-dashboard-btn">
-              ← Back to Dashboard
-            </Link>
-          </div>
+        <PageHeader 
+          title="Certificate Verification"
+          description={`Verified certificate for completing the ${cert?.track?.name || 'Track'}.`}
+          crumbs={[
+            { label: 'Learning', path: '/tracks' },
+            { label: 'Certificates' },
+            { label: cert?.track?.name || 'Certificate' }
+          ]}
+        />
 
+        <div className="container" style={{ marginTop: '0px' }}>
           {/* Action buttons */}
           <motion.div
             className="cert-actions"

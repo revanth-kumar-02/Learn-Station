@@ -9,6 +9,7 @@ import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
 import ActivityHeatmap from '../components/common/ActivityHeatmap';
+import PageHeader from '../components/common/PageHeader';
 import { 
   Camera, 
   X, 
@@ -292,11 +293,16 @@ export default function ProfilePage() {
 
   return (
     <PageTransition>
-      <div className="profile-page" style={{ padding: 'var(--space-8) 0' }}>
-        <div className="container container--narrow">
+      <div className="profile-page animate-fade-in" style={{ padding: '0' }}>
+        <PageHeader 
+          title="Profile"
+          description="Manage your personal details, learning progress, achievements, and account settings."
+        />
+
+        <div className="container container--narrow" style={{ marginTop: '0px' }}>
           
           {/* Profile Header */}
-          <motion.div className="profile-header" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div className="profile-header" style={{ marginTop: '0' }} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
             <div 
               className="profile-avatar-container" 
               onClick={openEditModal}

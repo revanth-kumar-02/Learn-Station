@@ -1,7 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './Header';
-import Breadcrumbs from './Breadcrumbs';
 import LearningPathOverlay from '../common/LearningPathOverlay';
 import { useAuth } from '../../context/AuthContext';
 
@@ -36,7 +35,6 @@ export default function Layout() {
             transition={pageTransition as any}
             style={{ minHeight: '100%' }}
           >
-            {user && <Breadcrumbs />}
             <Outlet />
           </motion.div>
         </AnimatePresence>

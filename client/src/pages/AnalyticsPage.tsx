@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import PageTransition from '../components/layout/PageTransition';
 import Loader from '../components/common/Loader';
+import PageHeader from '../components/common/PageHeader';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#3b82f6'];
 
@@ -537,19 +538,14 @@ export default function AnalyticsPage() {
 
   return (
     <PageTransition>
-      <div className="analytics-page">
-        <div className="container">
-          {/* Header */}
-          <motion.div
-            className="analytics-header"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <h1 className="analytics-header__title">📊 Learning Analytics</h1>
-            <p className="analytics-header__subtitle">
-              Track your learning patterns, consistency, and XP growth over time.
-            </p>
-          </motion.div>
+      <div className="analytics-page animate-fade-in">
+        <PageHeader 
+          title="Learning Analytics"
+          description="Track your learning patterns, consistency, and XP growth over time."
+          icon="📊"
+        />
+
+        <div className="container" style={{ marginTop: '0px' }}>
 
           {loading ? (
             <Loader />

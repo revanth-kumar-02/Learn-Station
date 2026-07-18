@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { lessonService, aiService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import PageHeader from '../components/common/PageHeader';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
@@ -492,13 +493,34 @@ ${userText}
     <PageTransition>
       <div className="workspace-layout">
         
+        <PageHeader 
+          title={lesson.title}
+          description={`${track.name} • Lesson ${lesson.display_order}`}
+          crumbs={[
+            { label: 'Learning', path: '/tracks' },
+            { label: 'Tracks', path: '/tracks' },
+            { label: track.name, path: `/track/${track.slug}` },
+            { label: lesson.title }
+          ]}
+          actions={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={14} /> {lesson.estimated_minutes || 8} min
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                ⚡ {lesson.xp_reward || 25} XP
+              </span>
+            </div>
+          }
+        />
+
         {/* Workspace Body */}
         <div 
           style={{ 
             display: 'grid', 
             gridTemplateColumns: mentorOpen ? '1fr 340px' : '1fr 48px', 
             gap: 'var(--space-6)', 
-            height: 'calc(100vh - 100px)', 
+            height: 'calc(100vh - 210px)', 
             padding: 'var(--space-4)',
             transition: 'grid-template-columns 0.3s ease-in-out'
           }} 
@@ -508,24 +530,6 @@ ${userText}
           {/* Main workspace */}
           <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '12px' }} className="no-scrollbar">
             
-            {/* Header info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-              <div>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  {track.name} • Lesson {lesson.display_order}
-                </span>
-                <h1 style={{ fontSize: '20px', fontWeight: 700, margin: '2px 0 0' }}>{lesson.title}</h1>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Clock size={14} /> {lesson.estimated_minutes || 8} min
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  ⚡ {lesson.xp_reward || 25} XP
-                </span>
-              </div>
-            </div>
-
             {/* Segmented Tab Headers */}
             <nav className="premium-tabs" style={{ marginBottom: 'var(--space-6)' }}>
               {TABS.map((tab, idx) => {

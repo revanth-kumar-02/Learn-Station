@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import PageHeader from '../components/common/PageHeader';
 import '../css/admin.css';
 
 // SVG Icons
@@ -556,34 +557,39 @@ export default function AdminControlCenter() {
 
       {/* Main Content Area */}
       <div className="admin-content">
-        <header className="admin-header">
-          <div className="admin-header__title-section">
-            <button className="admin-mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              ☰
-            </button>
-            <h1 className="admin-header__title">
-              {SIDEBAR_ITEMS.find((i) => i.id === currentModule)?.label}
-            </h1>
-            {user?.role === 'owner' && (
-              <span className="owner-badge" style={{ marginLeft: '12px' }}>
-                👑 ★ OWNER
-                <span className="owner-badge__shine" />
-              </span>
-            )}
-          </div>
-
-          <div className="admin-header__actions">
-            {health && (
-              <div className="admin-header__status">
-                <span className="admin-header__status-pulse" />
-                <span>Health Status: {health.status}</span>
-              </div>
-            )}
-            <Link to="/" className="admin-header__back-btn">
-              ← Return to Platform
-            </Link>
-          </div>
-        </header>
+        <PageHeader 
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button className="admin-mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+                ☰
+              </button>
+              <span>{SIDEBAR_ITEMS.find((i) => i.id === currentModule)?.label}</span>
+              {user?.role === 'owner' && (
+                <span className="owner-badge" style={{ marginLeft: '12px' }}>
+                  👑 ★ OWNER
+                  <span className="owner-badge__shine" />
+                </span>
+              )}
+            </div>
+          }
+          crumbs={[
+            { label: 'Admin Panel', path: '/admin' },
+            { label: SIDEBAR_ITEMS.find((i) => i.id === currentModule)?.label || 'Dashboard' }
+          ]}
+          actions={
+            <div className="admin-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {health && (
+                <div className="admin-header__status" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  <span className="admin-header__status-pulse" />
+                  <span>Health Status: {health.status}</span>
+                </div>
+              )}
+              <Link to="/" className="admin-header__back-btn" style={{ fontSize: '13px', color: 'var(--accent-blue)', textDecoration: 'none' }}>
+                ← Return to Platform
+              </Link>
+            </div>
+          }
+        />
 
         <main className="admin-viewport">
           {loading && <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '20px' }}>Syncing data with command center...</div>}

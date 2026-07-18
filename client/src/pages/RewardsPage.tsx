@@ -5,7 +5,7 @@ import {
   Coins, Trophy, Calendar, CheckCircle2, Circle, Flame, Sparkles, 
   Lock, Award, Shield, User, GraduationCap, Code2, Monitor, AlertCircle
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import PageHeader from '../components/common/PageHeader';
 import '../css/pages.css';
 
 interface Particle {
@@ -161,23 +161,22 @@ export default function RewardsPage() {
   };
 
   return (
-    <div className="page-std" style={{ position: 'relative' }}>
-      <div className="container">
+    <div className="page-std animate-fade-in" style={{ position: 'relative' }}>
+      <PageHeader
+        icon={<Coins size={22} />}
+        color="amber"
+        eyebrow="Gamification & Progression"
+        title="Rewards & Economy"
+        description="Maintain streaks, complete missions, collect rare cosmetics, and build consistent habits."
+        stats={[
+          { label: 'LearnCoins', value: coins },
+          { label: 'Level',      value: levelProgress.level },
+          { label: 'XP Progress', value: `${Math.round(levelProgress.progress * 100)}%` },
+          { label: 'Season',     value: season?.name || 'Active' },
+        ]}
+      />
 
-        {/* ── Hero ── */}
-        <PageHero
-          icon={<Coins size={22} />}
-          color="amber"
-          eyebrow="Gamification & Progression"
-          title="Rewards & Economy"
-          description="Maintain streaks, complete missions, collect rare cosmetics, and build consistent habits."
-          stats={[
-            { label: 'LearnCoins', value: coins },
-            { label: 'Level',      value: levelProgress.level },
-            { label: 'XP Progress', value: `${Math.round(levelProgress.progress * 100)}%` },
-            { label: 'Season',     value: season?.name || 'Active' },
-          ]}
-        />
+      <div className="container" style={{ marginTop: '0px' }}>
 
         {/* 2. MAIN LAYOUT GRID */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '32px' }} className="rewards-grid">

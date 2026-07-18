@@ -7,6 +7,7 @@ import ProgressBar from '../components/common/ProgressBar';
 import Loader from '../components/common/Loader';
 import PageTransition from '../components/layout/PageTransition';
 import { useAuth } from '../context/AuthContext';
+import PageHeader from '../components/common/PageHeader';
 
 const TRACK_ICONS = { sql: '🗄️', python: '🐍', webdev: '🌐', ai: '🤖', datascience: '📈', java: '☕' };
 
@@ -302,35 +303,35 @@ export default function TrackDetailPage() {
           </div>
         )}
 
+        <PageHeader 
+          title={track.name}
+          description={track.description}
+          crumbs={[
+            { label: 'Learning', path: '/tracks' },
+            { label: 'Tracks', path: '/tracks' },
+            { label: track.name }
+          ]}
+        />
+
         <div className="container">
-          {/* Track Header */}
-          <motion.div
-            className="track-detail__header"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="track-detail__icon" style={{ background: `${track.color}15`, color: track.color }}>
-              {TRACK_ICONS[track.slug] || '📚'}
+          {/* Track Stats & Progress */}
+          <div className="track-detail__stats card" style={{ marginBottom: '32px', padding: '16px', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+            <div className="track-detail__meta" style={{ display: 'flex', gap: '12px', color: 'var(--text-secondary)', fontSize: '13px', alignItems: 'center' }}>
+              <span style={{ fontSize: '18px' }}>{TRACK_ICONS[track.slug] || '📚'}</span>
+              <span>{track.totalLessons} lessons</span>
+              <span>·</span>
+              <span>{progress?.xpEarned || 0} XP earned</span>
+              <span>·</span>
+              <span>{progress?.progressPercent || 0}% complete</span>
             </div>
-            <div className="track-detail__info">
-              <h1 style={{ color: track.color }}>{track.name}</h1>
-              <p>{track.description}</p>
-              <div className="track-detail__meta">
-                <span>{track.totalLessons} lessons</span>
-                <span>·</span>
-                <span>{progress?.xpEarned || 0} XP earned</span>
-                <span>·</span>
-                <span>{progress?.progressPercent || 0}% complete</span>
-              </div>
-              <ProgressBar
-                value={progress?.progressPercent || 0}
-                max={100}
-                color={track.color}
-                size="md"
-                className="mt-4"
-              />
-            </div>
-          </motion.div>
+            <ProgressBar
+              value={progress?.progressPercent || 0}
+              max={100}
+              color={track.color}
+              size="md"
+              className="mt-3"
+            />
+          </div>
 
           {/* Modules & Lessons */}
           <div className="track-detail__modules">
