@@ -375,13 +375,22 @@ export default function TrackDetailPage() {
                           const isUnlocked = isCompleted || (isModUnlocked && (li === 0 || (completedSet.has(mod.lessons[li - 1]?.id?.toString()) && areLessonChallengesCompleted(mod.lessons[li - 1]))));
                           const isCurrent = lesson.id.toString() === currentLessonId;
 
+                          const allCompleted = mod.lessons && mod.lessons.length > 0 && mod.lessons.every(l => completedSet.has(l.id.toString()));
+
+                          // Connectors logic
+                          const hasTopConnector = li > 0;
+                          const isTopConnectorActive = hasTopConnector && completedSet.has(mod.lessons[li - 1]?.id?.toString());
+                          
+                          const hasBottomConnector = li < mod.lessons.length - 1 || allCompleted;
+                          const isBottomConnectorActive = isCompleted;
+
                           return (
                             <motion.div
                               key={lesson._id}
-                              className={`lesson-row ${isCompleted ? 'lesson-row--completed' : ''} ${isCurrent ? 'lesson-row--current' : ''} ${!isUnlocked ? 'lesson-row--locked' : ''}`}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: li * 0.08 }}
+                              className={`timeline-row ${isCompleted ? 'timeline-row--completed' : ''} ${isCurrent ? 'timeline-row--current' : ''} ${!isUnlocked ? 'timeline-row--locked' : ''}`}
+                              initial={{ opacity: 0, y: 15 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: li * 0.05 }}
                               onClick={() => {
                                 if (!isUnlocked) {
                                   showToast("This lesson is locked. Complete the previous lesson to continue.");
@@ -390,71 +399,123 @@ export default function TrackDetailPage() {
                                 }
                               }}
                             >
-                              <div className="lesson-row__indicator">
-                                {isCompleted ? (
-                                  <svg className="lesson-row__check" width="20" height="20" viewBox="0 0 20 20">
-                                    <circle cx="10" cy="10" r="9" fill={track.color} />
-                                    <path d="M6 10l3 3 5-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-                                  </svg>
-                                ) : !isUnlocked ? (
-                                  <div className="lesson-row__dot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', fontSize: '13px' }}>🔒</div>
-                                ) : isCurrent ? (
-                                  <div className="lesson-row__dot lesson-row__dot--active" style={{ borderColor: track.color }} />
-                                ) : (
-                                  <div className="lesson-row__dot" />
+                              {/* Indicator block with rail and node */}
+                              <div className="timeline-row__indicator">
+                                {hasTopConnector && (
+                                  <div className={`timeline-row__connector-top ${isTopConnectorActive ? 'timeline-row__connector-top--active' : ''}`} />
                                 )}
-                                {li < mod.lessons.length - 1 && <div className="lesson-row__line" />}
+                                {hasBottomConnector && (
+                                  <div className={`timeline-row__connector-bottom ${isBottomConnectorActive ? 'timeline-row__connector-bottom--active' : ''}`} />
+                                )}
+                                
+                                {isCompleted ? (
+                                  <div className="timeline-node timeline-node--completed">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  </div>
+                                ) : !isUnlocked ? (
+                                  <div className="timeline-node timeline-node--locked">🔒</div>
+                                ) : isCurrent ? (
+                                  <div className="timeline-node timeline-node--current">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                                      <polygon points="5 3 19 12 5 21 5 3" />
+                                    </svg>
+                                  </div>
+                                ) : (
+                                  <div className="timeline-node timeline-node--available" />
+                                )}
                               </div>
 
-                              <div className="lesson-row__content">
-                                <h4 style={isCurrent ? { color: 'var(--text-primary)', fontWeight: 'bold' } : {}}>{lesson.title}</h4>
-                                <div className="lesson-row__meta">
-                                  <span>⏱ {lesson.estimatedMinutes} min</span>
-                                  <span>✦ {lesson.xpReward} XP</span>
+                              {/* Card Content block */}
+                              <div className="timeline-card">
+                                <div className="timeline-card__details">
+                                  <h4 className="timeline-card__title">{lesson.title}</h4>
+                                  <div className="timeline-card__meta">
+                                    <span className="timeline-card__meta-item">⏱ {lesson.estimatedMinutes} min</span>
+                                    <span className="timeline-card__meta-item">✦ {lesson.xpReward} XP</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="timeline-card__action">
+                                  {isCurrent ? (
+                                    <button 
+                                      className="lesson-row__btn-continue"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/lesson/${lesson.slug}`);
+                                      }}
+                                    >
+                                      Continue
+                                    </button>
+                                  ) : (
+                                    <div className="lesson-row__arrow" style={!isUnlocked ? { opacity: 0.3 } : {}}>→</div>
+                                  )}
                                 </div>
                               </div>
-
-                              {isCurrent ? (
-                                <button className="lesson-row__btn-continue">
-                                  Continue
-                                </button>
-                              ) : (
-                                <div className="lesson-row__arrow" style={!isUnlocked ? { opacity: 0.3 } : {}}>→</div>
-                              )}
                             </motion.div>
                           );
                         })}
-                      </div>
-                      
-                      {mod.lessons && mod.lessons.length > 0 && mod.lessons.every(l => completedSet.has(l.id.toString())) && (
-                        <div style={{ padding: 'var(--space-4)', margin: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', marginTop: '16px' }}>
-                          {passedAssessments.includes(mod.id.toString()) ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-green)', fontSize: '13px', fontWeight: 600 }}>
-                              <span>🏆</span>
-                              <span>Module Assessment Passed! Next module unlocked.</span>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                              <div>
-                                <h4 style={{ fontSize: '13px', fontWeight: 600, margin: 0 }}>Module Quiz Assessment Required</h4>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                                  Test your understanding with 10 questions. Passing score: 80% (8/10).
-                                </p>
+
+                        {/* Milestone checkpoint card integrated into same timeline rail */}
+                        {mod.lessons && mod.lessons.length > 0 && mod.lessons.every(l => completedSet.has(l.id.toString())) && (() => {
+                          const isAssessmentPassed = passedAssessments.includes(mod.id.toString());
+                          return (
+                            <motion.div
+                              className="timeline-row timeline-row--milestone-row"
+                              initial={{ opacity: 0, y: 15 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: mod.lessons.length * 0.05 }}
+                              style={{ cursor: 'default' }}
+                            >
+                              <div className="timeline-row__indicator">
+                                <div className="timeline-row__connector-top timeline-row__connector-top--active" />
+                                
+                                {isAssessmentPassed ? (
+                                  <div className="timeline-node timeline-node--completed timeline-node--milestone">
+                                    🏆
+                                  </div>
+                                ) : (
+                                  <div className="timeline-node timeline-node--current timeline-node--milestone">
+                                    🎯
+                                  </div>
+                                )}
                               </div>
-                              <button
-                                onClick={() => handleStartAssessment('module', mod.id, mod.name)}
-                                className="btn btn--primary btn--sm"
-                                style={{
-                                  background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
-                                  color: 'white'
-                                }}
-                              >
-                                Take Module Assessment
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
+
+                              <div className="timeline-card">
+                                {isAssessmentPassed ? (
+                                  <div className="timeline-milestone-card" style={{ borderColor: 'var(--accent-green)', background: 'var(--bg-glass)' }}>
+                                    <div className="timeline-milestone-card__info">
+                                      <h4 className="timeline-milestone-card__title" style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>🏆 Module Completed!</h4>
+                                      <p className="timeline-milestone-card__desc">Congratulations! You have successfully passed the assessment and unlocked the next module.</p>
+                                    </div>
+                                    <span style={{ fontSize: '20px' }}>⭐</span>
+                                  </div>
+                                ) : (
+                                  <div className="timeline-milestone-card" style={{ borderColor: 'var(--accent-blue)', background: 'var(--bg-glass)' }}>
+                                    <div className="timeline-milestone-card__info">
+                                      <h4 className="timeline-milestone-card__title">🎯 Module Quiz Assessment Required</h4>
+                                      <p className="timeline-milestone-card__desc">Test your understanding with 10 questions. Passing score: 80% (8/10).</p>
+                                    </div>
+                                    <button
+                                      onClick={() => handleStartAssessment('module', mod.id, mod.name)}
+                                      className="btn btn--primary btn--sm"
+                                      style={{
+                                        background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-violet) 100%)',
+                                        color: 'white',
+                                        padding: '8px 16px',
+                                        fontSize: '12px'
+                                      }}
+                                    >
+                                      Take Assessment
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })()}
+                      </div>
                     </motion.div>
                   )}
                 </motion.div>
