@@ -21,6 +21,7 @@ export interface User {
   daily_missions?: any;
   learn_coins?: number;
   mentor_profile?: any;
+  ai_roadmap_state?: any;
 }
 
 export interface UserResponse {

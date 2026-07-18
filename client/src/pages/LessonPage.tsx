@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { lessonService, aiService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { supabase } from '../supabase';
 import PageHeader from '../components/common/PageHeader';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
@@ -52,6 +53,13 @@ export default function LessonPage() {
   
   const [currentStep, setCurrentStep] = useState(0);
   const [maxStepReached, setMaxStepReached] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState({
+    overviewCompleted: false,
+    lessonCompleted: false,
+    practiceCompleted: false,
+    quizCompleted: false,
+    summaryCompleted: false
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Quiz/Challenge States
@@ -129,6 +137,45 @@ export default function LessonPage() {
     }
   };
 
+  const saveStepProgress = async (updatedFlags: typeof completedSteps, stepIndex: number = currentStep) => {
+    if (!user?.id || !slug) return;
+    try {
+      const currentRoadmapState = user.ai_roadmap_state || {};
+      const currentLessonProgress = currentRoadmapState.lesson_progress || {};
+
+      const updatedLessonProgress = {
+        ...currentLessonProgress,
+        [slug]: {
+          ...(currentLessonProgress[slug] || {}),
+          ...updatedFlags,
+          currentStep: stepIndex,
+          maxStepReached: Math.max(stepIndex, maxStepReached)
+        }
+      };
+
+      const nextRoadmapState = {
+        ...currentRoadmapState,
+        lesson_progress: updatedLessonProgress
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ai_roadmap_state: nextRoadmapState })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('[Supabase Progression Save Error] Failed to update profile:', error);
+      } else {
+        updateUser({
+          ...user,
+          ai_roadmap_state: nextRoadmapState
+        });
+      }
+    } catch (err) {
+      console.error('[Supabase Progression Save Error]', err);
+    }
+  };
+
   // Fetch data
   useEffect(() => {
     const fetchLesson = async () => {
@@ -169,6 +216,57 @@ export default function LessonPage() {
         } else {
           setIsDailyLimitReached(false);
         }
+
+        // Restore progression states from Supabase profiles or mark complete if already finished
+        const completedLessonsSet = new Set((data.progress?.completedLessons || []).map((l: any) => l.toString()));
+        const isCompleted = data.isCompleted || (data.lesson && completedLessonsSet.has(data.lesson.id.toString()));
+        
+        if (isCompleted) {
+          setCompletedSteps({
+            overviewCompleted: true,
+            lessonCompleted: true,
+            practiceCompleted: true,
+            quizCompleted: true,
+            summaryCompleted: true
+          });
+          setMaxStepReached(5);
+          setCurrentStep(0);
+        } else if (user?.id) {
+          const { data: profileData, error: profileErr } = await supabase
+            .from('profiles')
+            .select('ai_roadmap_state')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (!profileErr && profileData?.ai_roadmap_state) {
+            const roadmapState = profileData.ai_roadmap_state as any;
+            const lessonProgress = roadmapState?.lesson_progress?.[slug!] || {};
+            const restoredFlags = {
+              overviewCompleted: lessonProgress.overviewCompleted ?? false,
+              lessonCompleted: lessonProgress.lessonCompleted ?? false,
+              practiceCompleted: lessonProgress.practiceCompleted ?? false,
+              quizCompleted: lessonProgress.quizCompleted ?? false,
+              summaryCompleted: lessonProgress.summaryCompleted ?? false
+            };
+            setCompletedSteps(restoredFlags);
+            
+            const savedStep = lessonProgress.currentStep !== undefined ? Number(lessonProgress.currentStep) : 0;
+            const savedMaxStep = lessonProgress.maxStepReached !== undefined ? Number(lessonProgress.maxStepReached) : 0;
+            setCurrentStep(savedStep);
+            setMaxStepReached(Math.max(savedStep, savedMaxStep));
+          } else {
+            // First time landing on the lesson
+            setCompletedSteps({
+              overviewCompleted: true, // Overview starts completed
+              lessonCompleted: false,
+              practiceCompleted: false,
+              quizCompleted: false,
+              summaryCompleted: false
+            });
+            setCurrentStep(0);
+            setMaxStepReached(0);
+          }
+        }
       } catch (err: any) {
         console.error(err);
         if (err.response?.status === 403) {
@@ -179,12 +277,57 @@ export default function LessonPage() {
       }
     };
     fetchLesson();
-  }, [slug, user?.daily_missions]);
+  }, [slug, user?.daily_missions, user?.id]);
+
+  // Automatically mark step as completed when viewed (for non-interactive steps)
+  useEffect(() => {
+    if (loading || !lesson) return;
+
+    if (currentStep === 0) {
+      setCompletedSteps(prev => {
+        if (prev.overviewCompleted) return prev;
+        const next = { ...prev, overviewCompleted: true };
+        saveStepProgress(next, 0);
+        return next;
+      });
+      setMaxStepReached(prev => Math.max(prev, 1));
+    }
+    else if (currentStep === 1) {
+      setCompletedSteps(prev => {
+        if (prev.lessonCompleted) return prev;
+        const next = { ...prev, lessonCompleted: true };
+        saveStepProgress(next, 1);
+        return next;
+      });
+      setMaxStepReached(prev => Math.max(prev, 2));
+    }
+    else if (currentStep === 4) {
+      setCompletedSteps(prev => {
+        if (prev.summaryCompleted) return prev;
+        const next = { ...prev, summaryCompleted: true };
+        saveStepProgress(next, 4);
+        return next;
+      });
+      setMaxStepReached(prev => Math.max(prev, 5));
+    }
+  }, [currentStep, loading, lesson]);
 
   // Scroll to bottom of chat
   useEffect(() => {
     mentorEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mentorMessages, mentorOpen]);
+
+  // Audit metadata and log error if anything is missing
+  useEffect(() => {
+    if (!loading) {
+      if (!lesson || !lesson.title) {
+        console.error('[Lesson Metadata Error] Lesson metadata failed to load or title is undefined:', lesson);
+      }
+      if (!track || !track.name) {
+        console.error('[Lesson Metadata Error] Track metadata failed to load or name is undefined:', track);
+      }
+    }
+  }, [loading, lesson, track]);
 
   if (loading) return <Loader fullPage />;
 
@@ -225,21 +368,37 @@ export default function LessonPage() {
   const enhanced = getEnhancedLessonData(lesson);
   if (!enhanced) return <div className="container"><h2>Failed to load enhanced lesson metadata.</h2></div>;
 
+  const lessonTitle = lesson?.title || 'Unknown Lesson';
+  const trackName = track?.name || 'Unknown Track';
+  const displayOrder = lesson?.display_order !== undefined ? lesson.display_order : 'Unknown';
+  const duration = lesson?.estimated_minutes !== undefined ? lesson.estimated_minutes : 'Unknown';
+  const xpReward = lesson?.xp_reward !== undefined ? lesson.xp_reward : 'Unknown';
+
   const completedLessonsSet = new Set((progress?.completedLessons || []).map((l: any) => l.toString()));
 
   const handleTabClick = (idx: number) => {
-    if (idx <= maxStepReached || completedLessonsSet.has(lesson.id.toString())) {
+    const isCompleted = completedLessonsSet.has(lesson?.id?.toString());
+    
+    // Check if tab is unlocked strictly using the step completion flags
+    let isUnlocked = false;
+    if (idx === 0) isUnlocked = true;
+    else if (idx === 1) isUnlocked = completedSteps.overviewCompleted || isCompleted;
+    else if (idx === 2) isUnlocked = completedSteps.lessonCompleted || isCompleted;
+    else if (idx === 3) isUnlocked = completedSteps.practiceCompleted || isCompleted;
+    else if (idx === 4) isUnlocked = completedSteps.quizCompleted || isCompleted;
+    else if (idx === 5) isUnlocked = completedSteps.summaryCompleted || isCompleted;
+
+    if (isUnlocked) {
       setCurrentStep(idx);
+      saveStepProgress(completedSteps, idx);
     }
   };
 
   const handleNextStep = () => {
     const next = currentStep + 1;
     if (next < TABS.length) {
-      if (next > maxStepReached) {
-        setMaxStepReached(next);
-      }
       setCurrentStep(next);
+      saveStepProgress(completedSteps, next);
     }
   };
 
@@ -294,6 +453,12 @@ export default function LessonPage() {
     const isLastQuestion = challengeIndex === challengesList.length - 1;
     const finalExpectedScore = quizScore + (isCorrect ? 1 : 0);
     if (isLastQuestion && finalExpectedScore >= 4) {
+      setCompletedSteps(prev => {
+        if (prev.quizCompleted) return prev;
+        const next = { ...prev, quizCompleted: true };
+        saveStepProgress(next, 3);
+        return next;
+      });
       setMaxStepReached(prev => Math.max(prev, 4));
     }
   };
@@ -313,6 +478,12 @@ export default function LessonPage() {
       setQuizSubmitted(true);
       // Ensure Summary is unlocked if quiz is passed
       if (quizScore >= 4) {
+        setCompletedSteps(prev => {
+          if (prev.quizCompleted) return prev;
+          const next = { ...prev, quizCompleted: true };
+          saveStepProgress(next, 3);
+          return next;
+        });
         setMaxStepReached(prev => Math.max(prev, 4));
       }
     }
@@ -494,21 +665,21 @@ ${userText}
       <div className="workspace-layout">
         
         <PageHeader 
-          title={lesson.title}
-          description={`${track.name} • Lesson ${lesson.display_order}`}
+          title={lessonTitle}
+          description={`${trackName} • Lesson ${displayOrder}`}
           crumbs={[
             { label: 'Learning', path: '/tracks' },
             { label: 'Tracks', path: '/tracks' },
-            { label: track.name, path: `/track/${track.slug}` },
-            { label: lesson.title }
+            { label: trackName, path: track?.slug ? `/track/${track.slug}` : '/tracks' },
+            { label: lessonTitle }
           ]}
           actions={
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={14} /> {lesson.estimated_minutes || 8} min
+                <Clock size={14} /> {duration} min
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                ⚡ {lesson.xp_reward || 25} XP
+                ⚡ {xpReward} XP
               </span>
             </div>
           }
@@ -533,7 +704,15 @@ ${userText}
             {/* Segmented Tab Headers */}
             <nav className="premium-tabs" style={{ marginBottom: 'var(--space-6)' }}>
               {TABS.map((tab, idx) => {
-                const isUnlocked = idx <= maxStepReached || completedLessonsSet.has(lesson.id.toString());
+                const isCompleted = completedLessonsSet.has(lesson?.id?.toString());
+                let isUnlocked = false;
+                if (idx === 0) isUnlocked = true;
+                else if (idx === 1) isUnlocked = completedSteps.overviewCompleted || isCompleted;
+                else if (idx === 2) isUnlocked = completedSteps.lessonCompleted || isCompleted;
+                else if (idx === 3) isUnlocked = completedSteps.practiceCompleted || isCompleted;
+                else if (idx === 4) isUnlocked = completedSteps.quizCompleted || isCompleted;
+                else if (idx === 5) isUnlocked = completedSteps.summaryCompleted || isCompleted;
+
                 const isActive = currentStep === idx;
 
                 return (
@@ -720,7 +899,15 @@ ${userText}
                         instruction={lesson.practice_instruction || ''}
                         answer={lesson.practice_answer || ''}
                         slug={lesson.slug}
-                        onCorrect={() => setMaxStepReached(prev => Math.max(prev, 3))}
+                        onCorrect={() => {
+                          setCompletedSteps(prev => {
+                            if (prev.practiceCompleted) return prev;
+                            const next = { ...prev, practiceCompleted: true };
+                            saveStepProgress(next, 2);
+                            return next;
+                          });
+                          setMaxStepReached(prev => Math.max(prev, 3));
+                        }}
                       />
                     </div>
                   )}
@@ -756,60 +943,87 @@ ${userText}
                           )}
                         </div>
                       ) : (
-                        lesson.challenges?.[challengeIndex] && (
+                        lesson.challenges?.[challengeIndex] ? (
                           <div className="lesson-challenge">
                             <span className="lesson-challenge__counter">
                               Question {challengeIndex + 1} of {lesson.challenges.length}
                             </span>
-                            <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 600, margin: '8px 0 16px' }}>
                               {lesson.challenges[challengeIndex].question}
                             </h3>
 
-                            {/* MCQ */}
+                            {/* Multiple choice options */}
                             {lesson.challenges[challengeIndex].type === 'multiple-choice' && (
-                              <div className="lesson-challenge__options" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {lesson.challenges[challengeIndex].options?.map((opt: string, i: number) => {
                                   const isSelected = selectedOption === i;
-                                  let stateClass = '';
-                                  if (feedback) {
+                                  const isAnswered = feedback !== null;
+                                  let optionStyle: React.CSSProperties = {
+                                    padding: '12px 14px',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    cursor: isAnswered ? 'default' : 'pointer',
+                                    transition: 'all 0.2s'
+                                  };
+
+                                  if (isSelected) {
+                                    optionStyle.borderColor = 'var(--accent-blue)';
+                                    optionStyle.backgroundColor = 'var(--accent-blue-glow)';
+                                  }
+
+                                  if (isAnswered) {
                                     if (i === lesson.challenges[challengeIndex].correct_index) {
-                                      stateClass = 'challenge-option--correct';
+                                      optionStyle.borderColor = 'var(--accent-green)';
+                                      optionStyle.backgroundColor = 'rgba(34, 197, 94, 0.08)';
                                     } else if (isSelected) {
-                                      stateClass = 'challenge-option--wrong';
+                                      optionStyle.borderColor = 'var(--accent-rose)';
+                                      optionStyle.backgroundColor = 'rgba(239, 68, 68, 0.08)';
                                     }
-                                  } else if (isSelected) {
-                                    stateClass = 'challenge-option--selected';
                                   }
 
                                   return (
-                                    <button
-                                      key={i}
-                                      disabled={!!feedback}
-                                      onClick={() => setSelectedOption(i)}
-                                      className={`challenge-option ${stateClass}`}
+                                    <button 
+                                      key={i} 
+                                      onClick={() => !isAnswered && setSelectedOption(i)} 
+                                      style={optionStyle}
+                                      className="quiz-option-btn"
                                     >
-                                      <span className="challenge-option__letter">{String.fromCharCode(65 + i)}</span>
-                                      <span>{opt}</span>
+                                      {opt}
                                     </button>
                                   );
                                 })}
                               </div>
                             )}
 
-                            {/* Fill Blanks */}
+                            {/* Fill blank template */}
                             {lesson.challenges[challengeIndex].type === 'fill-blank' && (
-                              <div className="lesson-challenge__template">
+                              <div style={{ fontSize: '13px', lineHeight: 2 }}>
                                 {lesson.challenges[challengeIndex].template?.split('___').map((part: string, i: number, arr: any[]) => (
                                   <React.Fragment key={i}>
-                                    {part}
+                                    <span>{part}</span>
                                     {i < arr.length - 1 && (
-                                      <input
-                                        type="text"
-                                        className="challenge-fill-input"
-                                        disabled={!!feedback}
+                                      <input 
+                                        type="text" 
                                         value={userAnswer}
                                         onChange={e => setUserAnswer(e.target.value)}
-                                        style={{ width: '100px', display: 'inline-block' }}
+                                        disabled={feedback !== null}
+                                        style={{
+                                          width: '120px',
+                                          margin: '0 6px',
+                                          padding: '2px 8px',
+                                          borderRadius: '4px',
+                                          border: '1px solid var(--border)',
+                                          backgroundColor: 'var(--bg-tertiary)',
+                                          color: 'var(--text-primary)',
+                                          outline: 'none',
+                                          fontSize: '13px',
+                                          display: 'inline-block'
+                                        }}
+                                        placeholder="fill blank..."
                                       />
                                     )}
                                   </React.Fragment>
@@ -817,83 +1031,112 @@ ${userText}
                               </div>
                             )}
 
-                            {/* Output Prediction */}
+                            {/* Output prediction playground */}
                             {lesson.challenges[challengeIndex].type === 'output-prediction' && (
-                              <div>
-                                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
                                   {lesson.challenges[challengeIndex].starter_code}
                                 </pre>
-                                <div style={{ marginTop: '12px' }}>
-                                  <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Predict expected console output or return value:</label>
-                                  <input
-                                    type="text"
-                                    className="challenge-fill-input"
-                                    placeholder="Type output..."
-                                    disabled={!!feedback}
-                                    value={userAnswer}
-                                    onChange={e => setUserAnswer(e.target.value)}
-                                    style={{ width: '100%' }}
-                                  />
-                                </div>
+                                <input 
+                                  type="text"
+                                  value={userAnswer}
+                                  onChange={e => setUserAnswer(e.target.value)}
+                                  disabled={feedback !== null}
+                                  placeholder="What will this code output?..."
+                                  style={{
+                                    padding: '10px 12px',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    outline: 'none'
+                                  }}
+                                />
                               </div>
                             )}
 
-                            {/* Match Following */}
+                            {/* Match following grid */}
                             {lesson.challenges[challengeIndex].type === 'match-following' && (
-                              <div>
-                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Click a term on the left, then click its match on the right.</p>
-                                <div className="match-grid-layout">
-                                  <div className="match-column">
-                                    {Object.keys(lesson.challenges[challengeIndex].pairs || {}).map(k => {
-                                      const isSelected = selectedMatchKey === k;
-                                      const isMatched = !!matches[k];
-                                      return (
-                                        <div 
-                                          key={k} 
-                                          onClick={() => !isMatched && handleMatchClick('left', k)}
-                                          className={`match-card ${isSelected ? 'match-card--selected' : ''} ${isMatched ? 'match-card--disabled' : ''}`}
-                                        >
-                                          {k} {isMatched && `➔ ${matches[k]}`}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                  <div className="match-column">
-                                    {Object.values(lesson.challenges[challengeIndex].pairs || {}).sort(() => 0.5 - Math.random()).map((v: any) => {
-                                      const isMatched = Object.values(matches).includes(v);
-                                      return (
-                                        <div 
-                                          key={v} 
-                                          onClick={() => !isMatched && handleMatchClick('right', v)}
-                                          className={`match-card ${isMatched ? 'match-card--disabled' : ''}`}
-                                        >
-                                          {v}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Left Options</span>
+                                  {Object.keys(lesson.challenges[challengeIndex].pairs || {}).map(k => {
+                                    const isSelected = selectedMatchKey === k;
+                                    const matchedVal = matches[k];
+
+                                    return (
+                                      <button
+                                        key={k}
+                                        onClick={() => handleMatchClick('left', k)}
+                                        style={{
+                                          padding: '10px',
+                                          borderRadius: '6px',
+                                          border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
+                                          backgroundColor: isSelected ? 'var(--accent-blue-glow)' : 'var(--bg-primary)',
+                                          color: 'var(--text-primary)',
+                                          fontSize: '12px',
+                                          cursor: 'pointer',
+                                          textAlign: 'left'
+                                        }}
+                                      >
+                                        {k} {matchedVal && <span style={{ float: 'right', color: 'var(--accent-green)' }}>✓ Linked</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Right Options</span>
+                                  {Object.values(lesson.challenges[challengeIndex].pairs || {}).sort(() => 0.5 - Math.random()).map((v: any) => {
+                                    const isLinked = Object.values(matches).includes(v);
+
+                                    return (
+                                      <button
+                                        key={v}
+                                        onClick={() => handleMatchClick('right', v)}
+                                        disabled={isLinked}
+                                        style={{
+                                          padding: '10px',
+                                          borderRadius: '6px',
+                                          border: isLinked ? '1px dashed var(--accent-green)' : '1px solid var(--border)',
+                                          backgroundColor: isLinked ? 'rgba(34, 197, 94, 0.03)' : 'var(--bg-primary)',
+                                          color: isLinked ? 'var(--text-muted)' : 'var(--text-primary)',
+                                          fontSize: '12px',
+                                          cursor: isLinked ? 'default' : 'pointer',
+                                          textAlign: 'left'
+                                        }}
+                                      >
+                                        {v}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
 
-                            {/* Debugging */}
+                            {/* Debugging playground */}
                             {lesson.challenges[challengeIndex].type === 'debugging' && (
-                              <div>
-                                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderLeft: '3px solid var(--accent-rose)', borderRadius: 'var(--radius-md)', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
                                   {lesson.challenges[challengeIndex].starter_code}
                                 </pre>
-                                <div style={{ marginTop: '12px' }}>
-                                  <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Provide the corrected code line or statement:</label>
-                                  <input
-                                    type="text"
-                                    className="challenge-fill-input"
-                                    placeholder="Type fixed line..."
-                                    disabled={!!feedback}
-                                    value={userAnswer}
-                                    onChange={e => setUserAnswer(e.target.value)}
-                                    style={{ width: '100%' }}
-                                  />
-                                </div>
+                                <textarea 
+                                  value={userAnswer}
+                                  onChange={e => setUserAnswer(e.target.value)}
+                                  disabled={feedback !== null}
+                                  placeholder="Write the corrected code here..."
+                                  rows={4}
+                                  style={{
+                                    padding: '10px 12px',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    outline: 'none',
+                                    fontFamily: 'var(--font-mono)'
+                                  }}
+                                />
                               </div>
                             )}
 
@@ -929,6 +1172,12 @@ ${userText}
                               )}
                             </div>
 
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+                            <HelpCircle size={48} style={{ margin: '0 auto 16px', color: 'var(--text-muted)' }} />
+                            <h3>No Quiz Questions Available</h3>
+                            <p style={{ fontSize: '13px', marginTop: '6px' }}>This lesson does not contain any quiz challenges. You can safely proceed to the next step.</p>
                           </div>
                         )
                       )}
@@ -1081,7 +1330,11 @@ ${userText}
             {/* Bottom Navigation controls */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-4)' }}>
               <button 
-                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))} 
+                onClick={() => {
+                  const prevStep = Math.max(0, currentStep - 1);
+                  setCurrentStep(prevStep);
+                  saveStepProgress(completedSteps, prevStep);
+                }} 
                 disabled={currentStep === 0}
                 className="btn btn--secondary btn--sm"
               >
@@ -1091,7 +1344,18 @@ ${userText}
               {currentStep < TABS.length - 1 && (
                 <button
                   onClick={handleNextStep}
-                  disabled={currentStep >= maxStepReached && !completedLessonsSet.has(lesson.id.toString())}
+                  disabled={
+                    (() => {
+                      const isCompleted = completedLessonsSet.has(lesson?.id?.toString());
+                      if (isCompleted) return false;
+                      if (currentStep === 0) return !completedSteps.overviewCompleted;
+                      if (currentStep === 1) return !completedSteps.lessonCompleted;
+                      if (currentStep === 2) return !completedSteps.practiceCompleted;
+                      if (currentStep === 3) return !completedSteps.quizCompleted;
+                      if (currentStep === 4) return !completedSteps.summaryCompleted;
+                      return false;
+                    })()
+                  }
                   className="btn btn--primary btn--sm"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
@@ -1167,7 +1431,7 @@ ${userText}
               {/* Chat messages */}
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }} className="no-scrollbar">
                 <div className="chat-msg chat-msg--mentor" style={{ backgroundColor: 'var(--bg-primary)', padding: '10px', borderRadius: 'var(--radius-md)', fontSize: '12px', alignSelf: 'flex-start', maxWidth: '85%' }}>
-                  Hi! I am your interactive AI coding mentor. Ask me anything about <strong>{lesson.title}</strong>, or select one of the suggested prompts below!
+                  Hi! I am your interactive AI coding mentor. Ask me anything about <strong>{lessonTitle}</strong>, or select one of the suggested prompts below!
                 </div>
 
                 {mentorMessages.map((msg, i) => {
@@ -1289,12 +1553,12 @@ ${userText}
             <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🎉</span>
             <h2 style={{ fontSize: '20px', fontWeight: 700 }}>Lesson Completed!</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '8px 0 20px' }}>
-              Excellent job! You passed the quiz and completed the structured roadmap objectives. You earned <strong>+{lesson.xp_reward || 25} XP</strong>!
+              Excellent job! You passed the quiz and completed the structured roadmap objectives. You earned <strong>+{xpReward} XP</strong>!
             </p>
             <button 
               onClick={() => {
                 setShowSuccessOverlay(false);
-                navigate(`/track/${track.slug}`);
+                navigate(track?.slug ? `/track/${track.slug}` : '/tracks');
               }} 
               className="btn btn--primary btn--md"
               style={{ width: '100%' }}
