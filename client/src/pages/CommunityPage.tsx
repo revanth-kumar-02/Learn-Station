@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   communityService, UserProfile, StudyGroup, ForumPost, 
-  PeerReview, SharedResource
+  PeerReview, SharedResource, ActivityFeedItem
 } from '../services/communityService';
 import { 
   Users, UserPlus, Check, X, MessageSquare, Code, BookOpen, 
@@ -9,6 +9,7 @@ import {
   ThumbsUp, Calendar, AlertCircle, FileText, CheckCircle, Play, Sparkles
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import { supabase } from '../supabase';
 import '../css/pages.css';
 
 type SectionTab = 'friends' | 'groups' | 'forums' | 'peer-review' | 'resources';
@@ -21,6 +22,13 @@ export default function CommunityPage() {
   const [friendsData, setFriendsData] = useState<{ active: UserProfile[]; incoming: UserProfile[]; outgoing: UserProfile[]; suggestions: UserProfile[] }>({
     active: [], incoming: [], outgoing: [], suggestions: []
   });
+
+  // --- SEARCH STATE ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserProfile[] | null>(null);
+
+  // --- ACTIVITY FEED STATE ---
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
 
   // --- STUDY GROUPS STATE ---
   const [groupsData, setGroupsData] = useState<{ myGroups: StudyGroup[]; discover: StudyGroup[] }>({
@@ -55,17 +63,51 @@ export default function CommunityPage() {
   const [resourceDesc, setResourceDesc] = useState('');
   const [resourceType, setResourceType] = useState<'notes' | 'cheatsheet' | 'mindmap' | 'template' | 'snippet'>('notes');
   const [resourceContent, setResourceContent] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     loadTabData();
+  }, [activeTab]);
+
+  // --- REALTIME SUBSCRIPTIONS ---
+  useEffect(() => {
+    const channel = supabase
+      .channel('community-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, () => {
+        loadTabData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'study_groups' }, () => {
+        loadTabData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'forum_posts' }, () => {
+        loadTabData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'forum_replies' }, () => {
+        loadTabData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'peer_code_reviews' }, () => {
+        loadTabData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_resources' }, () => {
+        loadTabData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeTab]);
 
   const loadTabData = async () => {
     setLoading(true);
     try {
       if (activeTab === 'friends') {
-        const res = await communityService.getFriends();
-        setFriendsData(res);
+        const [friends, feedRes] = await Promise.all([
+          communityService.getFriends(),
+          communityService.getActivityFeed()
+        ]);
+        setFriendsData(friends);
+        setActivityFeed(feedRes.feed);
       } else if (activeTab === 'groups') {
         const res = await communityService.getStudyGroups();
         setGroupsData(res);
@@ -191,13 +233,62 @@ export default function CommunityPage() {
     } : null);
   };
 
+  // --- USER SEARCH ---
+  const handleSearchUsers = async (val: string) => {
+    setSearchQuery(val);
+    if (!val.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    try {
+      const res = await communityService.searchUsers(val);
+      setSearchResults(res.users);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // --- FILE UPLOAD TO SUPABASE STORAGE ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `resources/${fileName}`;
+
+      // Upload file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('community-resources')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('community-resources')
+        .getPublicUrl(filePath);
+
+      setResourceContent(data.publicUrl);
+      alert('File uploaded successfully! The public URL is populated in the content field.');
+    } catch (err: any) {
+      console.error('[Storage Upload Error]', err);
+      alert('Error uploading file to Supabase Storage: ' + err.message);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   // --- RESOURCES ACTIONS ---
   const shareNewResource = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resourceTitle || !resourceContent) return;
     await communityService.shareResource({ title: resourceTitle, description: resourceDesc, type: resourceType, content: resourceContent });
-    setNewPostTitle('');
-    setNewPostContent('');
+    setResourceTitle('');
+    setResourceDesc('');
+    setResourceContent('');
     loadTabData();
   };
 
@@ -307,27 +398,27 @@ export default function CommunityPage() {
                       </div>
                     ))}
                   </div>
-                )}
-
-                {/* FRIEND ACTIVITY FEED (Sprint 6.6) */}
-                <h3 className="section-title" style={{ fontSize: '15px', fontWeight: 800, marginTop: '40px', marginBottom: '16px' }}>Friend Activity Feed</h3>
-                <div className="timeline-list">
-                  {[
-                    { user: 'Alice', action: 'completed Python Lesson 12', time: '10 mins ago' },
-                    { user: 'Bob', action: 'earned SQL Expert Badge', time: '2 hours ago' },
-                    { user: 'Charlie', action: 'joined Python Study Group', time: '1 day ago' }
-                  ].map((act, i) => (
-                    <div key={i} className="timeline-card">
-                      <div className="timeline-marker" />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="text-primary" style={{ fontSize: '13px' }}>
-                          <strong style={{ fontWeight: 700 }}>{act.user}</strong> {act.action}
-                        </span>
-                        <span className="text-secondary" style={{ fontSize: '11px' }}>{act.time}</span>
+                )}                {/* COMMUNITY ACTIVITY FEED */}
+                <h3 className="section-title" style={{ fontSize: '15px', fontWeight: 800, marginTop: '40px', marginBottom: '16px' }}>Community Activity Feed</h3>
+                {activityFeed.length === 0 ? (
+                  <span className="text-secondary" style={{ fontSize: '11.5px' }}>No community activities logged yet.</span>
+                ) : (
+                  <div className="timeline-list">
+                    {activityFeed.map((act) => (
+                      <div key={act.id} className="timeline-card">
+                        <div className="timeline-marker" />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '16px' }}>
+                          <span className="text-primary" style={{ fontSize: '13px' }}>
+                            <strong style={{ fontWeight: 700 }}>{act.username}</strong> {act.description}
+                          </span>
+                          <span className="text-secondary" style={{ fontSize: '10.5px', flexShrink: 0 }}>
+                            {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -353,6 +444,38 @@ export default function CommunityPage() {
                     </div>
                   </div>
                 )}
+
+                {/* SEARCH PEERS */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '20px', borderRadius: 'var(--radius-xl)', marginBottom: '24px' }}>
+                  <h4 className="text-primary" style={{ fontSize: '13.5px', fontWeight: 800, marginBottom: '12px' }}>Find Peers</h4>
+                  <input 
+                    type="text" 
+                    placeholder="Search by name or username..." 
+                    value={searchQuery}
+                    onChange={(e) => handleSearchUsers(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', fontSize: '12.5px', color: 'var(--text-primary)', marginBottom: '12px' }}
+                  />
+                  {searchResults !== null && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <span className="text-secondary" style={{ fontSize: '10.5px', fontWeight: 600 }}>Search Results:</span>
+                      {searchResults.length === 0 ? (
+                        <span className="text-secondary" style={{ fontSize: '11px' }}>No matching learners found.</span>
+                      ) : (
+                        searchResults.map((f) => (
+                          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: 'var(--radius-lg)' }}>
+                            <div>
+                              <div className="text-primary" style={{ fontSize: '12.5px', fontWeight: 700 }}>{f.name}</div>
+                              <div className="text-secondary" style={{ fontSize: '10.5px' }}>@{f.username} • Lvl {f.level}</div>
+                            </div>
+                            <button onClick={() => sendRequest(f.id)} className="btn btn--secondary btn--sm" style={{ fontSize: '11px', padding: '6px 10px' }}>
+                              Add
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* SUGGESTIONS */}
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '20px', borderRadius: 'var(--radius-xl)' }}>
@@ -814,8 +937,18 @@ export default function CommunityPage() {
                       <label className="text-secondary" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Short Description</label>
                       <textarea value={resourceDesc} onChange={(e) => setResourceDesc(e.target.value)} rows={2} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', fontSize: '13px', color: 'var(--text-primary)', resize: 'none' }} />
                     </div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label className="text-secondary" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Upload Document (Optional)</label>
+                      <input 
+                        type="file" 
+                        onChange={handleFileUpload} 
+                        style={{ width: '100%', fontSize: '12px', color: 'var(--text-secondary)' }} 
+                        accept=".pdf,.txt,.md,.json,.js,.py,.ts"
+                      />
+                      {uploadingFile && <span className="text-secondary" style={{ fontSize: '10px', marginTop: '4px', display: 'block' }}>Uploading to Supabase Storage...</span>}
+                    </div>
                     <div style={{ marginBottom: '16px' }}>
-                      <label className="text-secondary" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Resource Content (Markdown or Text)</label>
+                      <label className="text-secondary" style={{ fontSize: '11px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Resource Content (Markdown, Text, or File Link)</label>
                       <textarea value={resourceContent} onChange={(e) => setResourceContent(e.target.value)} rows={5} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', fontSize: '13px', color: 'var(--text-primary)', resize: 'vertical' }} required />
                     </div>
                     <button type="submit" className="btn btn--primary" style={{ width: '100%', justifyContent: 'center' }}>Publish Resource</button>

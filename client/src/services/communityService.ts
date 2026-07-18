@@ -79,9 +79,29 @@ export interface SharedResource {
   author: UserProfile;
 }
 
+export interface ActivityFeedItem {
+  id: string;
+  user_id: string;
+  username: string;
+  user_avatar?: string;
+  activity_type: string;
+  description: string;
+  created_at: string;
+}
+
 export const communityService = {
   getFriends: async (): Promise<{ active: UserProfile[]; incoming: UserProfile[]; outgoing: UserProfile[]; suggestions: UserProfile[] }> => {
     const { data } = await api.get('/community/friends');
+    return data;
+  },
+
+  searchUsers: async (query: string): Promise<{ users: UserProfile[] }> => {
+    const { data } = await api.get('/community/friends/search', { params: { query } });
+    return data;
+  },
+
+  getActivityFeed: async (): Promise<{ feed: ActivityFeedItem[] }> => {
+    const { data } = await api.get('/community/activity');
     return data;
   },
 

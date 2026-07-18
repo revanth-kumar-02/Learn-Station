@@ -431,6 +431,19 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
         '🚀',
         `/track/${track.slug}`
       );
+
+      // Log activity
+      try {
+        await supabase.from('activity_feed').insert({
+          user_id: userId,
+          username: profile.name,
+          user_avatar: profile.avatar_url,
+          activity_type: 'track_started',
+          description: `started the learning track: "${track.name}"`
+        });
+      } catch (err) {
+        console.warn('[Activity Logger] Table activity_feed missing, skipped logging activity.');
+      }
     }
 
     // Check if quiz is passed (hard gate check)
@@ -578,9 +591,20 @@ export const completeLesson = async (req: Request, res: Response, next: NextFunc
         current_module: nextModuleId,
         last_accessed_at: new Date().toISOString(),
       })
-      .eq('id', progress.id);
-
     if (updateProgressError) throw updateProgressError;
+
+    // Log activity to community feed
+    try {
+      await supabase.from('activity_feed').insert({
+        user_id: userId,
+        username: profile.name,
+        user_avatar: profile.avatar_url,
+        activity_type: 'lesson_completed',
+        description: `completed the lesson: "${lesson.title}"`
+      });
+    } catch (err) {
+      console.warn('[Activity Logger] Table activity_feed missing, skipped logging activity.');
+    }
 
     // 6. Update user XP & Streak
     // Streak logic

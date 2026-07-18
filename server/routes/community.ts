@@ -4,7 +4,8 @@ import {
   getStudyGroups, createStudyGroup, joinStudyGroup, leaveStudyGroup,
   getForumPosts, createForumPost, createForumReply, upvoteForumItem,
   getPeerReviews, submitCodeForReview, createReviewComment,
-  getSharedResources, shareResource, likeResource
+  getSharedResources, shareResource, likeResource,
+  searchUsers, getActivityFeed
 } from '../controllers/communityController';
 import { protect } from '../middleware/auth';
 
@@ -12,9 +13,12 @@ const router = express.Router();
 
 // Friends System
 router.get('/friends', protect, getFriendsList);
+router.get('/friends/search', protect, searchUsers);
 router.post('/friends/request', protect, sendFriendRequest);
 router.post('/friends/accept', protect, acceptFriendRequest);
 router.post('/friends/reject', protect, rejectFriendRequest);
+router.get('/activity', protect, getActivityFeed);
+
 
 // Study Groups
 router.get('/groups', protect, getStudyGroups);

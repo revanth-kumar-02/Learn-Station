@@ -201,6 +201,9 @@ export const createStudyGroup = async (req: Request, res: Response, next: NextFu
       .from('study_group_members')
       .insert({ group_id: group.id, user_id: userId, role: 'admin' });
 
+    // Log activity
+    await logActivity(userId, 'group_joined', `created the study group "${name}"`);
+
     res.json({ success: true, group });
   } catch (err) {
     next(err);
@@ -508,6 +511,9 @@ export const shareResource = async (req: Request, res: Response, next: NextFunct
       await supabase.from('profiles').update({ reputation: (helper.reputation || 0) + 10 }).eq('id', userId);
     }
 
+    // Log activity
+    await logActivity(userId, 'resource_uploaded', `shared a resource: "${title}"`);
+
     res.json({ success: true, resource });
   } catch (err) {
     next(err);
@@ -535,5 +541,128 @@ export const likeResource = async (req: Request, res: Response, next: NextFuncti
     res.json({ success: true });
   } catch (err) {
     next(err);
+  }
+};
+
+// ================= SEARCH USERS & ACTIVITY FEED =================
+
+// @desc    Search users by name or username
+// @route   GET /api/community/friends/search
+export const searchUsers = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user!.id;
+    const { query } = req.query;
+
+    if (!query) {
+      return res.json({ users: [] });
+    }
+
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, name, username, avatar_url, level, reputation')
+      .neq('id', userId)
+      .or(`name.ilike.%${query}%,username.ilike.%${query}%`)
+      .limit(10);
+
+    if (error) throw error;
+
+    res.json({ users: profiles || [] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Get chronological community activity feed (with dynamic fallback if table is missing)
+// @route   GET /api/community/activity
+export const getActivityFeed = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    // 1. Attempt to fetch from activity_feed table
+    const { data: feed, error: feedError } = await supabase
+      .from('activity_feed')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (!feedError && feed) {
+      return res.json({ feed });
+    }
+
+    console.warn('[Community Controller] activity_feed table missing or returned error. Falling back to dynamic aggregation.');
+
+    // 2. Fallback: Aggregate chronological feed from public tables (forum posts, resources, study groups)
+    const [postsRes, resourcesRes, groupsRes] = await Promise.all([
+      supabase.from('forum_posts').select('*, author:profiles(name, username, avatar_url)').order('created_at', { ascending: false }).limit(10),
+      supabase.from('community_resources').select('*, author:profiles(name, username, avatar_url)').order('created_at', { ascending: false }).limit(10),
+      supabase.from('study_groups').select('*, admin:profiles(name, username, avatar_url)').order('created_at', { ascending: false }).limit(10)
+    ]);
+
+    const aggregatedFeed: any[] = [];
+
+    if (postsRes.data) {
+      postsRes.data.forEach(p => {
+        aggregatedFeed.push({
+          id: p.id,
+          user_id: p.user_id,
+          username: p.author?.name || 'A student',
+          user_avatar: p.author?.avatar_url,
+          activity_type: 'forum_post',
+          description: `started a new forum discussion: "${p.title}"`,
+          created_at: p.created_at
+        });
+      });
+    }
+
+    if (resourcesRes.data) {
+      resourcesRes.data.forEach(r => {
+        aggregatedFeed.push({
+          id: r.id,
+          user_id: r.user_id,
+          username: r.author?.name || 'A student',
+          user_avatar: r.author?.avatar_url,
+          activity_type: 'resource_uploaded',
+          description: `shared a new study resource: "${r.title}"`,
+          created_at: r.created_at
+        });
+      });
+    }
+
+    if (groupsRes.data) {
+      groupsRes.data.forEach(g => {
+        aggregatedFeed.push({
+          id: g.id,
+          user_id: g.admin_id,
+          username: g.admin?.name || 'A student',
+          user_avatar: g.admin?.avatar_url,
+          activity_type: 'group_created',
+          description: `created a new study group: "${g.name}"`,
+          created_at: g.created_at
+        });
+      });
+    }
+
+    // Sort chronologically (newest first)
+    aggregatedFeed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    res.json({ feed: aggregatedFeed.slice(0, 30) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Helper: Log activity to the database feed
+export const logActivity = async (userId: string, type: string, description: string): Promise<void> => {
+  try {
+    const { data: profile } = await supabase.from('profiles').select('name, avatar_url').eq('id', userId).single();
+    if (!profile) return;
+
+    await supabase.from('activity_feed').insert({
+      user_id: userId,
+      username: profile.name,
+      user_avatar: profile.avatar_url,
+      activity_type: type,
+      description
+    });
+  } catch (err) {
+    console.warn('[Activity Logger] Table activity_feed missing, skipped logging activity.');
   }
 };
